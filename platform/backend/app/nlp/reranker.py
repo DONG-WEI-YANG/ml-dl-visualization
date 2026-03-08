@@ -1,4 +1,4 @@
-"""Layer 6: RAG Retrieval + Re-ranking — TF-IDF cosine similarity enhanced."""
+"""Layer 6: RAG Retrieval + Re-ranking — TF-IDF cosine similarity + FAISS enhanced."""
 
 import logging
 from .pipeline import NLPContext
@@ -63,8 +63,30 @@ def _tfidf_rerank(query: str, results: list[dict], top_k: int = 5) -> list[dict]
         return results[:top_k]
 
 
+def _faiss_rerank(query: str, results: list[dict], top_k: int = 5) -> list[dict]:
+    """Re-rank FTS results using FAISS cosine similarity."""
+    if not results:
+        return results[:top_k]
+
+    try:
+        from .vector_store import search_by_id
+        chunk_ids = [r.get("id") for r in results if r.get("id") is not None]
+        if not chunk_ids:
+            return results[:top_k]
+
+        id_scores = search_by_id(chunk_ids, query)
+        score_map = dict(id_scores)
+
+        scored = [(r, score_map.get(r.get("id"), 0.0)) for r in results]
+        scored.sort(key=lambda x: -x[1])
+        return [r for r, _ in scored[:top_k]]
+    except Exception as e:
+        logger.warning("FAISS rerank failed: %s", e)
+        return results[:top_k]
+
+
 def retrieve_and_rerank(ctx: NLPContext) -> NLPContext:
-    """Retrieve RAG context with TF-IDF cosine similarity re-ranking."""
+    """Retrieve RAG context with TF-IDF + FAISS cosine similarity re-ranking."""
 
     # Primary search: use original user message
     context = retrieve_context(ctx.user_message, week=ctx.week, top_k=5)
@@ -82,15 +104,39 @@ def retrieve_and_rerank(ctx: NLPContext) -> NLPContext:
             clean_concept = concept.split("(")[0].strip()
             results = search_fts(clean_concept, week=ctx.week, top_k=2)
             if results:
-                # Apply TF-IDF re-ranking if model available
-                results = _tfidf_rerank(ctx.user_message, results, top_k=2)
+                # Try FAISS re-ranking first, fall back to TF-IDF
+                reranked = _faiss_rerank(ctx.user_message, results, top_k=2)
+                if all(r == results[i] for i, r in enumerate(reranked)):
+                    # FAISS didn't change order, try TF-IDF
+                    reranked = _tfidf_rerank(ctx.user_message, results, top_k=2)
+
                 extra_parts = [
                     f"[來源：第{r['week']}週 {r['file_type']} — {r['title']}]\n{r['content']}"
-                    for r in results
+                    for r in reranked
                 ]
                 extra = "\n\n---\n\n".join(extra_parts)
                 context = context + "\n\n---\n\n" + extra if context else extra
                 break
+
+    # FAISS secondary retrieval channel: find semantically similar chunks
+    if len(context) < 200:
+        try:
+            from .vector_store import search_similar
+            faiss_results = search_similar(ctx.user_message, top_k=3)
+            if faiss_results:
+                for fr in faiss_results:
+                    if fr.get("score", 0) > 0.3:
+                        fts_results = search_fts(fr.get("title", ""), week=fr.get("week"), top_k=1)
+                        if fts_results:
+                            extra_parts = [
+                                f"[來源：第{r['week']}週 {r['file_type']} — {r['title']}]\n{r['content']}"
+                                for r in fts_results
+                            ]
+                            extra = "\n\n---\n\n".join(extra_parts)
+                            context = context + "\n\n---\n\n" + extra if context else extra
+                            break
+        except Exception:
+            pass
 
     ctx.rag_context = context
 

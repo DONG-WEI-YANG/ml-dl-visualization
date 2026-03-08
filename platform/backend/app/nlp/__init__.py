@@ -26,9 +26,12 @@ from .retrieval import expand_query, link_cross_week
 from .response import assemble_response
 from .response_gen import (adjust_complexity, inject_citations,
                           generate_follow_up, generate_encouragement, check_completeness)
+from .coordinators import aggregate_confidence, resolve_conflicts, route_pipeline
 
-# 42-layer pipeline in execution order
+# 42-layer pipeline in execution order (+ 3 coordinator layers)
 FULL_PIPELINE = [
+    # C3. Route Pipeline (informational, before preprocessing)
+    route_pipeline,             # C3
     # A. Text Preprocessing (L1-6)
     segment_chinese,        # L1
     tag_pos,                # L2
@@ -45,6 +48,8 @@ FULL_PIPELINE = [
     estimate_confidence,    # L12
     detect_emotion,         # L13 (urgency is inside detect_emotion)
     detect_politeness,      # L14
+    # C1. Aggregate Confidence (after all understanding layers)
+    aggregate_confidence,   # C1
     # C. Student Level (L15-20)
     assess_difficulty,      # L15
     score_vocabulary,       # L16
@@ -59,6 +64,8 @@ FULL_PIPELINE = [
     detect_math,            # L25
     score_question_quality, # L26
     score_readability,      # L27
+    # C2. Resolve Conflicts (after all analysis layers)
+    resolve_conflicts,      # C2
     # E. Context & Memory (L28-32)
     track_conversation,     # L28+30
     detect_topic_continuity,  # L29

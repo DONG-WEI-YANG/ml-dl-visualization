@@ -4,7 +4,7 @@ L28 ConversationTracker — enhanced from existing
 L29 TopicContinuityDetector — sentence-transformers
 L30 HintLadderManager — state machine
 L31 SessionSummarizer — snownlp + jieba
-L32 KnowledgeStateTracker — concept tracking
+L32 KnowledgeStateTracker — jieba keyword extraction + snownlp sentiment
 """
 
 import re
@@ -158,25 +158,95 @@ def session_summarizer(ctx: NLPContext) -> NLPContext:
     return ctx
 
 
-# ── L32: Knowledge State Tracker ──
+# ── L32: Knowledge State Tracker (enhanced with jieba + snownlp) ──
 
 def knowledge_state_tracker(ctx: NLPContext) -> NLPContext:
-    """L32: Track which concepts the student has demonstrated understanding of."""
+    """L32: Track which concepts the student has demonstrated understanding of,
+    using jieba keyword extraction and snownlp sentiment analysis."""
+
+    # Get domain concepts from topic.py's CONCEPT_MAP
+    try:
+        from .topic import CONCEPT_MAP
+    except ImportError:
+        CONCEPT_MAP = {}
+
+    # Extract keywords from each user message using jieba
+    try:
+        import jieba.analyse
+        jieba_available = True
+    except ImportError:
+        jieba_available = False
+
+    # Get snownlp for sentiment
+    try:
+        from snownlp import SnowNLP
+        snownlp_available = True
+    except ImportError:
+        snownlp_available = False
+
     # Analyze conversation history for confirmed understanding
     for msg in ctx.conversation_history:
         if msg.get("role") != "user":
             continue
-        content = msg.get("content", "").lower()
+        content = msg.get("content", "")
+        content_lower = content.lower()
+
+        # Extract keywords from this message using jieba
+        msg_keywords = []
+        if jieba_available:
+            try:
+                msg_keywords = jieba.analyse.extract_tags(content, topK=5)
+            except Exception:
+                pass
+
+        # Check if keywords match domain concepts
+        matched_concepts = []
+        for kw in msg_keywords:
+            kw_lower = kw.lower()
+            for trigger, concept in CONCEPT_MAP.items():
+                if trigger in kw_lower or kw_lower in trigger:
+                    if concept not in matched_concepts:
+                        matched_concepts.append(concept)
+
         # Signals of understanding
-        if any(w in content for w in ["我懂了", "了解了", "原來", "i see", "i understand", "got it", "makes sense"]):
+        understanding_signals = [
+            "我懂了", "了解了", "原來", "i see", "i understand", "got it",
+            "makes sense", "懂了", "明白了", "原來如此",
+        ]
+        confusion_signals = [
+            "不懂", "不理解", "困惑", "confused", "don't understand",
+            "搞不懂", "不明白", "看不懂",
+        ]
+
+        is_understanding = any(w in content_lower for w in understanding_signals)
+        is_confused = any(w in content_lower for w in confusion_signals)
+
+        # Use snownlp sentiment to supplement signal detection
+        if snownlp_available and not is_understanding and not is_confused:
+            try:
+                s = SnowNLP(content)
+                sentiment = s.sentiments
+                if sentiment > 0.7:
+                    is_understanding = True  # Positive sentiment suggests understanding
+                elif sentiment < 0.3:
+                    is_confused = True  # Negative sentiment suggests confusion
+            except Exception:
+                pass
+
+        if is_understanding:
             # Find which concepts were in the previous assistant message
             idx = ctx.conversation_history.index(msg)
             if idx > 0:
                 prev = ctx.conversation_history[idx - 1].get("content", "").lower()
-                for concept in ctx.domain_concepts:
+                for concept in matched_concepts + ctx.domain_concepts:
                     if concept.split("(")[0].strip().lower() in prev:
                         if concept not in ctx.known_concepts:
                             ctx.known_concepts.append(concept)
+
+        elif is_confused:
+            for concept in matched_concepts:
+                if concept not in ctx.unknown_concepts:
+                    ctx.unknown_concepts.append(concept)
 
     return ctx
 

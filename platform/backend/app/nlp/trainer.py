@@ -541,6 +541,388 @@ def _generate_emotion_data() -> tuple[list[str], list[str]]:
     return texts, labels
 
 
+def _generate_sub_intent_data() -> tuple[list[str], list[str]]:
+    """Generate synthetic training examples for sub-intent classification."""
+    texts, labels = [], []
+
+    def add(label: str, samples: list[str], n: int = 1):
+        for s in samples:
+            for _ in range(n):
+                texts.append(s)
+                labels.append(label)
+
+    # ── definition sub-intents ──
+    add("basic_definition", [
+        "什麼是梯度下降", "CNN是什麼", "何謂損失函數", "overfitting的定義",
+        "什麼是SVM", "解釋一下RNN", "batch normalization是什麼意思",
+        "什麼叫做交叉驗證", "learning rate是什麼", "define gradient descent",
+        "what is overfitting", "what does CNN mean", "explain dropout",
+        "what is cross-validation", "define loss function",
+        "什麼是反向傳播", "embedding是什麼", "Transformer的定義",
+    ] * 2)
+    add("comparison_definition", [
+        "overfitting和underfitting的差別是什麼", "L1跟L2正則化定義上有什麼不同",
+        "precision和recall的定義差在哪", "CNN跟RNN的定義有何不同",
+        "bias和variance各是什麼意思", "softmax跟sigmoid分別是什麼",
+        "gradient和derivative差別是什麼", "bagging跟boosting的定義",
+        "difference between overfitting and underfitting",
+        "what's the difference between L1 and L2",
+        "how are precision and recall defined differently",
+        "compare the definitions of CNN and RNN",
+        "what distinguishes bias from variance",
+        "MSE和MAE的定義差異", "standardization跟normalization差在哪",
+        "batch和epoch和iteration分別是什麼",
+    ] * 2)
+    add("formal_definition", [
+        "梯度下降的正式數學定義", "loss function的嚴格定義是什麼",
+        "請給我交叉熵的正式定義", "Bayes theorem的正式表述",
+        "從數學上定義什麼是overfitting", "KL divergence的嚴謹定義",
+        "mutual information的正式定義", "entropy的資訊論定義",
+        "formal definition of gradient descent", "rigorous definition of loss function",
+        "mathematical definition of cross-entropy", "formal statement of Bayes theorem",
+        "strictly define overfitting mathematically", "define KL divergence formally",
+        "information-theoretic definition of entropy",
+        "正式定義什麼是決策邊界", "SVM的數學定義",
+    ] * 2)
+
+    # ── how sub-intents ──
+    add("code_implementation", [
+        "怎麼用Python實作梯度下降", "如何用sklearn寫SVM",
+        "PyTorch怎麼實作CNN", "用numpy寫反向傳播", "如何寫一個DataLoader",
+        "怎麼用keras建模型", "用matplotlib畫loss曲線的code",
+        "寫一個random forest的程式", "怎麼implement attention mechanism",
+        "how to implement gradient descent in Python",
+        "how to code SVM with sklearn", "implement CNN in PyTorch",
+        "write backpropagation with numpy", "code a custom DataLoader",
+        "how to build a model with keras", "implement random forest from scratch",
+        "如何用pandas做資料前處理的程式碼", "怎麼寫cross-validation的code",
+    ] * 2)
+    add("conceptual_steps", [
+        "梯度下降的步驟是什麼", "訓練模型的流程", "做特徵工程的步驟",
+        "cross-validation怎麼做", "模型評估的步驟有哪些",
+        "怎麼一步步做資料前處理", "建立ML pipeline的流程",
+        "CNN訓練的步驟", "transfer learning的流程",
+        "what are the steps of gradient descent", "training workflow",
+        "steps for feature engineering", "how to do cross-validation step by step",
+        "what is the model evaluation process", "data preprocessing pipeline steps",
+        "怎麼做hyperparameter tuning的步驟", "部署模型的流程",
+        "如何設計實驗的步驟", "模型選擇的流程",
+    ] * 2)
+    add("tool_usage", [
+        "sklearn怎麼用", "matplotlib要怎麼設定", "pandas的基本用法",
+        "jupyter notebook怎麼操作", "怎麼用tensorboard", "MLflow怎麼用",
+        "SHAP套件的使用方式", "怎麼使用Colab的GPU",
+        "how to use sklearn", "how to configure matplotlib",
+        "pandas basics", "how to use tensorboard", "using MLflow",
+        "how to use SHAP library", "how to use Colab GPU",
+        "怎麼用seaborn畫圖", "wandb要怎麼設定", "怎麼使用Git管理ML專案",
+    ] * 2)
+
+    # ── debug sub-intents ──
+    add("syntax_error", [
+        "SyntaxError怎麼解", "縮排錯誤", "IndentationError",
+        "括號沒有對齊", "少了冒號", "語法錯誤怎麼修",
+        "拼錯了函數名稱", "import語法不對",
+        "SyntaxError how to fix", "indentation error",
+        "missing colon", "syntax error in my code",
+        "misspelled function name", "import syntax wrong",
+        "字串沒有結尾引號", "括號不匹配的錯誤",
+    ] * 2)
+    add("logic_error", [
+        "程式跑出來結果不對", "output跟預期不一樣", "模型預測全部一樣",
+        "loss不下降", "accuracy一直是0", "結果全是NaN",
+        "predictions are all the same", "loss not decreasing",
+        "accuracy stuck at zero", "results are all NaN",
+        "training loss下降但val loss上升", "predict出來的值很奇怪",
+        "模型收斂到錯誤的值", "gradient vanishing問題",
+        "邏輯上應該是對的但結果錯了", "算出來的數字不make sense",
+    ] * 2)
+    add("runtime_error", [
+        "RuntimeError怎麼辦", "out of memory", "OOM錯誤",
+        "GPU記憶體不夠", "kernel一直重啟", "程式跑到一半當掉",
+        "process killed", "segmentation fault", "timeout error",
+        "CUDA out of memory", "kernel crash", "memory error",
+        "跑到一半就斷了", "記憶體溢出", "程式執行太慢",
+        "stack overflow error", "recursion limit exceeded",
+    ] * 2)
+    add("environment_error", [
+        "pip install失敗", "套件裝不了", "版本衝突",
+        "import找不到模組", "Python版本不對", "CUDA版本不match",
+        "虛擬環境壞了", "conda環境問題", "requirements.txt有衝突",
+        "pip install failed", "package not found", "version conflict",
+        "module not found", "wrong Python version", "CUDA mismatch",
+        "virtual environment broken", "conda conflict",
+        "PATH設定問題", "M1 Mac安裝問題",
+    ] * 2)
+
+    # ── code sub-intents ──
+    add("library_usage", [
+        "sklearn的API怎麼查", "numpy的函數怎麼用", "pandas的方法",
+        "matplotlib的參數設定", "PyTorch的tensor操作",
+        "how to use sklearn API", "numpy function reference",
+        "pandas method usage", "matplotlib parameters",
+        "怎麼用requests套件", "beautifulsoup怎麼用",
+        "scipy的optimize函數", "PIL圖片處理",
+        "tensorflow的layer設定", "xgboost的參數",
+        "怎麼查套件的文件", "這個函數的參數是什麼意思",
+    ] * 2)
+    add("code_review", [
+        "幫我看看這段code", "這段程式碼有什麼問題", "code review一下",
+        "這樣寫對不對", "有沒有更好的寫法", "這段code可以改進嗎",
+        "review my code", "is this code correct", "any issues with this code",
+        "can this be improved", "code quality check",
+        "這段code的設計好嗎", "有沒有bug", "這樣的架構OK嗎",
+        "這個function寫得好不好", "程式碼風格有問題嗎",
+    ] * 2)
+    add("code_optimization", [
+        "程式碼怎麼寫得更快", "怎麼優化效能", "減少記憶體使用",
+        "向量化運算怎麼寫", "怎麼避免for loop", "程式碼太慢怎麼辦",
+        "how to optimize this code", "make it faster",
+        "reduce memory usage", "vectorize this operation",
+        "avoid for loops", "code is too slow",
+        "怎麼做parallel processing", "batch processing怎麼寫",
+        "怎麼profile程式碼效能", "time complexity太高怎麼改",
+    ] * 2)
+
+    # ── formula sub-intents ──
+    add("derivation", [
+        "推導梯度下降的公式", "交叉熵的推導過程", "backprop的鏈式法則展開",
+        "softmax的微分推導", "batch normalization公式推導",
+        "derive gradient descent formula", "derivation of cross-entropy",
+        "chain rule expansion in backprop", "derive softmax gradient",
+        "derive the update rule for Adam", "KL divergence推導",
+        "information gain的推導", "bias-variance decomposition推導",
+        "推導SVM的dual form", "推導logistic regression的梯度",
+        "attention score的推導", "ELBO的推導",
+    ] * 2)
+    add("intuitive_explanation", [
+        "用白話文解釋梯度下降的公式", "公式背後的直覺是什麼",
+        "為什麼公式長這樣", "這個公式的幾何意義", "公式各項代表什麼",
+        "explain the formula intuitively", "what's the intuition behind this formula",
+        "geometric meaning of this equation", "what does each term mean",
+        "用比喻解釋這個公式", "公式的物理意義",
+        "為什麼要取log", "為什麼要加那個正則項",
+        "這個公式跟物理的關係", "公式中的常數代表什麼",
+        "直覺上理解為什麼要除以根號", "loss function為什麼長這樣",
+    ] * 2)
+    add("calculation", [
+        "幫我算一下這個公式", "帶入數字算看看", "計算這個梯度",
+        "MSE的計算範例", "手動算一次cross-entropy",
+        "help me calculate this formula", "plug in numbers",
+        "calculate this gradient", "MSE calculation example",
+        "manually compute cross-entropy", "具體算一下信息增益",
+        "計算Gini impurity", "帶入資料算loss", "手算一次forward pass",
+        "計算convolution的output size", "算一下parameter數量",
+        "這個積分怎麼算", "手動做一次gradient update",
+    ] * 2)
+
+    return texts, labels
+
+
+def _generate_confidence_data() -> tuple[list[str], list[str]]:
+    """Generate synthetic training examples for confidence level classification."""
+    texts, labels = [], []
+
+    def add(label: str, samples: list[str]):
+        for s in samples:
+            texts.append(s)
+            labels.append(label)
+
+    add("high", [
+        "我知道答案是這個", "我確定是用梯度下降", "I'm sure that's right",
+        "確定是overfitting", "我非常肯定", "一定是這樣沒錯",
+        "我理解了就是這個意思", "答案就是用L2 regularization",
+        "我做出來了很確定", "I'm confident this is correct",
+        "definitely overfitting", "I know the answer",
+        "我已經驗證過了是對的", "我可以確認這個結果",
+        "我百分之百確定", "I'm absolutely sure",
+        "毫無疑問是這樣", "我敢打賭是這個",
+        "我確認過了沒問題", "我很有把握",
+        "對就是這個", "沒錯", "就是這樣",
+    ] * 3)
+
+    add("medium", [
+        "我覺得可能是overfitting", "maybe it's the learning rate",
+        "應該是用CNN吧", "我猜是梯度消失", "大概是這樣",
+        "I think it might be", "probably overfitting", "should be using CNN",
+        "我覺得答案可能是", "也許是參數設錯了", "可能需要regularization",
+        "似乎是這個原因", "看起來好像是", "感覺像是",
+        "I guess it could be", "it seems like",
+        "我不太確定但覺得是", "有一定把握但不完全確定",
+        "八成是這個", "或許是因為learning rate太大",
+        "我的直覺告訴我是這個", "我傾向認為是",
+    ] * 3)
+
+    add("low", [
+        "我完全不知道", "no idea at all", "不確定怎麼做",
+        "不太懂這個概念", "完全沒有頭緒", "一點都不確定",
+        "我真的不知道", "I have no clue", "不懂",
+        "毫無概念", "no idea", "I don't know",
+        "完全看不懂", "我不知道從哪開始", "一頭霧水",
+        "我搞不清楚", "I'm totally lost", "clueless",
+        "什麼都不懂", "我對這個零了解", "完全陌生",
+        "不太會", "不太理解", "我不明白",
+    ] * 3)
+
+    return texts, labels
+
+
+def _generate_urgency_data() -> tuple[list[str], list[str]]:
+    """Generate synthetic training examples for urgency classification."""
+    texts, labels = [], []
+
+    def add(label: str, samples: list[str]):
+        for s in samples:
+            texts.append(s)
+            labels.append(label)
+
+    add("high", [
+        "明天要交作業了", "deadline快到了", "urgent help needed",
+        "趕時間需要快點解決", "今天晚上就要交", "來不及了",
+        "拜託快點幫我", "考試快到了", "剩不到一小時",
+        "due tomorrow", "deadline tonight", "ASAP please",
+        "急需幫忙", "馬上就要demo了", "等一下就要報告",
+        "今天之內要完成", "時間緊迫", "very urgent",
+        "不趕快做完會來不及", "只剩兩個小時",
+        "助教說今天是最後期限", "快要期末了還不會",
+        "報告在即需要馬上搞懂", "deadline is in 2 hours",
+    ] * 3)
+
+    add("normal", [
+        "什麼是梯度下降", "我想了解CNN", "可以解釋一下嗎",
+        "怎麼實作random forest", "loss function的公式",
+        "如何做cross-validation", "幫我看看這段code",
+        "what is gradient descent", "explain CNN please",
+        "how to implement random forest", "loss function formula",
+        "想問一下SVM的參數怎麼調", "請問這個概念的意思",
+        "老師好，有個問題想請教", "可以幫我clarify這個嗎",
+        "我在學習overfitting的概念", "想更深入了解attention mechanism",
+        "這週的內容我有疑問", "請問作業第三題",
+        "how to tune hyperparameters", "can you explain this concept",
+    ] * 3)
+
+    add("low", [
+        "隨便問問而已", "有空再回我就好", "no rush",
+        "不急慢慢來", "純粹好奇", "閒著沒事想問",
+        "有時間再看就好", "just wondering", "whenever you have time",
+        "不急著要答案", "只是隨便想想", "no hurry",
+        "有空的話可以解釋嗎", "不重要的問題", "just curious",
+        "等你有空再說", "低優先度的問題", "take your time",
+        "慢慢回就好不趕", "隨便問的不用太認真回",
+        "by the way", "順便問一下",
+    ] * 3)
+
+    return texts, labels
+
+
+def _generate_politeness_data() -> tuple[list[str], list[str]]:
+    """Generate synthetic training examples for politeness classification."""
+    texts, labels = [], []
+
+    def add(label: str, samples: list[str]):
+        for s in samples:
+            texts.append(s)
+            labels.append(label)
+
+    add("polite", [
+        "請問老師這個怎麼做", "麻煩您幫我看一下", "不好意思想請教一下",
+        "could you please explain", "打擾了想問個問題",
+        "sorry to bother you", "感謝老師的說明", "謝謝您的幫忙",
+        "請問可以解釋一下嗎", "不好意思再問一個問題",
+        "麻煩老師了", "would you mind explaining", "thank you for your help",
+        "可以請您再說一次嗎", "非常感謝", "if you don't mind",
+        "抱歉佔用您的時間", "請教一下老師", "不知道方不方便問",
+        "冒昧打擾一下", "excuse me, could you help",
+        "勞煩您了", "承蒙指教", "多謝多謝",
+    ] * 3)
+
+    add("neutral", [
+        "什麼是梯度下降", "CNN怎麼用", "解釋一下overfitting",
+        "我不懂這個概念", "可以說明一下嗎", "怎麼做cross-validation",
+        "what is gradient descent", "how does CNN work", "explain overfitting",
+        "I don't understand this", "can you explain", "how to do cross-validation",
+        "想問一下這個", "有個問題", "我有疑問",
+        "這是什麼意思", "help me understand", "question about this topic",
+        "我想問", "有問題想問", "想了解一下",
+        "為什麼會這樣", "怎麼辦", "這個怎麼處理",
+    ] * 3)
+
+    add("direct", [
+        "告訴我答案", "給我答案", "just tell me",
+        "直接說重點", "不要廢話", "give me the answer",
+        "快點回答", "直接給code", "別解釋了直接給我看",
+        "stop explaining just give me the code", "cut to the chase",
+        "少說廢話", "直接講", "不用解釋那麼多",
+        "just the answer please", "skip the explanation",
+        "直說就好", "長話短說", "簡單講",
+        "我只要答案", "don't explain just show me",
+        "重點是什麼直接說", "get to the point",
+    ] * 3)
+
+    return texts, labels
+
+
+def _generate_learning_style_data() -> tuple[list[str], list[str]]:
+    """Generate synthetic training examples for learning style classification."""
+    texts, labels = [], []
+
+    def add(label: str, samples: list[str]):
+        for s in samples:
+            texts.append(s)
+            labels.append(label)
+
+    add("visual", [
+        "可以畫圖嗎", "有沒有圖表", "show me a chart",
+        "視覺化這個概念", "能不能用圖片解釋", "畫一個示意圖",
+        "有沒有流程圖", "用圖形表示", "可以看到視覺化嗎",
+        "plot出來看看", "能不能畫個決策邊界的圖", "有diagram嗎",
+        "show me a visualization", "can you draw it",
+        "我想看到圖", "有沒有架構圖", "用圖解釋比較容易懂",
+        "顯示一下結果的圖表", "可以用圖來說明嗎",
+        "我比較喜歡看圖理解", "有heatmap嗎", "能不能畫個graph",
+        "用動畫解釋", "有沒有互動式的視覺化",
+    ] * 3)
+
+    add("practical", [
+        "給我code", "寫程式示範", "example code",
+        "實作一個看看", "hands-on練習", "可以動手做嗎",
+        "直接跑看看", "寫個範例程式", "怎麼implement",
+        "show me the code", "let me try coding it",
+        "我想實際操作", "可以練習嗎", "做一個demo",
+        "直接用Notebook跑", "我想自己寫寫看",
+        "give me sample code", "I want to practice",
+        "讓我動手試試", "用code解釋", "寫一個小專案來學",
+        "有沒有exercise", "練習題在哪", "我想做lab",
+    ] * 3)
+
+    add("textual", [
+        "解釋原理", "理論推導", "mathematical proof",
+        "公式推導", "用文字說明", "詳細的文字解釋",
+        "背後的數學是什麼", "理論基礎", "嚴謹的推導",
+        "explain the theory", "mathematical derivation",
+        "text explanation", "detailed written explanation",
+        "我想看推導過程", "用數學證明", "形式化的說明",
+        "formal proof", "theoretical foundation",
+        "概念性的解釋", "用文字描述原理", "理論上為什麼",
+        "write out the proof", "文獻中怎麼說的", "教科書上的定義",
+    ] * 3)
+
+    add("balanced", [
+        "什麼是梯度下降", "CNN怎麼運作", "overfitting是什麼",
+        "解釋一下loss function", "怎麼做cross-validation",
+        "我想了解SVM", "random forest的介紹",
+        "what is gradient descent", "how does CNN work",
+        "explain loss function", "introduce SVM",
+        "這個概念是什麼", "幫我整理這週重點", "有什麼建議",
+        "tell me about this topic", "summarize this week",
+        "老師好想問個問題", "這週在教什麼", "考試考什麼",
+        "我是第一次上這門課", "有推薦的學習資源嗎",
+        "需要什麼先備知識", "有問題想請教",
+    ] * 3)
+
+    return texts, labels
+
+
 def train_models() -> dict:
     """Train all NLP models and save to disk."""
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
@@ -588,7 +970,112 @@ def train_models() -> dict:
     with open(MODEL_DIR / "emotion_model.pkl", "wb") as f:
         pickle.dump(emotion_pipeline, f)
 
-    # 3. Curriculum TF-IDF vectorizer (for topic extraction + re-ranking)
+    # 3. Sub-intent classifier
+    texts_si, labels_si = _generate_sub_intent_data()
+    sub_intent_pipeline = Pipeline([
+        ("tfidf", TfidfVectorizer(
+            analyzer="char_wb",
+            ngram_range=(1, 4),
+            max_features=8000,
+            sublinear_tf=True,
+        )),
+        ("clf", LinearSVC(C=1.0, max_iter=2000, class_weight="balanced")),
+    ])
+    sub_intent_pipeline.fit(texts_si, labels_si)
+    cv_si = cross_val_score(sub_intent_pipeline, texts_si, labels_si, cv=3, scoring="accuracy")
+    results["sub_intent"] = {
+        "samples": len(texts_si),
+        "classes": len(set(labels_si)),
+        "cv_accuracy": float(np.mean(cv_si)),
+    }
+    with open(MODEL_DIR / "sub_intent_model.pkl", "wb") as f:
+        pickle.dump(sub_intent_pipeline, f)
+
+    # 4. Confidence classifier
+    texts_cf, labels_cf = _generate_confidence_data()
+    confidence_pipeline = Pipeline([
+        ("tfidf", TfidfVectorizer(
+            analyzer="char_wb",
+            ngram_range=(1, 3),
+            max_features=5000,
+            sublinear_tf=True,
+        )),
+        ("clf", LogisticRegression(C=1.0, max_iter=1000, class_weight="balanced")),
+    ])
+    confidence_pipeline.fit(texts_cf, labels_cf)
+    cv_cf = cross_val_score(confidence_pipeline, texts_cf, labels_cf, cv=3, scoring="accuracy")
+    results["confidence"] = {
+        "samples": len(texts_cf),
+        "classes": len(set(labels_cf)),
+        "cv_accuracy": float(np.mean(cv_cf)),
+    }
+    with open(MODEL_DIR / "confidence_model.pkl", "wb") as f:
+        pickle.dump(confidence_pipeline, f)
+
+    # 5. Urgency classifier
+    texts_ur, labels_ur = _generate_urgency_data()
+    urgency_pipeline = Pipeline([
+        ("tfidf", TfidfVectorizer(
+            analyzer="char_wb",
+            ngram_range=(1, 3),
+            max_features=5000,
+            sublinear_tf=True,
+        )),
+        ("clf", LinearSVC(C=1.0, max_iter=2000, class_weight="balanced")),
+    ])
+    urgency_pipeline.fit(texts_ur, labels_ur)
+    cv_ur = cross_val_score(urgency_pipeline, texts_ur, labels_ur, cv=3, scoring="accuracy")
+    results["urgency"] = {
+        "samples": len(texts_ur),
+        "classes": len(set(labels_ur)),
+        "cv_accuracy": float(np.mean(cv_ur)),
+    }
+    with open(MODEL_DIR / "urgency_model.pkl", "wb") as f:
+        pickle.dump(urgency_pipeline, f)
+
+    # 6. Politeness classifier
+    texts_pl, labels_pl = _generate_politeness_data()
+    politeness_pipeline = Pipeline([
+        ("tfidf", TfidfVectorizer(
+            analyzer="char_wb",
+            ngram_range=(1, 3),
+            max_features=5000,
+            sublinear_tf=True,
+        )),
+        ("clf", LogisticRegression(C=1.0, max_iter=1000, class_weight="balanced")),
+    ])
+    politeness_pipeline.fit(texts_pl, labels_pl)
+    cv_pl = cross_val_score(politeness_pipeline, texts_pl, labels_pl, cv=3, scoring="accuracy")
+    results["politeness"] = {
+        "samples": len(texts_pl),
+        "classes": len(set(labels_pl)),
+        "cv_accuracy": float(np.mean(cv_pl)),
+    }
+    with open(MODEL_DIR / "politeness_model.pkl", "wb") as f:
+        pickle.dump(politeness_pipeline, f)
+
+    # 7. Learning style classifier
+    texts_ls, labels_ls = _generate_learning_style_data()
+    learning_style_pipeline = Pipeline([
+        ("tfidf", TfidfVectorizer(
+            analyzer="char_wb",
+            ngram_range=(1, 3),
+            max_features=5000,
+            sublinear_tf=True,
+        )),
+        ("clf", LinearSVC(C=1.0, max_iter=2000, class_weight="balanced")),
+    ])
+    learning_style_pipeline.fit(texts_ls, labels_ls)
+    cv_ls = cross_val_score(learning_style_pipeline, texts_ls, labels_ls, cv=3, scoring="accuracy")
+    results["learning_style"] = {
+        "samples": len(texts_ls),
+        "classes": len(set(labels_ls)),
+        "cv_accuracy": float(np.mean(cv_ls)),
+    }
+    with open(MODEL_DIR / "learning_style_model.pkl", "wb") as f:
+        pickle.dump(learning_style_pipeline, f)
+
+    # 8. Curriculum TF-IDF vectorizer (for topic extraction + re-ranking)
     from app.rag.store import get_db
     conn = get_db()
     rows = conn.execute("SELECT id, content, week, title FROM rag_chunks").fetchall()
@@ -619,6 +1106,31 @@ def train_models() -> dict:
             "chunks": len(chunk_texts),
             "features": corpus_tfidf.max_features,
         }
+
+        # 9. Build FAISS index from corpus TF-IDF vectors
+        try:
+            import faiss
+            # L2 normalize for cosine similarity via inner product
+            dense_matrix = corpus_matrix.toarray().astype(np.float32)
+            faiss.normalize_L2(dense_matrix)
+            dim = dense_matrix.shape[1]
+            index = faiss.IndexFlatIP(dim)
+            index.add(dense_matrix)
+            # Use faiss.serialize_index + pickle to avoid Unicode path issues on Windows
+            index_bytes = faiss.serialize_index(index)
+            with open(MODEL_DIR / "faiss_index.pkl", "wb") as f:
+                pickle.dump(index_bytes, f)
+            with open(MODEL_DIR / "faiss_meta.pkl", "wb") as f:
+                pickle.dump({
+                    "ids": chunk_ids,
+                    "meta": chunk_meta,
+                }, f)
+            results["faiss"] = {
+                "vectors": index.ntotal,
+                "dimension": dim,
+            }
+        except Exception as e:
+            results["faiss"] = {"error": str(e)}
     else:
         results["corpus"] = {"chunks": 0, "note": "No RAG chunks found. Run /api/rag/ingest first."}
 

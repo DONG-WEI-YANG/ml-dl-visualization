@@ -1,0 +1,279 @@
+scikit-learn 5 nz
+sklearn 5 nz
+TensorFlow 5 nz
+PyTorch 5 nz
+Keras 5 nz
+NumPy 5 nz
+Pandas 5 nz
+Matplotlib 5 nz
+Seaborn 5 nz
+Plotly 5 nz
+XGBoost 5 nz
+LightGBM 5 nz
+CatBoost 5 nz
+SHAP 5 nz
+MLflow 5 nz
+Hugging Face 5 nz
+Transformers 5 nz
+NLTK 5 nz
+spaCy 5 nz
+OpenCV 5 nz
+Jupyter 5 nz
+Colab 5 nz
+gradient descent 5 nz
+梯度下降 5 n
+learning rate 5 nz
+學習率 5 n
+loss function 5 nz
+損失函數 5 n
+cost function 5 nz
+linear regression 5 nz
+線性回歸 5 n
+logistic regression 5 nz
+邏輯迴歸 5 n
+decision boundary 5 nz
+決策邊界 5 n
+decision tree 5 nz
+決策樹 5 n
+random forest 5 nz
+隨機森林 5 n
+support vector machine 5 nz
+支撐向量機 5 n
+SVM 5 nz
+KNN 5 nz
+K-nearest neighbors 5 nz
+naive bayes 5 nz
+貝氏分類器 5 n
+neural network 5 nz
+神經網路 5 n
+deep learning 5 nz
+深度學習 5 n
+machine learning 5 nz
+機器學習 5 n
+supervised learning 5 nz
+監督式學習 5 n
+unsupervised learning 5 nz
+非監督式學習 5 n
+reinforcement learning 5 nz
+強化學習 5 n
+overfitting 5 nz
+過擬合 5 n
+underfitting 5 nz
+欠擬合 5 n
+cross-validation 5 nz
+交叉驗證 5 n
+hyperparameter 5 nz
+超參數 5 n
+activation function 5 nz
+激活函數 5 n
+ReLU 5 nz
+Sigmoid 5 nz
+Softmax 5 nz
+Tanh 5 nz
+backpropagation 5 nz
+反向傳播 5 n
+forward propagation 5 nz
+前向傳播 5 n
+chain rule 5 nz
+鏈式法則 5 n
+gradient 5 nz
+梯度 5 n
+partial derivative 5 nz
+偏微分 5 n
+convolution 5 nz
+卷積 5 n
+pooling 5 nz
+池化 5 n
+convolutional neural network 5 nz
+卷積神經網路 5 n
+CNN 5 nz
+RNN 5 nz
+recurrent neural network 5 nz
+循環神經網路 5 n
+LSTM 5 nz
+GRU 5 nz
+Transformer 5 nz
+attention mechanism 5 nz
+注意力機制 5 n
+self-attention 5 nz
+自注意力 5 n
+multi-head attention 5 nz
+多頭注意力 5 n
+positional encoding 5 nz
+位置編碼 5 n
+embedding 5 nz
+嵌入 5 n
+word embedding 5 nz
+詞嵌入 5 n
+Word2Vec 5 nz
+GloVe 5 nz
+BERT 5 nz
+GPT 5 nz
+ResNet 5 nz
+VGG 5 nz
+LeNet 5 nz
+AlexNet 5 nz
+GAN 5 nz
+generative adversarial network 5 nz
+生成對抗網路 5 n
+VAE 5 nz
+variational autoencoder 5 nz
+變分自編碼器 5 n
+autoencoder 5 nz
+自編碼器 5 n
+transfer learning 5 nz
+遷移學習 5 n
+fine-tuning 5 nz
+微調 5 n
+pre-training 5 nz
+預訓練 5 n
+batch normalization 5 nz
+批次正規化 5 n
+layer normalization 5 nz
+層正規化 5 n
+dropout 5 nz
+regularization 5 nz
+正則化 5 n
+L1 regularization 5 nz
+L2 regularization 5 nz
+early stopping 5 nz
+早停 5 n
+早停法 5 n
+data augmentation 5 nz
+資料增強 5 n
+ensemble learning 5 nz
+集成學習 5 n
+bagging 5 nz
+boosting 5 nz
+gradient boosting 5 nz
+梯度提升 5 n
+AdaBoost 5 nz
+GBDT 5 nz
+feature engineering 5 nz
+特徵工程 5 n
+feature selection 5 nz
+特徵選擇 5 n
+feature importance 5 nz
+特徵重要度 5 n
+PCA 5 nz
+principal component analysis 5 nz
+主成分分析 5 n
+dimensionality reduction 5 nz
+降維 5 n
+t-SNE 5 nz
+UMAP 5 nz
+clustering 5 nz
+聚類 5 n
+K-means 5 nz
+DBSCAN 5 nz
+accuracy 5 nz
+準確率 5 n
+precision 5 nz
+精確率 5 n
+recall 5 nz
+召回率 5 n
+F1 score 5 nz
+F1分數 5 n
+AUC 5 nz
+ROC 5 nz
+ROC曲線 5 n
+confusion matrix 5 nz
+混淆矩陣 5 n
+MSE 5 nz
+MAE 5 nz
+RMSE 5 nz
+R-squared 5 nz
+bias 5 nz
+偏差 5 n
+variance 5 nz
+方差 5 n
+bias-variance tradeoff 5 nz
+偏差方差權衡 5 n
+one-hot encoding 5 nz
+獨熱編碼 5 n
+label encoding 5 nz
+標籤編碼 5 n
+standardization 5 nz
+標準化 5 n
+normalization 5 nz
+正規化 5 n
+min-max scaling 5 nz
+missing values 5 nz
+缺失值 5 n
+imputation 5 nz
+填補 5 n
+train-test split 5 nz
+訓練測試分割 5 n
+stratified sampling 5 nz
+分層抽樣 5 n
+grid search 5 nz
+random search 5 nz
+Bayesian optimization 5 nz
+貝氏優化 5 n
+learning curve 5 nz
+學習曲線 5 n
+epoch 5 nz
+batch size 5 nz
+mini-batch 5 nz
+SGD 5 nz
+Adam 5 nz
+momentum 5 nz
+weight decay 5 nz
+gradient vanishing 5 nz
+梯度消失 5 n
+gradient exploding 5 nz
+梯度爆炸 5 n
+skip connection 5 nz
+殘差連接 5 n
+residual connection 5 nz
+Grad-CAM 5 nz
+feature map 5 nz
+特徵圖 5 n
+kernel 5 nz
+stride 5 nz
+padding 5 nz
+flatten 5 nz
+dense layer 5 nz
+全連接層 5 n
+fully connected layer 5 nz
+softmax layer 5 nz
+output layer 5 nz
+輸出層 5 n
+hidden layer 5 nz
+隱藏層 5 n
+input layer 5 nz
+輸入層 5 n
+MLOps 5 nz
+model deployment 5 nz
+模型部署 5 n
+inference 5 nz
+推論 5 n
+RAG 5 nz
+retrieval augmented generation 5 nz
+檢索增強生成 5 n
+prompt engineering 5 nz
+提示工程 5 n
+large language model 5 nz
+大型語言模型 5 n
+LLM 5 nz
+tokenization 5 nz
+斷詞 5 n
+分詞 5 n
+data pipeline 5 nz
+資料管線 5 n
+model pipeline 5 nz
+Pipeline 5 nz
+StandardScaler 5 nz
+MinMaxScaler 5 nz
+OneHotEncoder 5 nz
+LabelEncoder 5 nz
+train_test_split 5 nz
+GridSearchCV 5 nz
+RandomizedSearchCV 5 nz
+cross_val_score 5 nz
+fit 5 nz
+predict 5 nz
+transform 5 nz
+fit_transform 5 nz
+model.fit 5 nz
+model.predict 5 nz

@@ -1,9 +1,9 @@
 """Group F: Retrieval Enhancement Layers (L33-36).
 
-L33 QueryExpander — jieba synonyms + sentence-transformers
+L33 QueryExpander — jieba keyword extraction + synonym map + concept map
 L34 RAGRetriever — existing FTS5 (delegates to rag.retriever)
 L35 SemanticReranker — sentence-transformers cosine similarity
-L36 CrossWeekLinker — concept-based cross-week linking
+L36 CrossWeekLinker — concept-based cross-week linking + FAISS similarity
 """
 
 import re
@@ -55,18 +55,42 @@ CONCEPT_WEEK_MAP = {
 }
 
 
-# ── L33: Query Expander ──
+# ── L33: Query Expander (enhanced with jieba keyword extraction) ──
 
 def query_expander(ctx: NLPContext) -> NLPContext:
-    """L33: Expand query with synonyms for better retrieval."""
+    """L33: Expand query using jieba keywords + synonyms + domain concept map."""
     expanded_parts = [ctx.user_message]
 
+    # Use jieba for keyword extraction to find expansion targets
+    jieba_keywords = []
+    try:
+        import jieba.analyse
+        jieba_keywords = jieba.analyse.extract_tags(ctx.user_message, topK=5)
+    except ImportError:
+        pass
+
+    # Combine with pipeline-extracted keywords
+    all_keywords = list(set(jieba_keywords + ctx.keywords[:5]))
+
     # Add synonyms for detected keywords
-    for kw in ctx.keywords[:5]:
+    for kw in all_keywords:
         kw_lower = kw.lower()
         for trigger, syns in SYNONYMS.items():
             if trigger in kw_lower or kw_lower in trigger.lower():
                 expanded_parts.extend(syns[:2])
+
+    # Add related terms from domain concept map (from topic.py)
+    try:
+        from .topic import CONCEPT_MAP as TOPIC_CONCEPT_MAP
+        for kw in all_keywords:
+            kw_lower = kw.lower()
+            for trigger, concept in TOPIC_CONCEPT_MAP.items():
+                if trigger in kw_lower or kw_lower in trigger:
+                    # Add the bilingual concept as expansion
+                    expanded_parts.append(concept)
+                    break
+    except ImportError:
+        pass
 
     ctx.expanded_query = " ".join(expanded_parts)
     return ctx
@@ -132,13 +156,14 @@ def semantic_reranker(ctx: NLPContext) -> NLPContext:
     return ctx
 
 
-# ── L36: Cross-Week Linker ──
+# ── L36: Cross-Week Linker (enhanced with FAISS similarity) ──
 
 def cross_week_linker(ctx: NLPContext) -> NLPContext:
-    """L36: Find related content in other weeks."""
+    """L36: Find related content in other weeks using concept map + FAISS similarity."""
     links = []
     current_week = ctx.week
 
+    # Concept-based linking (original approach)
     for concept in ctx.domain_concepts:
         # Extract the Chinese part of the concept
         clean = concept.split("(")[0].strip()
@@ -146,6 +171,24 @@ def cross_week_linker(ctx: NLPContext) -> NLPContext:
         for w in related_weeks:
             if w != current_week:
                 links.append({"week": w, "concept": concept, "relation": "相關概念"})
+
+    # FAISS-based cross-week similarity search
+    try:
+        from .vector_store import search_similar
+        results = search_similar(ctx.user_message, top_k=5)
+        for result in results:
+            w = result.get("week", 0)
+            if w != current_week and w > 0:
+                title = result.get("title", "")
+                score = result.get("score", 0)
+                if score > 0.3:  # Only include reasonably similar results
+                    links.append({
+                        "week": w,
+                        "concept": title,
+                        "relation": f"語義相似 (score={score:.2f})",
+                    })
+    except Exception:
+        pass  # FAISS not available or not trained yet
 
     # Deduplicate by week
     seen_weeks = set()

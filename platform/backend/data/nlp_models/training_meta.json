@@ -9,8 +9,37 @@
     "classes": 5,
     "cv_accuracy": 0.8384160520895622
   },
+  "sub_intent": {
+    "samples": 550,
+    "classes": 16,
+    "cv_accuracy": 1.0
+  },
+  "confidence": {
+    "samples": 207,
+    "classes": 3,
+    "cv_accuracy": 1.0
+  },
+  "urgency": {
+    "samples": 201,
+    "classes": 3,
+    "cv_accuracy": 1.0
+  },
+  "politeness": {
+    "samples": 213,
+    "classes": 3,
+    "cv_accuracy": 1.0
+  },
+  "learning_style": {
+    "samples": 285,
+    "classes": 4,
+    "cv_accuracy": 1.0
+  },
   "corpus": {
     "chunks": 1015,
     "features": 15000
+  },
+  "faiss": {
+    "vectors": 1015,
+    "dimension": 15000
   }
 }
