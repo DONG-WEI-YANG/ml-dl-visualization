@@ -3,6 +3,7 @@ import { lazy, Suspense } from "react";
 import { WEEKS } from "../types";
 import ChatPanel from "../components/llm/ChatPanel";
 import QuizPanel from "../components/quiz/QuizPanel";
+import ConceptCards from "../components/concepts/ConceptCards";
 
 const weekComponents: Record<number, React.LazyExoticComponent<React.ComponentType>> = {
   1: lazy(() => import("../components/viz/EnvironmentSetupViz")),
@@ -81,6 +82,8 @@ export default function WeekPage() {
             )}
           </div>
 
+          <ConceptCards week={week} />
+
           <QuizPanel week={week} />
 
           <div className="border border-gray-200 rounded-xl p-6">
@@ -89,19 +92,22 @@ export default function WeekPage() {
             </h2>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { name: "講義", icon: "📄", type: "lecture" },
-                { name: "投影片", icon: "📊", type: "slides" },
-                { name: "Notebook", icon: "📓", type: "notebook" },
-                { name: "作業", icon: "✏️", type: "assignment" },
+                { name: "講義", icon: "📄", type: "lecture", format: "PDF/HTML" },
+                { name: "投影片", icon: "📊", type: "slides", format: "PDF/HTML" },
+                { name: "Notebook", icon: "📓", type: "notebook", format: "ipynb" },
+                { name: "作業", icon: "✏️", type: "assignment", format: "PDF/HTML" },
               ].map((item) => (
                 <a
                   key={item.name}
                   href={`/api/curriculum/week/${week}/${item.type}`}
                   download
-                  className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="flex items-center justify-between px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
-                  <span>{item.icon}</span>
-                  {item.name}
+                  <span className="flex items-center gap-2">
+                    <span>{item.icon}</span>
+                    {item.name}
+                  </span>
+                  <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{item.format}</span>
                 </a>
               ))}
             </div>

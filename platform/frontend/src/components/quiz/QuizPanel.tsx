@@ -5,13 +5,14 @@ interface Question {
   id: string;
   question: string;
   options: string[];
+  category: string;
 }
 
 interface GradeResult {
   score: number;
   total: number;
   percentage: number;
-  results: { id: string; correct: boolean; correct_answer: number; user_answer: number | null }[];
+  results: { id: string; correct: boolean; correct_answer: number; user_answer: number | null; explanation: string }[];
 }
 
 export default function QuizPanel({ week }: { week: number }) {
@@ -46,7 +47,25 @@ export default function QuizPanel({ week }: { week: number }) {
     setResult(null);
   };
 
+  const getCategorySummary = () => {
+    if (!result) return null;
+    const categoryStats: Record<string, { correct: number; total: number }> = {};
+    for (const r of result.results) {
+      const q = questions.find((qq) => qq.id === r.id);
+      const cat = q?.category || "other";
+      if (!categoryStats[cat]) categoryStats[cat] = { correct: 0, total: 0 };
+      categoryStats[cat].total++;
+      if (r.correct) categoryStats[cat].correct++;
+    }
+    return categoryStats;
+  };
+
+  const categoryLabel = (cat: string) =>
+    cat === "concept" ? "概念" : cat === "application" ? "應用" : "程式";
+
   if (questions.length === 0) return null;
+
+  const categorySummary = getCategorySummary();
 
   return (
     <div className="border border-gray-200 rounded-xl p-6" role="region" aria-label="Weekly quiz">
@@ -70,8 +89,15 @@ export default function QuizPanel({ week }: { week: number }) {
             <div key={q.id} className={`p-3 rounded-lg ${
               qResult ? (qResult.correct ? "bg-green-50" : "bg-red-50") : "bg-gray-50"
             }`}>
-              <p className="text-sm font-medium mb-2">
-                {qi + 1}. {q.question}
+              <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                <span>{qi + 1}. {q.question}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                  q.category === "concept" ? "bg-blue-100 text-blue-600" :
+                  q.category === "application" ? "bg-green-100 text-green-600" :
+                  "bg-purple-100 text-purple-600"
+                }`}>
+                  {q.category === "concept" ? "概念" : q.category === "application" ? "應用" : "程式"}
+                </span>
               </p>
               <div className="space-y-1" role="radiogroup" aria-label={`Question ${qi + 1} options`}>
                 {q.options.map((opt, oi) => {
@@ -104,10 +130,46 @@ export default function QuizPanel({ week }: { week: number }) {
                   );
                 })}
               </div>
+              {qResult && !qResult.correct && qResult.explanation && (
+                <p className="mt-2 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2">
+                  💡 {qResult.explanation}
+                </p>
+              )}
             </div>
           );
         })}
       </div>
+
+      {result && categorySummary && (
+        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+          <p className="text-xs font-semibold text-gray-700 mb-2">各類別表現</p>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(categorySummary).map(([cat, stats]) => {
+              const pct = Math.round((stats.correct / stats.total) * 100);
+              const isStrong = pct >= 80;
+              const isWeak = pct < 60;
+              return (
+                <span
+                  key={cat}
+                  className={`text-xs px-2 py-1 rounded-full font-medium ${
+                    isStrong
+                      ? "bg-green-100 text-green-700"
+                      : isWeak
+                      ? "bg-red-100 text-red-700"
+                      : "bg-yellow-100 text-yellow-700"
+                  }`}
+                >
+                  {categoryLabel(cat)} {stats.correct}/{stats.total}
+                  {isStrong ? " ✓" : isWeak ? " ✗" : ""}
+                </span>
+              );
+            })}
+          </div>
+          <p className="text-[10px] text-gray-400 mt-1.5">
+            ✓ 表現優良（≥80%）　✗ 需加強（&lt;60%）
+          </p>
+        </div>
+      )}
 
       <div className="flex gap-2 mt-4">
         {!result ? (

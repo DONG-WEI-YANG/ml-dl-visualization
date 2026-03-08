@@ -10,19 +10,21 @@ def test_get_quiz_week_1():
     assert resp.status_code == 200
     data = resp.json()
     assert data["week"] == 1
-    assert len(data["questions"]) == 3
-    # Answers should not be included
+    assert len(data["questions"]) == 10
+    # Answers and explanations should not be included; category should be
     for q in data["questions"]:
         assert "id" in q
         assert "question" in q
         assert "options" in q
+        assert "category" in q
         assert "answer" not in q
+        assert "explanation" not in q
 
 
 def test_get_quiz_week_18():
     resp = client.get("/api/quiz/week/18")
     assert resp.status_code == 200
-    assert len(resp.json()["questions"]) == 3
+    assert len(resp.json()["questions"]) == 10
 
 
 def test_get_quiz_invalid_week():
@@ -43,7 +45,7 @@ def test_submit_quiz():
     assert "score" in data
     assert "total" in data
     assert "percentage" in data
-    assert data["total"] == 3
+    assert data["total"] == 10
 
 
 def test_submit_quiz_empty_answers():
