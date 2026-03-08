@@ -216,24 +216,23 @@ export default function ProjectShowcaseViz() {
           <p className="text-xs text-gray-500">
             點擊各步驟查看說明。期末專題需完成完整 ML Pipeline。
           </p>
-          <div className="flex items-center gap-1">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
             {PIPELINE_STEPS.map((step, idx) => (
-              <div key={step.id} className="flex items-center">
-                <button
-                  onClick={() => setActiveStep(activeStep === idx ? null : idx)}
-                  className={`flex flex-col items-center gap-1 px-2 py-3 rounded-lg text-xs transition-all min-w-[64px] ${
-                    activeStep === idx
-                      ? "bg-blue-50 border-2 border-blue-400 shadow-sm"
-                      : "bg-gray-50 border border-gray-200 hover:bg-gray-100"
-                  }`}
-                >
-                  <span className="text-xl">{step.icon}</span>
-                  <span className="font-medium leading-tight text-center">{step.label}</span>
-                </button>
+              <button
+                key={step.id}
+                onClick={() => setActiveStep(activeStep === idx ? null : idx)}
+                className={`flex flex-col items-center gap-1 px-2 py-3 rounded-lg text-xs transition-all ${
+                  activeStep === idx
+                    ? "bg-blue-50 border-2 border-blue-400 shadow-sm"
+                    : "bg-gray-50 border border-gray-200 hover:bg-gray-100"
+                }`}
+              >
+                <span className="text-xl">{step.icon}</span>
+                <span className="font-medium leading-tight text-center">{step.label}</span>
                 {idx < PIPELINE_STEPS.length - 1 && (
-                  <span className="text-gray-300 text-lg mx-0.5">→</span>
+                  <span className="text-gray-300 text-[10px] sm:hidden">Step {idx + 1}</span>
                 )}
-              </div>
+              </button>
             ))}
           </div>
 

@@ -51,17 +51,31 @@ export default function Sidebar() {
           學習分析
         </NavLink>
         {user?.role === "admin" && (
-          <NavLink
-            to="/admin"
-            className={({ isActive }) =>
-              `flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-                isActive ? "bg-gray-200 text-gray-900 font-medium" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-              }`
-            }
-          >
-            <span className="text-base">&#9881;</span>
-            系統管理
-          </NavLink>
+          <>
+            <NavLink
+              to="/admin/users"
+              className={({ isActive }) =>
+                `flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+                  isActive ? "bg-purple-50 text-purple-700 font-medium" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                }`
+              }
+            >
+              <span className="text-base">&#128101;</span>
+              帳號管理
+            </NavLink>
+            <NavLink
+              to="/admin"
+              end
+              className={({ isActive }) =>
+                `flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+                  isActive ? "bg-gray-200 text-gray-900 font-medium" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                }`
+              }
+            >
+              <span className="text-base">&#9881;</span>
+              系統管理
+            </NavLink>
+          </>
         )}
       </div>
 

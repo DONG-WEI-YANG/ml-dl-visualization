@@ -6,6 +6,7 @@ import Home from "./pages/Home";
 import WeekPage from "./pages/WeekPage";
 import Dashboard from "./pages/Dashboard";
 import AdminSettings from "./pages/AdminSettings";
+import UserManagement from "./pages/UserManagement";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -41,6 +42,7 @@ export default function App() {
               <Route path="week/:weekId" element={<WeekPage />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="admin" element={<AdminSettings />} />
+              <Route path="admin/users" element={<UserManagement />} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>

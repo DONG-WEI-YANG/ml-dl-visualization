@@ -25,7 +25,7 @@ export default function ChatPanel({ week, topic }: Props) {
   };
 
   return (
-    <div className="flex flex-col h-[500px] border border-gray-200 rounded-xl bg-white" role="region" aria-label="AI Tutor Chat">
+    <div className="flex flex-col h-[calc(100vh-120px)] max-h-[700px] min-h-[400px] border border-gray-200 rounded-xl bg-white" role="region" aria-label="AI Tutor Chat">
       <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b rounded-t-xl">
         <div className="flex items-center gap-2">
           <span className="font-medium text-gray-900 text-sm">AI 助教</span>

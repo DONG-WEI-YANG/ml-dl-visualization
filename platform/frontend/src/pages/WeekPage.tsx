@@ -62,8 +62,8 @@ export default function WeekPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+        <div className="space-y-4 min-w-0">
           <div className="border border-gray-200 rounded-xl p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
               視覺化互動區
@@ -108,7 +108,9 @@ export default function WeekPage() {
           </div>
         </div>
 
-        <ChatPanel week={week} topic={weekInfo.topic} />
+        <div className="lg:sticky lg:top-6 lg:self-start">
+          <ChatPanel week={week} topic={weekInfo.topic} />
+        </div>
       </div>
     </div>
   );
