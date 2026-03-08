@@ -21,3 +21,7 @@ sentence-transformers>=3.0.0
 rapidfuzz>=3.10.0
 wordfreq>=3.1.0
 faiss-cpu>=1.7.0
+pypinyin>=0.50.0
+zhconv>=1.4.0
+pycorrector>=1.0.0
+sympy>=1.12.0

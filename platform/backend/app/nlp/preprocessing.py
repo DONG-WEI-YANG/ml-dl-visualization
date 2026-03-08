@@ -18,6 +18,7 @@ _jieba = None
 _posseg = None
 _langdetect = None
 _sent_tokenize = None
+_zhconv = None
 
 
 def _get_jieba():
@@ -54,6 +55,18 @@ def _get_sent_tokenize():
         except Exception:
             _sent_tokenize = None
     return _sent_tokenize
+
+
+def _get_zhconv():
+    global _zhconv
+    if _zhconv is None:
+        try:
+            import zhconv
+            _zhconv = zhconv
+        except ImportError:
+            logger.warning("zhconv not available for text_normalizer")
+            _zhconv = False
+    return _zhconv if _zhconv is not False else None
 
 
 # ── Chinese + English stopwords ──
@@ -150,12 +163,19 @@ _FULLWIDTH_MAP = str.maketrans(
 
 
 def text_normalizer(ctx):
-    """L5: Normalize text — fullwidth->halfwidth, collapse whitespace."""
+    """L5: Normalize text — fullwidth->halfwidth, collapse whitespace, Traditional Chinese."""
     text = ctx.user_message
     # Fullwidth to halfwidth
     text = text.translate(_FULLWIDTH_MAP)
     # Collapse multiple spaces/newlines
     text = re.sub(r'\s+', ' ', text).strip()
+    # Convert to Traditional Chinese (zh-tw) for consistency
+    zc = _get_zhconv()
+    if zc is not None:
+        try:
+            text = zc.convert(text, 'zh-tw')
+        except Exception:
+            pass
     ctx.normalized_text = text
     return ctx
 

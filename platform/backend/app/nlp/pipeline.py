@@ -100,6 +100,10 @@ class NLPContext:
     completeness_score: float = 0.0                            # L42 ResponseCompletenessChecker
     completeness_missing: list[str] = field(default_factory=list)
 
+    # ── Text Correction ──
+    corrected_text: str = ""                              # corrected version of user message
+    corrections: list[dict] = field(default_factory=list)  # list of {"original": str, "corrected": str, "type": str}
+
     # ── Pipeline metadata ──
     layers_executed: list[str] = field(default_factory=list)
     total_processing_ms: float = 0.0

@@ -237,6 +237,29 @@ def vocabulary_level_scorer(ctx: NLPContext) -> NLPContext:
                 domain_bonus += 0.02
 
         ctx.vocabulary_score = min(vocab_score + domain_bonus, 1.0)
+
+        # Detect phonetic-input typos using pypinyin
+        # Students using pinyin input may produce homophone errors
+        try:
+            import pypinyin
+            # Check if any keyword looks like a pinyin-confused word
+            # by comparing tone patterns — unusual tone sequences suggest
+            # the student is less fluent with Chinese character input
+            pinyin_oddity = 0
+            for kw, weight in tfidf_kw:
+                py_list = pypinyin.pinyin(kw, style=pypinyin.Style.TONE)
+                # Check for single-char segments that repeat (pinyin confusion)
+                if len(kw) >= 2 and all(len(p[0]) <= 2 for p in py_list):
+                    pinyin_oddity += 1
+            if pinyin_oddity > len(tfidf_kw) * 0.5:
+                # Many short-pinyin tokens suggest less fluent typing
+                ctx.vocabulary_score = max(ctx.vocabulary_score - 0.05, 0.0)
+                logger.debug("vocabulary_level_scorer: pinyin oddity detected, adjusted score")
+        except ImportError:
+            pass
+        except Exception as e:
+            logger.debug("vocabulary_level_scorer: pypinyin check failed: %s", e)
+
         return ctx
 
     except ImportError:

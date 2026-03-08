@@ -27,6 +27,8 @@ from .response import assemble_response
 from .response_gen import (adjust_complexity, inject_citations,
                           generate_follow_up, generate_encouragement, check_completeness)
 from .coordinators import aggregate_confidence, resolve_conflicts, route_pipeline
+from .text_correction import normalize_chinese_variant, correct_typos, detect_pinyin_typos
+from .math_parser import parse_math_expressions
 
 # 42-layer pipeline in execution order (+ 3 coordinator layers)
 FULL_PIPELINE = [
@@ -38,6 +40,9 @@ FULL_PIPELINE = [
     split_sentences,        # L3
     detect_language,        # L4
     normalize_text,         # L5
+    normalize_chinese_variant,  # L5b: Traditional Chinese normalization
+    correct_typos,              # L5c: pycorrector typo fix
+    detect_pinyin_typos,        # L5d: pinyin-based typo detection
     filter_stopwords,       # L6
     # B. Student Understanding (L7-14)
     detect_intent,          # L7
@@ -62,6 +67,7 @@ FULL_PIPELINE = [
     recognize_entities,     # L23
     detect_code_blocks,     # L24
     detect_math,            # L25
+    parse_math_expressions, # L25b: sympy-based math parsing & validation
     score_question_quality, # L26
     score_readability,      # L27
     # C2. Resolve Conflicts (after all analysis layers)

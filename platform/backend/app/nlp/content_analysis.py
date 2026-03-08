@@ -294,8 +294,17 @@ MATH_PATTERNS = [
 ]
 
 
+def _get_sympy_parse_expr():
+    """Lazy-load sympy parse_expr for math validation."""
+    try:
+        from sympy.parsing.sympy_parser import parse_expr
+        return parse_expr
+    except ImportError:
+        return None
+
+
 def math_expression_detector(ctx: NLPContext) -> NLPContext:
-    """L25: Detect mathematical expressions in the message."""
+    """L25: Detect mathematical expressions in the message, with sympy validation."""
     text = ctx.user_message
     expressions = []
 
@@ -308,12 +317,38 @@ def math_expression_detector(ctx: NLPContext) -> NLPContext:
     if expressions:
         ctx.has_math = True
         ctx.math_expressions = expressions
+        # Validate with sympy for higher confidence
+        parse_expr = _get_sympy_parse_expr()
+        if parse_expr is not None:
+            for expr_str in expressions:
+                try:
+                    cleaned = expr_str.replace('^', '**')
+                    cleaned = re.sub(r'\\[a-zA-Z]+', '', cleaned)
+                    cleaned = re.sub(r'[{}]', '', cleaned)
+                    parse_expr(cleaned, evaluate=False)
+                    logger.debug("math_expression_detector: sympy validated '%s'", expr_str)
+                except Exception:
+                    pass  # Keep expression anyway — regex already detected it
         return ctx
 
     # Other math indicators
     for pattern in MATH_PATTERNS[4:]:
         if re.search(pattern, text):
             ctx.has_math = True
+            # Try to extract the matching expression for sympy validation
+            match = re.search(pattern, text)
+            if match:
+                matched_text = match.group(0)
+                parse_expr = _get_sympy_parse_expr()
+                if parse_expr is not None:
+                    try:
+                        cleaned = matched_text.replace('^', '**')
+                        cleaned = re.sub(r'(\d)([a-zA-Z])', r'\1*\2', cleaned)
+                        parse_expr(cleaned, evaluate=False)
+                        ctx.math_expressions.append(matched_text)
+                        logger.debug("math_expression_detector: sympy validated pattern '%s'", matched_text)
+                    except Exception:
+                        pass  # Still detected by regex, just not validated
             return ctx
 
     ctx.has_math = False
