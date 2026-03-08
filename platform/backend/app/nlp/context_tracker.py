@@ -1,6 +1,8 @@
 """Layer 5: Conversation Tracker — multi-turn context and Hint Ladder state."""
 
 import re
+import jieba
+from snownlp import SnowNLP
 from .pipeline import NLPContext
 
 FOLLOWUP_SIGNALS = [
@@ -25,25 +27,82 @@ STILL_STUCK_SIGNALS = [
 ]
 
 
+def _token_overlap_ratio(msg_a: str, msg_b: str) -> float:
+    """Compute token overlap ratio between two messages using jieba."""
+    if not msg_a or not msg_b:
+        return 0.0
+    tokens_a = set(jieba.lcut(msg_a))
+    tokens_b = set(jieba.lcut(msg_b))
+    if not tokens_a or not tokens_b:
+        return 0.0
+    intersection = tokens_a & tokens_b
+    return len(intersection) / min(len(tokens_a), len(tokens_b))
+
+
+def _get_sentiment_progression(history: list, current_msg: str) -> list:
+    """Track sentiment scores across conversation turns using SnowNLP."""
+    sentiments = []
+    for m in history:
+        if m.get("role") == "user" and m.get("content"):
+            try:
+                sentiments.append(SnowNLP(m["content"]).sentiments)
+            except Exception:
+                sentiments.append(0.5)
+    # Add current message sentiment
+    try:
+        sentiments.append(SnowNLP(current_msg).sentiments)
+    except Exception:
+        sentiments.append(0.5)
+    return sentiments
+
+
 def track_conversation(ctx: NLPContext) -> NLPContext:
     """Track multi-turn conversation state and Hint Ladder level."""
     history = ctx.conversation_history
     ctx.turn_count = sum(1 for m in history if m.get("role") == "user")
 
-    # Detect follow-up
     text = ctx.user_message
-    ctx.is_followup = ctx.turn_count > 0 and any(
+
+    # --- Regex-based follow-up detection (baseline) ---
+    regex_followup = ctx.turn_count > 0 and any(
         re.search(p, text, re.IGNORECASE) for p in FOLLOWUP_SIGNALS
     )
 
+    # --- NLP-enhanced follow-up detection via jieba token overlap ---
+    nlp_followup = False
+    if ctx.turn_count > 0:
+        prev_user_msgs = [m.get("content", "") for m in history if m.get("role") == "user"]
+        if prev_user_msgs:
+            last_msg = prev_user_msgs[-1]
+            overlap = _token_overlap_ratio(text, last_msg)
+            nlp_followup = overlap > 0.3  # Significant token overlap suggests follow-up
+
+    ctx.is_followup = regex_followup or nlp_followup
+
     # Track previous intent (from last assistant response context)
     if ctx.turn_count > 0:
-        ctx.previous_intent = ctx.intent  # Will be the current one; useful for next turn
+        ctx.previous_intent = ctx.intent
 
-    # Hint Ladder progression
+    # --- Regex-based progress/stuck detection (baseline) ---
     has_progress = any(re.search(p, text, re.IGNORECASE) for p in PROGRESS_SIGNALS)
     still_stuck = any(re.search(p, text, re.IGNORECASE) for p in STILL_STUCK_SIGNALS)
 
+    # --- NLP-enhanced: sentiment progression via SnowNLP ---
+    sentiment_decline = False
+    if ctx.turn_count > 0:
+        sentiments = _get_sentiment_progression(history, text)
+        if len(sentiments) >= 2:
+            recent = sentiments[-1]
+            prev_avg = sum(sentiments[:-1]) / len(sentiments[:-1])
+            # Declining sentiment suggests escalation needed
+            if recent < prev_avg - 0.15:
+                sentiment_decline = True
+
+    # Combine regex + NLP for stuck detection
+    if sentiment_decline and not has_progress:
+        still_stuck = True
+
+    # Hint Ladder progression
     if ctx.turn_count == 0:
         ctx.hint_level = 1  # Start with clarification
     elif still_stuck and ctx.turn_count >= 3:
@@ -51,7 +110,7 @@ def track_conversation(ctx: NLPContext) -> NLPContext:
     elif still_stuck:
         ctx.hint_level = min(ctx.hint_level + 1, 4)
     elif has_progress:
-        ctx.hint_level = min(ctx.hint_level + 1, 3)  # Progress → next level, max step guidance
+        ctx.hint_level = min(ctx.hint_level + 1, 3)  # Progress -> next level
     elif ctx.turn_count >= 2:
         ctx.hint_level = min(ctx.turn_count, 3)  # Gradually escalate
     else:

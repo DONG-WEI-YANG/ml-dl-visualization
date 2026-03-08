@@ -1,5 +1,8 @@
 """Layer 7: Response Assembly — adaptive response generation using all NLP layers."""
 
+import jieba.analyse
+import textstat
+from snownlp import SnowNLP
 from .pipeline import NLPContext
 
 # ── Base templates (by intent) ──
@@ -164,7 +167,23 @@ HOMEWORK_GUARD = (
 
 def assemble_response(ctx: NLPContext) -> NLPContext:
     """Assemble the final response using all NLP layer outputs."""
-    topic = "、".join(ctx.keywords[:3]) if ctx.keywords else ctx.user_message[:20]
+    # --- NLP-enhanced topic extraction via jieba TF-IDF ---
+    nlp_topics = []
+    try:
+        nlp_topics = jieba.analyse.extract_tags(ctx.user_message, topK=5)
+    except Exception:
+        pass
+    topic = "、".join(nlp_topics[:3]) if nlp_topics else (
+        "、".join(ctx.keywords[:3]) if ctx.keywords else ctx.user_message[:20]
+    )
+
+    # --- Extract RAG context keywords via SnowNLP ---
+    rag_keywords = []
+    if ctx.rag_context:
+        try:
+            rag_keywords = SnowNLP(ctx.rag_context).keywords(5)
+        except Exception:
+            pass
 
     # No context found
     if not ctx.rag_context:
@@ -187,13 +206,17 @@ def assemble_response(ctx: NLPContext) -> NLPContext:
         parts.append(prefix)
 
     # 2. Main content (intent template + RAG context)
+    # Use NLP-extracted topic for smarter template filling
     template = INTENT_TEMPLATES.get(ctx.intent, INTENT_TEMPLATES["general"])
     parts.append(template.format(topic=topic, context=ctx.rag_context))
 
-    # 3. Domain concept note
+    # 3. Domain concept note (enhanced with RAG keywords)
     concept_note = _concept_note(ctx)
     if concept_note:
         parts.append(concept_note)
+    elif rag_keywords:
+        kw_str = "、".join(rag_keywords[:3])
+        parts.append(f"\n\n📌 **相關關鍵詞：** {kw_str}\n")
 
     # 4. Separator
     parts.append("\n---")
@@ -224,4 +247,15 @@ def assemble_response(ctx: NLPContext) -> NLPContext:
         parts.append("\n\n⏰ 看起來你比較趕時間，我盡量給重點。如果需要更詳細的說明，完成後再回來問我。")
 
     ctx.response = "".join(parts)
+
+    # --- NLP: Check readability vs student level using textstat ---
+    try:
+        reading_ease = textstat.flesch_reading_ease(ctx.response)
+        level_thresholds = {"beginner": 60, "intermediate": 40, "advanced": 20}
+        target = level_thresholds.get(ctx.student_level, 40)
+        if reading_ease < target and ctx.student_level == "beginner":
+            ctx.response += "\n\n📝 **提示：** 以上內容較為進階，建議搭配教材中的基礎說明一起閱讀。"
+    except Exception:
+        pass
+
     return ctx

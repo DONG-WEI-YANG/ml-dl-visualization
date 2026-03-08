@@ -8,6 +8,15 @@ L41 EncouragementGenerator — emotion-aware encouragement
 L42 ResponseCompletenessChecker — check response quality
 """
 
+import jieba
+import jieba.analyse
+import jieba.posseg as posseg
+import textstat
+import numpy as np
+from snownlp import SnowNLP
+from rapidfuzz import fuzz, process as rfprocess
+from wordfreq import word_frequency
+
 from .pipeline import NLPContext
 from .response import (
     INTENT_TEMPLATES, EMOTION_PREFIX, LEVEL_GUIDANCE,
@@ -86,9 +95,41 @@ def complexity_adjuster(ctx: NLPContext) -> NLPContext:
     if not ctx.response:
         return ctx
 
+    # --- NLP: Measure actual complexity with textstat ---
+    try:
+        reading_ease = textstat.flesch_reading_ease(ctx.response)
+        text_standard = textstat.text_standard(ctx.response, float_output=True)
+    except Exception:
+        reading_ease = 50.0
+        text_standard = 6.0
+
+    # --- NLP: Count technical vs common terms using jieba + wordfreq ---
+    tokens = jieba.lcut(ctx.response)
+    technical_count = 0
+    common_count = 0
+    for token in tokens:
+        if len(token) < 2:
+            continue
+        freq = word_frequency(token, "zh")
+        if freq < 1e-6:
+            technical_count += 1  # Rare word = likely technical
+        else:
+            common_count += 1
+    total_meaningful = technical_count + common_count
+    tech_ratio = technical_count / total_meaningful if total_meaningful > 0 else 0.0
+
+    # --- Determine complexity from actual measurement ---
+    # reading_ease: higher = easier; text_standard: higher = harder
+    if reading_ease > 60 and tech_ratio < 0.3:
+        measured_complexity = "simple"
+    elif reading_ease < 30 or tech_ratio > 0.5:
+        measured_complexity = "advanced"
+    else:
+        measured_complexity = "moderate"
+
+    # --- Original logic (kept as baseline) ---
     if ctx.student_level == "beginner" and ctx.question_complexity == "simple":
         ctx.response_complexity = "simple"
-        # Add simplified explanation marker
         if len(ctx.response) > 500:
             ctx.response += "\n\n\ud83d\udcdd **\u7c21\u55ae\u4f86\u8aaa\uff1a** \u4e0a\u9762\u7684\u5167\u5bb9\u6bd4\u8f03\u591a\uff0c\u5efa\u8b70\u5148\u8b80\u6a19\u793a\u70ba\u300c\u521d\u5b78\u8005\u5efa\u8b70\u300d\u7684\u90e8\u5206\u3002"
     elif ctx.student_level == "advanced":
@@ -96,21 +137,72 @@ def complexity_adjuster(ctx: NLPContext) -> NLPContext:
     else:
         ctx.response_complexity = "moderate"
 
+    # --- NLP: Override if measured complexity mismatches student level ---
+    if ctx.student_level == "beginner" and measured_complexity == "advanced":
+        ctx.response_complexity = "moderate"
+        ctx.response += "\n\n\ud83d\udcdd **\u8907\u96dc\u5ea6\u63d0\u793a\uff1a** \u9019\u500b\u56de\u7b54\u5305\u542b\u8f03\u591a\u5c08\u696d\u8853\u8a9e\uff0c\u5efa\u8b70\u5148\u5c08\u6ce8\u7406\u89e3\u6a19\u793a\u70ba\u300c\u521d\u5b78\u8005\u5efa\u8b70\u300d\u7684\u90e8\u5206\u3002"
+    elif ctx.student_level == "advanced" and measured_complexity == "simple":
+        ctx.response_complexity = "moderate"
+
     return ctx
 
 
 # ── L39: Citation Injector ──
 
+# Known curriculum title patterns for fuzzy matching
+_CURRICULUM_TITLES = [
+    "機器學習基礎", "深度學習導論", "神經網路", "梯度下降",
+    "反向傳播", "卷積神經網路", "循環神經網路", "注意力機制",
+    "Transformer", "GAN", "強化學習", "自然語言處理",
+    "資料預處理", "特徵工程", "模型評估", "超參數調整",
+    "正規化", "最佳化", "損失函數", "啟動函數",
+]
+
+
 def citation_injector(ctx: NLPContext) -> NLPContext:
     """L39: Add explicit references to curriculum materials."""
-    if not ctx.rag_sources:
-        return ctx
+    # --- Original: use rag_sources ---
+    unique_sources = list(dict.fromkeys(ctx.rag_sources))[:3] if ctx.rag_sources else []
 
-    unique_sources = list(dict.fromkeys(ctx.rag_sources))[:3]
-    ctx.citations = unique_sources
+    # --- NLP: Extract proper nouns from RAG context via jieba.posseg ---
+    nlp_sources = []
+    if ctx.rag_context:
+        try:
+            words = posseg.lcut(ctx.rag_context)
+            # nr=person, ns=place, nt=org, nz=other proper noun
+            proper_nouns = [w.word for w in words if w.flag in ("nr", "ns", "nt", "nz") and len(w.word) >= 2]
+            # Deduplicate while preserving order
+            seen = set()
+            for pn in proper_nouns:
+                if pn not in seen:
+                    seen.add(pn)
+                    nlp_sources.append(pn)
+        except Exception:
+            pass
 
-    citation_text = "\n\n\ud83d\udcd6 **\u53c3\u8003\u4f86\u6e90\uff1a**\n" + "\n".join([f"- {s}" for s in unique_sources])
-    ctx.response += citation_text
+    # --- NLP: Fuzzy match extracted sources against curriculum titles ---
+    matched_titles = []
+    all_candidates = unique_sources + nlp_sources
+    for candidate in all_candidates:
+        try:
+            matches = rfprocess.extract(candidate, _CURRICULUM_TITLES, scorer=fuzz.partial_ratio, limit=1)
+            if matches and matches[0][1] >= 70:
+                matched_titles.append(f"{candidate}（相關：{matches[0][0]}）")
+            else:
+                matched_titles.append(candidate)
+        except Exception:
+            matched_titles.append(candidate)
+
+    # Deduplicate and limit
+    final_sources = list(dict.fromkeys(matched_titles))[:5]
+    if not final_sources:
+        final_sources = unique_sources
+
+    ctx.citations = final_sources if final_sources else unique_sources
+
+    if ctx.citations:
+        citation_text = "\n\n\ud83d\udcd6 **\u53c3\u8003\u4f86\u6e90\uff1a**\n" + "\n".join([f"- {s}" for s in ctx.citations])
+        ctx.response += citation_text
 
     return ctx
 
@@ -128,6 +220,17 @@ FOLLOWUP_TEMPLATES = {
 }
 
 
+# Domain concept map for follow-up question generation
+_DOMAIN_CONCEPT_MAP = [
+    "梯度下降", "學習率", "損失函數", "反向傳播", "過擬合",
+    "正規化", "批次大小", "激活函數", "卷積", "池化",
+    "注意力機制", "Transformer", "嵌入", "特徵提取",
+    "資料增強", "交叉驗證", "混淆矩陣", "精確率", "召回率",
+    "F1 分數", "偏差", "變異數", "Dropout", "批次正規化",
+    "遷移學習", "微調", "生成對抗網路", "自編碼器",
+]
+
+
 def follow_up_generator(ctx: NLPContext) -> NLPContext:
     """L40: Generate follow-up questions to guide student thinking."""
     templates = FOLLOWUP_TEMPLATES.get(ctx.intent, FOLLOWUP_TEMPLATES["general"])
@@ -136,14 +239,55 @@ def follow_up_generator(ctx: NLPContext) -> NLPContext:
     idx = min(ctx.hint_level - 1, len(templates) - 1)
     question = templates[idx]
 
-    # Fill in related concept if template has {related}
-    if "{related}" in question and ctx.domain_concepts:
-        question = question.format(related=ctx.domain_concepts[0])
+    # --- NLP: Extract keywords from user message ---
+    user_keywords = []
+    try:
+        user_keywords = jieba.analyse.extract_tags(ctx.user_message, topK=5)
+    except Exception:
+        pass
+
+    # --- NLP: Extract keywords via SnowNLP ---
+    snow_keywords = []
+    try:
+        snow_keywords = SnowNLP(ctx.user_message).keywords(3)
+    except Exception:
+        pass
+
+    # Merge NLP keywords
+    all_keywords = list(dict.fromkeys(user_keywords + snow_keywords))
+
+    # --- NLP: Find related concepts via rapidfuzz fuzzy matching ---
+    related_concepts = []
+    if all_keywords:
+        for kw in all_keywords[:3]:
+            try:
+                matches = rfprocess.extract(kw, _DOMAIN_CONCEPT_MAP, scorer=fuzz.ratio, limit=2)
+                for match_text, score, _ in matches:
+                    if score >= 50 and match_text not in related_concepts:
+                        related_concepts.append(match_text)
+            except Exception:
+                pass
+
+    # Fill in related concept with NLP-found concept (or domain_concepts fallback)
+    related = (
+        related_concepts[0] if related_concepts
+        else ctx.domain_concepts[0] if ctx.domain_concepts
+        else "其他相關概念"
+    )
+    if "{related}" in question:
+        question = question.format(related=related)
     else:
-        question = question.replace("{related}", "\u5176\u4ed6\u76f8\u95dc\u6982\u5ff5")
+        question = question.replace("{related}", related)
 
     ctx.follow_up_questions = [question]
-    ctx.response += f"\n\n\u2753 **\u601d\u8003\u984c\uff1a** {question}"
+
+    # Add NLP-generated concept-specific follow-up if related concepts found
+    if related_concepts and len(related_concepts) > 1:
+        extra_concept = related_concepts[1]
+        extra_q = f"你知道「{extra_concept}」和這個主題的關聯嗎？"
+        ctx.follow_up_questions.append(extra_q)
+
+    ctx.response += f"\n\n\u2753 **\u601d\u8003\u984c\uff1a** {ctx.follow_up_questions[0]}"
 
     return ctx
 
@@ -172,12 +316,41 @@ ENCOURAGEMENTS = {
 
 def encouragement_generator(ctx: NLPContext) -> NLPContext:
     """L41: Add emotion-aware encouragement."""
-    msgs = ENCOURAGEMENTS.get(ctx.emotion, [])
+    import random
+
+    # --- NLP: Fine-grained sentiment via SnowNLP ---
+    try:
+        nlp_sentiment = SnowNLP(ctx.user_message).sentiments
+    except Exception:
+        nlp_sentiment = 0.5
+
+    # --- NLP: Compute weighted encouragement intensity via numpy ---
+    # Factors: frustration_level (0-5), sentiment (0-1), confidence (0-1), turn_count
+    factors = np.array([
+        ctx.frustration_level / 5.0,        # Higher frustration = more encouragement
+        1.0 - nlp_sentiment,                # Lower sentiment = more encouragement
+        1.0 - ctx.confidence_level,         # Lower confidence = more encouragement
+        min(ctx.turn_count / 5.0, 1.0),     # More turns = more encouragement
+    ])
+    weights = np.array([0.35, 0.25, 0.25, 0.15])
+    intensity = float(np.dot(factors, weights))  # 0.0 to 1.0
+
+    # Select encouragement based on intensity, not just emotion category
+    if intensity > 0.6:
+        # High intensity: use frustrated encouragements
+        msgs = ENCOURAGEMENTS.get("frustrated", [])
+    elif intensity > 0.4:
+        # Medium intensity: use confused encouragements
+        msgs = ENCOURAGEMENTS.get("confused", ENCOURAGEMENTS.get(ctx.emotion, []))
+    else:
+        # Low intensity: use emotion-based or curious
+        msgs = ENCOURAGEMENTS.get(ctx.emotion, [])
+
     if msgs:
-        import random
         msg = random.choice(msgs)
         ctx.encouragement = msg
-        if ctx.emotion in ("frustrated", "confused"):
+        # Show encouragement if intensity is meaningful or emotion calls for it
+        if intensity > 0.35 or ctx.emotion in ("frustrated", "confused"):
             ctx.response += f"\n\n\ud83d\udcaa {msg}"
 
     return ctx
@@ -187,30 +360,71 @@ def encouragement_generator(ctx: NLPContext) -> NLPContext:
 
 def response_completeness_checker(ctx: NLPContext) -> NLPContext:
     """L42: Check if the response addresses all detected sub-questions."""
-    score = 0.5
+    # --- NLP: Measure response substance with textstat ---
+    try:
+        word_count = textstat.lexicon_count(ctx.response, removepunct=True)
+        sentence_count = textstat.sentence_count(ctx.response)
+    except Exception:
+        word_count = len(ctx.response)
+        sentence_count = max(1, ctx.response.count("。") + ctx.response.count("."))
+
+    # --- NLP: Keyword coverage via jieba + rapidfuzz ---
+    user_keywords = []
+    response_keywords = []
+    try:
+        user_keywords = jieba.analyse.extract_tags(ctx.user_message, topK=8)
+        response_keywords = jieba.analyse.extract_tags(ctx.response, topK=15)
+    except Exception:
+        pass
+
+    coverage_score = 0.0
+    if user_keywords and response_keywords:
+        matched = 0
+        for uk in user_keywords:
+            # Check if any response keyword fuzzy-matches the user keyword
+            try:
+                best = rfprocess.extractOne(uk, response_keywords, scorer=fuzz.ratio)
+                if best and best[1] >= 60:
+                    matched += 1
+            except Exception:
+                if uk in " ".join(response_keywords):
+                    matched += 1
+        coverage_score = matched / len(user_keywords) if user_keywords else 0.0
+
+    # --- NLP: Multi-dimensional completeness scoring with numpy ---
+    # Dimensions: coverage, length, complexity, follow-up, citations
+    dims = np.array([
+        coverage_score,                                          # keyword coverage
+        min(word_count / 200.0, 1.0),                           # response length adequacy
+        1.0 if ctx.rag_context else 0.0,                        # has RAG context
+        1.0 if ctx.follow_up_questions else 0.0,                # has follow-up
+        min(len(ctx.citations) / 2.0, 1.0) if ctx.citations else 0.0,  # has citations
+    ])
+    dim_weights = np.array([0.30, 0.20, 0.25, 0.15, 0.10])
+    nlp_score = float(np.dot(dims, dim_weights))
+
+    # --- Original boolean checks (kept as baseline) ---
+    base_score = 0.5
     missing = []
 
-    # Has RAG content?
     if ctx.rag_context:
-        score += 0.2
+        base_score += 0.2
 
-    # Addresses the intent?
     if ctx.intent != "general" and ctx.intent in ctx.response.lower():
-        score += 0.1
+        base_score += 0.1
 
-    # Has follow-up question?
     if ctx.follow_up_questions:
-        score += 0.1
+        base_score += 0.1
 
-    # Knowledge gaps addressed?
     if ctx.knowledge_gaps and not any(gap in ctx.response for gap in ctx.knowledge_gaps):
         missing.append("\u5148\u5099\u77e5\u8b58\u63d0\u793a")
 
-    # Misconceptions addressed?
     if ctx.misconceptions and not any("\u8ff7\u601d" in ctx.response for _ in ctx.misconceptions):
         missing.append("\u8ff7\u601d\u6982\u5ff5\u63d0\u9192")
 
-    ctx.completeness_score = min(score, 1.0)
+    # --- Combine original + NLP scores ---
+    combined_score = 0.5 * min(base_score, 1.0) + 0.5 * nlp_score
+    ctx.completeness_score = min(combined_score, 1.0)
     ctx.completeness_missing = missing
 
     return ctx
