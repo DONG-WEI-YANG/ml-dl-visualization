@@ -1,0 +1,1 @@
+{"description": "MNIST sample - 10 images per digit (0-9) as 28x28 pixel arrays, for CNN visualization in Week 12", "format": "JSON array of {label, pixels: number[784]}", "source": "LeCun et al., CC BY-SA 3.0", "note": "Full dataset available at https://yann.lecun.com/exdb/mnist/"}

@@ -1,0 +1,16 @@
+{
+  "intent": {
+    "samples": 2831,
+    "classes": 19,
+    "cv_accuracy": 0.893262726842449
+  },
+  "emotion": {
+    "samples": 521,
+    "classes": 5,
+    "cv_accuracy": 0.8384160520895622
+  },
+  "corpus": {
+    "chunks": 1015,
+    "features": 15000
+  }
+}

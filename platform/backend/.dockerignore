@@ -1,0 +1,8 @@
+__pycache__
+*.pyc
+.pytest_cache
+data/app.db
+data/nlp_models/*.pkl
+.env
+.venv
+*.egg-info
