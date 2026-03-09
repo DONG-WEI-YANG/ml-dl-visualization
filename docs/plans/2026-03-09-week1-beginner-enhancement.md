@@ -1,23 +1,27 @@
-import { useState, useMemo, useCallback } from "react";
-import {
-  ScatterChart,
-  Scatter,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+# Week 1 初學者友善增強 Implementation Plan
 
-/* ──────────────────── Types ──────────────────── */
+> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+
+**Goal:** 增強 EnvironmentSetupViz.tsx 讓 Week 1 更適合初學者，加入醫療情境引導、手動擬合、過擬合互動體驗
+
+**Architecture:** 單一檔案修改 `platform/frontend/src/components/viz/EnvironmentSetupViz.tsx`，新增 1 個 tab（過擬合體驗）、增強 3 個現有 tab（認識AI、動手預測、名詞對照），保留 2 個不動（ML工作流程、環境建置）。全部純前端計算，不需後端。
+
+**Tech Stack:** React 19 + TypeScript + Recharts + Tailwind CSS 4
+
+---
+
+### Task 1: Tab 結構更新 + 新增過擬合資料與數學工具
+
+**Files:**
+- Modify: `platform/frontend/src/components/viz/EnvironmentSetupViz.tsx:14-25`（TabId type + TABS array）
+- Modify: `platform/frontend/src/components/viz/EnvironmentSetupViz.tsx:1`（加入 LineChart import）
+- Modify: `platform/frontend/src/components/viz/EnvironmentSetupViz.tsx:162-193`（main component routing）
+
+**Step 1: Update TabId and TABS**
+
+```typescript
 type TabId = "landscape" | "workflow" | "tryit" | "overfit" | "glossary" | "setup";
-interface Point { x: number; y: number }
-interface Term { zh: string; en: string; desc: string; cat: string }
 
-/* ──────────────────── Tabs ──────────────────── */
 const TABS: { id: TabId; label: string }[] = [
   { id: "landscape", label: "認識 AI" },
   { id: "workflow", label: "ML 工作流程" },
@@ -26,76 +30,26 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "glossary", label: "名詞對照" },
   { id: "setup", label: "環境建置" },
 ];
+```
 
-/* ──────────────────── View 1 Data ──────────────────── */
-const LAYERS = [
-  {
-    id: "ai",
-    label: "人工智慧 AI",
-    color: "#6366f1",
-    bg: "bg-indigo-50",
-    border: "border-indigo-300",
-    ring: "ring-indigo-400",
-    desc: "讓機器展現智慧行為的技術總稱，涵蓋規則系統、搜尋演算法與學習方法。",
-    examples: ["語音助手 (Siri, Alexa)", "自動翻譯 (Google Translate)", "棋類 AI (AlphaGo)"],
-  },
-  {
-    id: "ml",
-    label: "機器學習 ML",
-    color: "#8b5cf6",
-    bg: "bg-violet-50",
-    border: "border-violet-300",
-    ring: "ring-violet-400",
-    desc: "AI 的子領域：讓機器從資料中自動學習規律，不需明確撰寫規則。",
-    examples: ["垃圾郵件過濾", "疾病風險預測", "推薦系統 (Netflix, YouTube)"],
-  },
-  {
-    id: "dl",
-    label: "深度學習 DL",
-    color: "#a855f7",
-    bg: "bg-purple-50",
-    border: "border-purple-300",
-    ring: "ring-purple-400",
-    desc: "ML 的子領域：使用多層神經網路從大量資料中自動提取特徵。",
-    examples: ["醫療影像判讀 (X-ray, CT)", "自然語言理解 (ChatGPT)", "自動駕駛"],
-  },
-];
+**Step 2: Add LineChart to Recharts import**
 
-/* ──────────────────── View 2 Data ──────────────────── */
-const STEPS = [
-  { title: "問題定義", en: "Define Problem", icon: "🎯", color: "bg-blue-500",
-    detail: "釐清要解決什麼問題、預測什麼目標。例如：「根據患者的體檢數據預測糖尿病風險」。確認是分類還是回歸問題。" },
-  { title: "資料收集與清理", en: "Collect & Clean Data", icon: "🗂️", color: "bg-emerald-500",
-    detail: "收集相關資料（病歷、檢驗結果等），處理缺失值、移除異常值、統一格式。資料品質決定模型上限。" },
-  { title: "特徵工程", en: "Feature Engineering", icon: "🔧", color: "bg-amber-500",
-    detail: "從原始資料中挑選或建構對預測有幫助的特徵，例如將身高體重轉換為 BMI。好的特徵能大幅提升模型效果。" },
-  { title: "模型訓練", en: "Train Model", icon: "🧠", color: "bg-rose-500",
-    detail: "選擇演算法（如決策樹、神經網路），讓模型從訓練資料中學習規律，逐步調整參數以最小化預測誤差。" },
-  { title: "評估與部署", en: "Evaluate & Deploy", icon: "🚀", color: "bg-violet-500",
-    detail: "用測試集評估模型表現（準確率、F1 等），確認無過擬合後部署到生產環境，持續監控效能。" },
-];
+```typescript
+import {
+  ScatterChart, Scatter, LineChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from "recharts";
+```
 
-/* ──────────────────── View 3 Helpers ──────────────────── */
-const INITIAL_POINTS: Point[] = [
-  { x: 1, y: 30 }, { x: 2, y: 45 }, { x: 3, y: 55 }, { x: 4, y: 50 },
-  { x: 5, y: 65 }, { x: 6, y: 70 }, { x: 7, y: 75 }, { x: 8, y: 85 },
-  { x: 9, y: 90 }, { x: 10, y: 95 },
-];
+**Step 3: Add overfit tab routing in main component**
 
-function leastSquares(points: Point[]) {
-  const n = points.length;
-  if (n < 2) return { w: 0, b: 0 };
-  const sumX = points.reduce((s, p) => s + p.x, 0);
-  const sumY = points.reduce((s, p) => s + p.y, 0);
-  const sumXY = points.reduce((s, p) => s + p.x * p.y, 0);
-  const sumX2 = points.reduce((s, p) => s + p.x * p.x, 0);
-  const denom = n * sumX2 - sumX * sumX;
-  if (Math.abs(denom) < 1e-10) return { w: 0, b: Math.round(sumY / n * 100) / 100 };
-  const w = (n * sumXY - sumX * sumY) / denom;
-  const b = (sumY - w * sumX) / n;
-  return { w: Math.round(w * 100) / 100, b: Math.round(b * 100) / 100 };
-}
+```tsx
+{tab === "overfit" && <OverfittingView />}
+```
 
+**Step 4: Add polynomial fitting helpers after leastSquares function**
+
+```typescript
 /* ──────────────────── Polynomial Fitting ──────────────────── */
 const OVERFIT_TRAIN: Point[] = [
   { x: 0.5, y: 2.3 }, { x: 1.2, y: 3.8 }, { x: 1.8, y: 5.1 }, { x: 2.5, y: 4.5 },
@@ -150,109 +104,27 @@ function calcMSE(coeffs: number[], points: Point[]): number {
   const sum = points.reduce((s, p) => s + Math.pow(p.y - polyEval(coeffs, p.x), 2), 0);
   return sum / points.length;
 }
+```
 
-/* ──────────────────── View 4 Data ──────────────────── */
-const CATEGORIES = ["基礎概念", "資料處理", "模型訓練", "評估指標", "深度學習"] as const;
-const TERMS: Term[] = [
-  { zh: "人工智慧", en: "Artificial Intelligence (AI)", desc: "讓機器展現智慧行為的技術總稱", cat: "基礎概念" },
-  { zh: "機器學習", en: "Machine Learning (ML)", desc: "從資料中自動學習規律的方法", cat: "基礎概念" },
-  { zh: "深度學習", en: "Deep Learning (DL)", desc: "使用多層神經網路的機器學習方法", cat: "基礎概念" },
-  { zh: "監督式學習", en: "Supervised Learning", desc: "使用標記資料訓練模型", cat: "基礎概念" },
-  { zh: "非監督式學習", en: "Unsupervised Learning", desc: "在無標記資料中發現結構", cat: "基礎概念" },
-  { zh: "強化學習", en: "Reinforcement Learning", desc: "透過獎勵信號學習決策", cat: "基礎概念" },
-  { zh: "回歸", en: "Regression", desc: "預測連續數值", cat: "基礎概念" },
-  { zh: "分類", en: "Classification", desc: "預測類別", cat: "基礎概念" },
-  { zh: "特徵", en: "Feature", desc: "描述資料的屬性/變數", cat: "資料處理" },
-  { zh: "標籤", en: "Label", desc: "資料的正確答案", cat: "資料處理" },
-  { zh: "訓練集", en: "Training Set", desc: "用來訓練模型的資料", cat: "資料處理" },
-  { zh: "測試集", en: "Test Set", desc: "用來評估模型的資料", cat: "資料處理" },
-  { zh: "資料增強", en: "Data Augmentation", desc: "人工擴增訓練資料多樣性", cat: "資料處理" },
-  { zh: "正規化", en: "Normalization", desc: "將資料縮放到統一範圍", cat: "資料處理" },
-  { zh: "標準化", en: "Standardization", desc: "將資料轉換為平均0、標準差1", cat: "資料處理" },
-  { zh: "特徵工程", en: "Feature Engineering", desc: "從原始資料建構有用的特徵", cat: "資料處理" },
-  { zh: "損失函數", en: "Loss Function", desc: "衡量預測與實際的差距", cat: "模型訓練" },
-  { zh: "梯度下降", en: "Gradient Descent", desc: "逐步調整參數以最小化損失", cat: "模型訓練" },
-  { zh: "學習率", en: "Learning Rate", desc: "梯度下降每步的步幅", cat: "模型訓練" },
-  { zh: "過擬合", en: "Overfitting", desc: "模型在訓練集表現好但在新資料表現差", cat: "模型訓練" },
-  { zh: "欠擬合", en: "Underfitting", desc: "模型連訓練集都學不好", cat: "模型訓練" },
-  { zh: "正則化", en: "Regularization", desc: "防止過擬合的技巧", cat: "模型訓練" },
-  { zh: "超參數", en: "Hyperparameter", desc: "需要手動設定的模型參數", cat: "模型訓練" },
-  { zh: "批次大小", en: "Batch Size", desc: "每次更新使用的資料量", cat: "模型訓練" },
-  { zh: "世代", en: "Epoch", desc: "完整遍歷一次訓練資料", cat: "模型訓練" },
-  { zh: "集成學習", en: "Ensemble Learning", desc: "結合多個模型提升效能", cat: "模型訓練" },
-  { zh: "遷移學習", en: "Transfer Learning", desc: "利用預訓練模型的知識", cat: "模型訓練" },
-  { zh: "模型部署", en: "Model Deployment", desc: "將模型放到生產環境中使用", cat: "模型訓練" },
-  { zh: "準確率", en: "Accuracy", desc: "正確預測的比例", cat: "評估指標" },
-  { zh: "精確率", en: "Precision", desc: "預測為正例中實際為正例的比例", cat: "評估指標" },
-  { zh: "召回率", en: "Recall", desc: "實際正例中被正確預測的比例", cat: "評估指標" },
-  { zh: "F1 分數", en: "F1 Score", desc: "精確率和召回率的調和平均", cat: "評估指標" },
-  { zh: "交叉驗證", en: "Cross-Validation", desc: "多次分割資料以可靠評估模型", cat: "評估指標" },
-  { zh: "混淆矩陣", en: "Confusion Matrix", desc: "分類結果的詳細統計表", cat: "評估指標" },
-  { zh: "神經網路", en: "Neural Network", desc: "模仿生物神經元的計算模型", cat: "深度學習" },
-  { zh: "激活函數", en: "Activation Function", desc: "增加神經網路非線性能力的函數", cat: "深度學習" },
-  { zh: "卷積神經網路", en: "CNN", desc: "擅長處理影像的神經網路", cat: "深度學習" },
-  { zh: "遞迴神經網路", en: "RNN", desc: "擅長處理序列的神經網路", cat: "深度學習" },
-  { zh: "注意力機制", en: "Attention", desc: "讓模型聚焦於重要部分", cat: "深度學習" },
-  { zh: "嵌入", en: "Embedding", desc: "將離散資料映射為連續向量", cat: "深度學習" },
-];
+**Step 5: Verify** — Run `npm run build` (or `npx tsc --noEmit`) from `platform/frontend/` to confirm no type errors.
 
-/* ──────────────────── View 5 Data ──────────────────── */
-const PACKAGES = [
-  { name: "Python", version: "3.10+", desc: "程式語言", cmd: "python.org 下載安裝",
-    why: "所有套件的基礎，ML/DL 領域最主流的程式語言。" },
-  { name: "NumPy", version: "1.24+", desc: "數值計算", cmd: "pip install numpy",
-    why: "提供高效的多維陣列運算，是幾乎所有 ML 套件的底層依賴。" },
-  { name: "Pandas", version: "2.0+", desc: "資料處理", cmd: "pip install pandas",
-    why: "方便讀取、清理、轉換表格資料（CSV、Excel 等）。" },
-  { name: "Matplotlib", version: "3.7+", desc: "繪圖", cmd: "pip install matplotlib",
-    why: "基礎繪圖庫，可畫折線圖、散佈圖、直方圖等視覺化。" },
-  { name: "Seaborn", version: "0.12+", desc: "統計繪圖", cmd: "pip install seaborn",
-    why: "建立在 Matplotlib 上的高階統計圖表，一行程式碼即可畫出美觀圖表。" },
-  { name: "Scikit-learn", version: "1.3+", desc: "機器學習", cmd: "pip install scikit-learn",
-    why: "最常用的 ML 工具箱，包含分類、回歸、聚類等演算法與評估工具。" },
-  { name: "Jupyter", version: "4.0+", desc: "互動筆記本", cmd: "pip install jupyter",
-    why: "互動式開發環境，可逐步執行程式碼並即時看到結果，非常適合學習。" },
-  { name: "PyTorch", version: "2.0+", desc: "深度學習 (W11+)", cmd: "pip install torch",
-    why: "主流深度學習框架，第 11 週開始使用，用於建構與訓練神經網路。" },
-];
+---
 
-/* ══════════════════ Main Component ══════════════════ */
-export default function EnvironmentSetupViz() {
-  const [tab, setTab] = useState<TabId>("landscape");
+### Task 2: 增強 LandscapeView — 醫療情境引導 + 逐步揭露
 
-  return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold">ML/DL 概論 Introduction to ML/DL</h3>
+**Files:**
+- Modify: `platform/frontend/src/components/viz/EnvironmentSetupViz.tsx` — LandscapeView function (lines 197-248)
 
-      {/* ── Tab Bar ── */}
-      <div className="flex flex-wrap gap-1 border-b border-gray-200 pb-1">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`px-3 py-1.5 rounded-t-lg text-sm font-medium transition-colors ${
-              tab === t.id
-                ? "bg-indigo-600 text-white"
-                : "text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+**Step 1: Replace entire LandscapeView function**
 
-      {/* ── Tab Content ── */}
-      {tab === "landscape" && <LandscapeView />}
-      {tab === "workflow" && <WorkflowView />}
-      {tab === "tryit" && <TryItView />}
-      {tab === "overfit" && <OverfittingView />}
-      {tab === "glossary" && <GlossaryView />}
-      {tab === "setup" && <SetupView />}
-    </div>
-  );
-}
+Key changes:
+- Add `revealLevel` state (0→1→2→3) instead of `active` toggle
+- Add medical scenario intro box above SVG
+- SVG ellipses use CSS opacity transitions; only visible when `revealLevel >= layerIndex`
+- "下一層" button to advance reveal
+- Info panel auto-shows for current revealed layer
 
-/* ══════════════════ View 1: AI Landscape ══════════════════ */
+```tsx
 function LandscapeView() {
   const [revealLevel, setRevealLevel] = useState(0); // 0=none, 1=AI, 2=ML, 3=DL
 
@@ -344,56 +216,28 @@ function LandscapeView() {
     </div>
   );
 }
+```
 
-/* ══════════════════ View 2: Workflow ══════════════════ */
-function WorkflowView() {
-  const [activeStep, setActiveStep] = useState<number | null>(null);
+**Step 2: Verify** — Run dev server, navigate to Week 1, click through 3 layers.
 
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-gray-600">機器學習的五大步驟 — 點擊各步驟了解詳情：</p>
+---
 
-      <div className="flex flex-col gap-2">
-        {STEPS.map((step, i) => (
-          <div key={i}>
-            <button
-              onClick={() => setActiveStep(activeStep === i ? null : i)}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl border-2 text-left transition-all ${
-                activeStep === i ? "border-indigo-400 shadow-md" : "border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              <span className={`${step.color} text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0`}>
-                {i + 1}
-              </span>
-              <span className="text-lg mr-1">{step.icon}</span>
-              <div className="flex-1 min-w-0">
-                <span className="font-semibold text-sm">{step.title}</span>
-                <span className="text-xs text-gray-400 ml-2">{step.en}</span>
-              </div>
-              <span className="text-gray-300 text-xs">{activeStep === i ? "▲" : "▼"}</span>
-            </button>
+### Task 3: 增強 TryItView — 手動擬合模式
 
-            {activeStep === i && (
-              <div className="ml-11 mt-1 mb-1 p-3 bg-gray-50 rounded-lg text-sm text-gray-700 border border-gray-100">
-                {step.detail}
-              </div>
-            )}
+**Files:**
+- Modify: `platform/frontend/src/components/viz/EnvironmentSetupViz.tsx` — TryItView function (lines 299-387)
 
-            {i < STEPS.length - 1 && (
-              <div className="flex justify-center my-0.5">
-                <svg width="20" height="18" viewBox="0 0 20 18">
-                  <path d="M10 0 L10 12 M4 8 L10 14 L16 8" stroke="#cbd5e1" strokeWidth="2" fill="none" />
-                </svg>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+**Step 1: Replace TryItView function**
 
-/* ══════════════════ View 3: Try It ══════════════════ */
+Key changes:
+- Add `manualW` and `manualB` slider states
+- Add `mode` state: "manual" | "auto"
+- In manual mode: sliders control the line, show MSE
+- "顯示最佳解" button transitions to auto mode
+- In auto mode: show original least squares + comparison
+- Keep click-to-add-points
+
+```tsx
 function TryItView() {
   const [points, setPoints] = useState<Point[]>([...INITIAL_POINTS]);
   const [mode, setMode] = useState<"manual" | "auto">("manual");
@@ -546,7 +390,20 @@ function TryItView() {
     </div>
   );
 }
+```
 
+**Step 2: Verify** — Dev server, try sliders, click "顯示最佳解", compare MSE.
+
+---
+
+### Task 4: 新增 OverfittingView — 過擬合體驗
+
+**Files:**
+- Modify: `platform/frontend/src/components/viz/EnvironmentSetupViz.tsx` — Add new function before GlossaryView
+
+**Step 1: Add OverfittingView function**
+
+```tsx
 /* ══════════════════ View 4: Overfitting Experience ══════════════════ */
 function OverfittingView() {
   const [degree, setDegree] = useState(1);
@@ -672,8 +529,25 @@ function OverfittingView() {
     </div>
   );
 }
+```
 
-/* ══════════════════ View 5: Glossary ══════════════════ */
+**Step 2: Verify** — Slider from 1→10, observe curve behavior and MSE changes.
+
+---
+
+### Task 5: 增強 GlossaryView — 預設初學者分類
+
+**Files:**
+- Modify: `platform/frontend/src/components/viz/EnvironmentSetupViz.tsx` — GlossaryView function (lines 390-449)
+
+**Step 1: Change default catFilter to beginner categories + add toggle**
+
+Key changes:
+- Default `catFilter` to `"基礎"` (a special value showing 基礎概念 + 資料處理)
+- Add `showAdvanced` toggle state
+- When `showAdvanced` is false, filter out 深度學習 category
+
+```tsx
 function GlossaryView() {
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState<string>("基礎");
@@ -724,7 +598,7 @@ function GlossaryView() {
         )}
       </div>
 
-      {/* Table */}
+      {/* Table — same as before */}
       <div className="overflow-auto max-h-[420px] border border-gray-200 rounded-xl">
         <table className="w-full text-sm">
           <thead className="bg-gray-50 sticky top-0">
@@ -755,76 +629,20 @@ function GlossaryView() {
     </div>
   );
 }
+```
 
-/* ══════════════════ View 6: Setup ══════════════════ */
-function SetupView() {
-  const [checked, setChecked] = useState<Record<string, boolean>>({});
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+**Step 2: Verify** — Default shows ~16 beginner terms, select "全部" shows more, toggle shows DL terms.
 
-  const toggle = (name: string) => setChecked((p) => ({ ...p, [name]: !p[name] }));
-  const toggleWhy = (name: string) => setExpanded((p) => ({ ...p, [name]: !p[name] }));
+---
 
-  const done = Object.values(checked).filter(Boolean).length;
-  const pct = Math.round((done / PACKAGES.length) * 100);
+### Task 6: Visual verification
 
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-gray-600">勾選已安裝的套件，追蹤你的環境建置進度：</p>
+**Step 1:** Run `cd platform/frontend && npm run build` to confirm no compile errors.
 
-      <div className="relative h-3 bg-gray-200 rounded-full overflow-hidden">
-        <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${pct}%` }} />
-      </div>
-      <p className="text-sm text-gray-500">
-        已完成 {done}/{PACKAGES.length} ({pct}%)
-      </p>
-
-      <div className="space-y-2">
-        {PACKAGES.map((pkg) => (
-          <div key={pkg.name} className="space-y-0">
-            <button
-              onClick={() => toggle(pkg.name)}
-              className={`w-full flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
-                checked[pkg.name] ? "border-green-300 bg-green-50" : "border-gray-200 hover:bg-gray-50"
-              }`}
-            >
-              <span className={`w-5 h-5 rounded flex items-center justify-center text-xs flex-shrink-0 ${
-                checked[pkg.name] ? "bg-green-500 text-white" : "border border-gray-300"
-              }`}>
-                {checked[pkg.name] && "\u2713"}
-              </span>
-              <div className="flex-1 min-w-0">
-                <span className="font-medium text-sm">{pkg.name}</span>
-                <span className="text-xs text-gray-400 ml-2">{pkg.version}</span>
-              </div>
-              <span className="text-xs text-gray-500">{pkg.desc}</span>
-            </button>
-
-            {/* Why + install cmd */}
-            <div className="ml-8 flex items-center gap-2 mt-0.5">
-              <button onClick={() => toggleWhy(pkg.name)}
-                className="text-xs text-indigo-500 hover:text-indigo-700 transition-colors">
-                {expanded[pkg.name] ? "▲ 收起" : "▼ 為什麼需要？"}
-              </button>
-              <code className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded hidden sm:inline">
-                {pkg.cmd}
-              </code>
-            </div>
-
-            {expanded[pkg.name] && (
-              <div className="ml-8 mt-1 p-2 bg-indigo-50 rounded-lg text-xs text-indigo-800 border border-indigo-100">
-                {pkg.why}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600">
-        <p className="font-medium mb-1">一鍵安裝指令：</p>
-        <code className="block bg-gray-900 text-green-400 p-2 rounded text-xs overflow-x-auto">
-          pip install numpy pandas matplotlib seaborn scikit-learn jupyter torch
-        </code>
-      </div>
-    </div>
-  );
-}
+**Step 2:** Start dev server and verify all 6 tabs:
+- 認識 AI: Medical intro visible, progressive reveal works
+- ML 工作流程: Unchanged, still works
+- 動手預測: Manual sliders → show best → comparison
+- 過擬合體驗: Degree slider 1→10, curves + MSE update
+- 名詞對照: Default "初學必備" shows ~16 terms
+- 環境建置: Unchanged, still works

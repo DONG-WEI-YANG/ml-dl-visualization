@@ -9,10 +9,11 @@ interface Props {
 
 const SUGGESTED_QUESTIONS: Record<number, string[]> = {
   1: [
-    "Python 的 list 和 NumPy array 有什麼差別？",
-    "Pandas 的 DataFrame 怎麼用？",
-    "如何安裝和管理 Python 套件？",
-    "Jupyter Notebook 有哪些快捷鍵？",
+    "機器學習和深度學習有什麼差別？",
+    "什麼是監督式學習？能舉個醫療上的例子嗎？",
+    "過擬合是什麼？為什麼要正則化？",
+    "ML 的完整工作流程是怎樣的？",
+    "Python 在 ML 領域為什麼這麼受歡迎？",
   ],
   2: [
     "EDA 的基本步驟有哪些？",
