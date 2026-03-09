@@ -12,6 +12,7 @@ interface User {
   username: string;
   display_name: string;
   role: "admin" | "teacher" | "student";
+  semester: string;
 }
 
 interface AuthContextType {

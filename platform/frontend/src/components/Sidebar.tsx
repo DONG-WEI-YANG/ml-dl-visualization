@@ -80,9 +80,16 @@ export default function Sidebar() {
       </div>
 
       <div className="p-3 border-t border-gray-200 flex items-center justify-between">
-        <span className="text-xs text-gray-500 truncate">
-          {user?.display_name || user?.username}
-        </span>
+        <div className="flex flex-col min-w-0">
+          <span className="text-xs text-gray-500 truncate">
+            {user?.display_name || user?.username}
+          </span>
+          {user?.semester && (
+            <span className="text-[10px] text-gray-400 truncate">
+              {user.semester.replace("-1", " 上學期").replace("-2", " 下學期")}
+            </span>
+          )}
+        </div>
         <button
           onClick={logout}
           className="text-xs text-gray-400 hover:text-gray-600"

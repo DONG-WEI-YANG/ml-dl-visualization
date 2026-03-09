@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from app.analytics.models import LearningEvent
 from app.analytics.tracker import record_event, get_student_analytics, get_class_summary
 
@@ -17,5 +17,5 @@ async def student_analytics(student_id: str):
 
 
 @router.get("/summary")
-async def class_summary():
-    return get_class_summary()
+async def class_summary(semester: str | None = Query(None)):
+    return get_class_summary(semester)

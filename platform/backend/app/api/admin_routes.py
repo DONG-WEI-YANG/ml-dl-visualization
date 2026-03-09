@@ -15,6 +15,7 @@ def _user_out(row) -> UserOut:
         username=row["username"],
         display_name=row["display_name"],
         email=row["email"],
+        semester=row["semester"],
         role=row["role"],
         is_active=bool(row["is_active"]),
         created_at=row["created_at"],
@@ -28,13 +29,20 @@ def _user_out(row) -> UserOut:
 @router.get("/users", response_model=list[UserOut])
 async def list_users(
     role: str | None = Query(None),
+    semester: str | None = Query(None),
     admin: dict = Depends(require_admin),
 ):
     conn = get_db()
+    conditions = []
+    params = []
     if role:
-        rows = conn.execute("SELECT * FROM users WHERE role = ? ORDER BY id", (role,)).fetchall()
-    else:
-        rows = conn.execute("SELECT * FROM users ORDER BY id").fetchall()
+        conditions.append("role = ?")
+        params.append(role)
+    if semester:
+        conditions.append("semester = ?")
+        params.append(semester)
+    where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
+    rows = conn.execute(f"SELECT * FROM users{where} ORDER BY id", params).fetchall()
     conn.close()
     return [_user_out(r) for r in rows]
 
@@ -74,6 +82,9 @@ async def update_user(user_id: int, data: UserUpdate, admin: dict = Depends(requ
     if data.is_active is not None:
         updates.append("is_active = ?")
         params.append(int(data.is_active))
+    if data.semester is not None:
+        updates.append("semester = ?")
+        params.append(data.semester)
     if data.password is not None:
         updates.append("password_hash = ?")
         params.append(hash_password(data.password))
@@ -172,7 +183,7 @@ async def get_settings(admin: dict = Depends(require_admin)):
 @router.put("/settings")
 async def update_settings(data: dict, admin: dict = Depends(require_admin)):
     """Update system settings. Accepts key-value pairs."""
-    allowed_keys = {"llm_provider", "llm_model", "rag_enabled", "rag_top_k"}
+    allowed_keys = {"llm_provider", "llm_model", "rag_enabled", "rag_top_k", "current_semester"}
     for key, value in data.items():
         if key not in allowed_keys:
             raise HTTPException(status_code=400, detail=f"不允許的設定項: {key}")

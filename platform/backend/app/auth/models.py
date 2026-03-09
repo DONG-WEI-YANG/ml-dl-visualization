@@ -6,6 +6,7 @@ class UserCreate(BaseModel):
     password: str
     display_name: str = ""
     email: str = ""
+    semester: str = ""
     role: str = "student"
 
 
@@ -14,6 +15,7 @@ class UserUpdate(BaseModel):
     email: str | None = None
     role: str | None = None
     is_active: bool | None = None
+    semester: str | None = None
     password: str | None = None
 
 
@@ -22,6 +24,7 @@ class UserOut(BaseModel):
     username: str
     display_name: str
     email: str
+    semester: str
     role: str
     is_active: bool
     created_at: str

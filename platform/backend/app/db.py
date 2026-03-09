@@ -21,6 +21,7 @@ def init_db():
             password_hash TEXT NOT NULL,
             display_name TEXT NOT NULL DEFAULT '',
             email TEXT DEFAULT '',
+            semester TEXT NOT NULL DEFAULT '',
             role TEXT NOT NULL CHECK(role IN ('admin', 'teacher', 'student')),
             is_active INTEGER NOT NULL DEFAULT 1,
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -51,6 +52,12 @@ def init_db():
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
     """)
+    # Migration: add semester column if not exists
+    try:
+        conn.execute("ALTER TABLE users ADD COLUMN semester TEXT NOT NULL DEFAULT ''")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # Column already exists
     # Seed default admin if none exists
     existing = conn.execute("SELECT id FROM users WHERE role = 'admin' LIMIT 1").fetchone()
     if not existing:
@@ -66,6 +73,7 @@ def init_db():
         "llm_model": "claude-sonnet-4-20250514",
         "rag_enabled": "true",
         "rag_top_k": "5",
+        "current_semester": "114-2",
     }
     for k, v in defaults.items():
         conn.execute(

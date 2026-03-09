@@ -7,6 +7,7 @@ interface User {
   display_name: string;
   email: string;
   role: "admin" | "teacher" | "student";
+  semester: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -24,20 +25,33 @@ const ROLE_COLORS: Record<string, string> = {
   student: "bg-green-100 text-green-700",
 };
 
+const CURRENT_YEAR = 114; // 民國年
+const SEMESTER_OPTIONS = Array.from({ length: 11 }, (_, i) => {
+  const y = CURRENT_YEAR - 5 + i;
+  return [`${y}-1`, `${y}-2`];
+}).flat();
+
+function formatSemester(s: string): string {
+  if (!s) return "-";
+  const [year, sem] = s.split("-");
+  return `${year} ${sem === "1" ? "上" : "下"}`;
+}
+
 export default function UserManagement() {
   const { user: me, token, logout } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [filterRole, setFilterRole] = useState<string>("");
+  const [filterSemester, setFilterSemester] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; type: "ok" | "err" }>({ text: "", type: "ok" });
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({ username: "", password: "", display_name: "", email: "", role: "student" });
+  const [createForm, setCreateForm] = useState({ username: "", password: "", display_name: "", email: "", role: "student", semester: "" });
 
   // Edit form
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editForm, setEditForm] = useState({ display_name: "", email: "", role: "", password: "" });
+  const [editForm, setEditForm] = useState({ display_name: "", email: "", role: "", password: "", semester: "" });
 
   // Teacher-student assignment
   const [assignMode, setAssignMode] = useState<{ teacherId: number; teacherName: string } | null>(null);
@@ -64,14 +78,18 @@ export default function UserManagement() {
 
   const fetchUsers = async () => {
     try {
-      const url = filterRole ? `/api/admin/users?role=${filterRole}` : "/api/admin/users";
+      const params = new URLSearchParams();
+      if (filterRole) params.set("role", filterRole);
+      if (filterSemester) params.set("semester", filterSemester);
+      const qs = params.toString();
+      const url = `/api/admin/users${qs ? `?${qs}` : ""}`;
       const data = await authFetch(url);
       setUsers(data);
     } catch { flash("無法載入使用者列表", "err"); }
     setLoading(false);
   };
 
-  useEffect(() => { if (token) fetchUsers(); }, [token, filterRole]);
+  useEffect(() => { if (token) fetchUsers(); }, [token, filterRole, filterSemester]);
 
   if (me?.role !== "admin") {
     return (
@@ -88,7 +106,7 @@ export default function UserManagement() {
       await authFetch("/api/auth/register", "POST", createForm);
       flash("帳號建立成功");
       setShowCreate(false);
-      setCreateForm({ username: "", password: "", display_name: "", email: "", role: "student" });
+      setCreateForm({ username: "", password: "", display_name: "", email: "", role: "student", semester: "" });
       fetchUsers();
     } catch (err: unknown) {
       flash((err as Error).message || "建立失敗", "err");
@@ -102,6 +120,7 @@ export default function UserManagement() {
     if (editForm.display_name !== editingUser.display_name) body.display_name = editForm.display_name;
     if (editForm.email !== editingUser.email) body.email = editForm.email;
     if (editForm.role !== editingUser.role) body.role = editForm.role;
+    if (editForm.semester !== (editingUser.semester || "")) body.semester = editForm.semester;
     if (editForm.password) body.password = editForm.password;
     if (Object.keys(body).length === 0) { setEditingUser(null); return; }
     try {
@@ -225,6 +244,20 @@ export default function UserManagement() {
         ))}
       </div>
 
+      {/* Semester Filter */}
+      <div className="flex items-center gap-2">
+        <select
+          value={filterSemester}
+          onChange={(e) => setFilterSemester(e.target.value)}
+          className="px-3 py-1.5 text-xs border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-300"
+        >
+          <option value="">全部學期</option>
+          {SEMESTER_OPTIONS.map((s) => (
+            <option key={s} value={s}>{formatSemester(s)}</option>
+          ))}
+        </select>
+      </div>
+
       {/* User Table */}
       {loading ? (
         <div className="text-gray-400 text-center py-8">載入中...</div>
@@ -237,6 +270,7 @@ export default function UserManagement() {
                 <th className="text-left px-4 py-3 font-medium">顯示名稱</th>
                 <th className="text-left px-4 py-3 font-medium">Email</th>
                 <th className="text-left px-4 py-3 font-medium">角色</th>
+                <th className="text-left px-4 py-3 font-medium">學期</th>
                 <th className="text-left px-4 py-3 font-medium">狀態</th>
                 <th className="text-right px-4 py-3 font-medium">操作</th>
               </tr>
@@ -252,6 +286,7 @@ export default function UserManagement() {
                       {ROLE_LABELS[u.role]}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-xs text-gray-500">{formatSemester(u.semester)}</td>
                   <td className="px-4 py-3">
                     <span className={`text-xs ${u.is_active ? "text-green-600" : "text-gray-400"}`}>
                       {u.is_active ? "啟用" : "停用"}
@@ -261,7 +296,7 @@ export default function UserManagement() {
                     <button
                       onClick={() => {
                         setEditingUser(u);
-                        setEditForm({ display_name: u.display_name, email: u.email, role: u.role, password: "" });
+                        setEditForm({ display_name: u.display_name, email: u.email, role: u.role, password: "", semester: u.semester || "" });
                       }}
                       className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded"
                     >
@@ -287,7 +322,7 @@ export default function UserManagement() {
                 </tr>
               ))}
               {users.length === 0 && (
-                <tr><td colSpan={6} className="text-center py-8 text-gray-400">沒有使用者</td></tr>
+                <tr><td colSpan={7} className="text-center py-8 text-gray-400">沒有使用者</td></tr>
               )}
             </tbody>
           </table>
@@ -343,6 +378,19 @@ export default function UserManagement() {
                 <option value="admin">管理員</option>
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">學期</label>
+              <select
+                value={createForm.semester}
+                onChange={(e) => setCreateForm({ ...createForm, semester: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">自動（使用系統預設）</option>
+                {SEMESTER_OPTIONS.map((s) => (
+                  <option key={s} value={s}>{formatSemester(s)}</option>
+                ))}
+              </select>
+            </div>
             <div className="flex gap-2 justify-end pt-2">
               <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">取消</button>
               <button type="submit" className="px-4 py-2 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600">建立</button>
@@ -384,6 +432,19 @@ export default function UserManagement() {
                 <option value="student">學生</option>
                 <option value="teacher">教師</option>
                 <option value="admin">管理員</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">學期</label>
+              <select
+                value={editForm.semester}
+                onChange={(e) => setEditForm({ ...editForm, semester: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">未設定</option>
+                {SEMESTER_OPTIONS.map((s) => (
+                  <option key={s} value={s}>{formatSemester(s)}</option>
+                ))}
               </select>
             </div>
             <div>

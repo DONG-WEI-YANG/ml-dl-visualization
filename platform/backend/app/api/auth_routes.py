@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from app.auth.models import LoginRequest, TokenResponse, UserOut, UserCreate
 from app.auth.utils import verify_password, hash_password, create_token
 from app.auth.dependencies import get_current_user, require_admin
-from app.db import get_db
+from app.db import get_db, get_setting
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
@@ -13,6 +13,7 @@ def _user_out(row: dict) -> UserOut:
         username=row["username"],
         display_name=row["display_name"],
         email=row["email"],
+        semester=row["semester"],
         role=row["role"],
         is_active=bool(row["is_active"]),
         created_at=row["created_at"],
@@ -47,9 +48,10 @@ async def register(req: UserCreate, admin: dict = Depends(require_admin)):
     existing = conn.execute("SELECT id FROM users WHERE username = ?", (req.username,)).fetchone()
     if existing:
         raise HTTPException(status_code=409, detail="使用者名稱已存在")
+    semester = req.semester or get_setting("current_semester", "")
     cursor = conn.execute(
-        "INSERT INTO users (username, password_hash, display_name, email, role) VALUES (?, ?, ?, ?, ?)",
-        (req.username, hash_password(req.password), req.display_name or req.username, req.email, req.role),
+        "INSERT INTO users (username, password_hash, display_name, email, role, semester) VALUES (?, ?, ?, ?, ?, ?)",
+        (req.username, hash_password(req.password), req.display_name or req.username, req.email, req.role, semester),
     )
     conn.commit()
     user = conn.execute("SELECT * FROM users WHERE id = ?", (cursor.lastrowid,)).fetchone()

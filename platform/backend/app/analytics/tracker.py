@@ -75,14 +75,32 @@ def get_student_analytics(student_id: str) -> StudentAnalytics:
     )
 
 
-def get_class_summary() -> dict:
+def get_class_summary(semester: str | None = None) -> dict:
     conn = get_db()
-    students = conn.execute("SELECT DISTINCT student_id FROM learning_events").fetchall()
-    total_events = conn.execute("SELECT COUNT(*) as c FROM learning_events").fetchone()["c"]
-    avg_score = conn.execute("SELECT AVG(score) as avg FROM learning_events WHERE score IS NOT NULL").fetchone()["avg"]
-    popular_topics = conn.execute(
-        "SELECT topic, COUNT(*) as cnt FROM learning_events WHERE event_type='llm_chat' AND topic != '' GROUP BY topic ORDER BY cnt DESC LIMIT 10"
-    ).fetchall()
+    if semester:
+        students = conn.execute(
+            "SELECT DISTINCT le.student_id FROM learning_events le JOIN users u ON le.student_id = CAST(u.id AS TEXT) WHERE u.semester = ?",
+            (semester,),
+        ).fetchall()
+        total_events = conn.execute(
+            "SELECT COUNT(*) as c FROM learning_events le JOIN users u ON le.student_id = CAST(u.id AS TEXT) WHERE u.semester = ?",
+            (semester,),
+        ).fetchone()["c"]
+        avg_score = conn.execute(
+            "SELECT AVG(le.score) as avg FROM learning_events le JOIN users u ON le.student_id = CAST(u.id AS TEXT) WHERE le.score IS NOT NULL AND u.semester = ?",
+            (semester,),
+        ).fetchone()["avg"]
+        popular_topics = conn.execute(
+            "SELECT le.topic, COUNT(*) as cnt FROM learning_events le JOIN users u ON le.student_id = CAST(u.id AS TEXT) WHERE le.event_type='llm_chat' AND le.topic != '' AND u.semester = ? GROUP BY le.topic ORDER BY cnt DESC LIMIT 10",
+            (semester,),
+        ).fetchall()
+    else:
+        students = conn.execute("SELECT DISTINCT student_id FROM learning_events").fetchall()
+        total_events = conn.execute("SELECT COUNT(*) as c FROM learning_events").fetchone()["c"]
+        avg_score = conn.execute("SELECT AVG(score) as avg FROM learning_events WHERE score IS NOT NULL").fetchone()["avg"]
+        popular_topics = conn.execute(
+            "SELECT topic, COUNT(*) as cnt FROM learning_events WHERE event_type='llm_chat' AND topic != '' GROUP BY topic ORDER BY cnt DESC LIMIT 10"
+        ).fetchall()
     conn.close()
 
     return {
