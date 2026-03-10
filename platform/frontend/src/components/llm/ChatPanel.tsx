@@ -124,7 +124,7 @@ const SUGGESTED_QUESTIONS: Record<number, string[]> = {
   ],
 };
 
-export default function ChatPanel({ week, topic, pinned, onClose, onTogglePin, onAutoOpen }: Props) {
+export default function ChatPanel({ week, topic, pinned, onClose, onTogglePin, onAutoOpen: _onAutoOpen }: Props) {
   const { messages, isLoading, send, clear } = useChat(week, topic);
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<"tutor" | "homework">("tutor");
