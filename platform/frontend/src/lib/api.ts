@@ -13,7 +13,8 @@ export async function fetchAPI<T>(path: string, body?: unknown, token?: string):
 }
 
 export function createWebSocket(path: string, token?: string): WebSocket {
-  const wsBase = window.location.origin.replace(/^http/, "ws");
+  const base = API_BASE || window.location.origin;
+  const wsBase = base.replace(/^http/, "ws");
   const url = token
     ? `${wsBase}${path}?token=${encodeURIComponent(token)}`
     : `${wsBase}${path}`;
