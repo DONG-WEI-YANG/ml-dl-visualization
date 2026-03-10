@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useState, useCallback } from "react";
 import { WEEKS } from "../types";
 import { API_BASE } from "../lib/api";
 import ChatPanel from "../components/llm/ChatPanel";
@@ -31,6 +31,12 @@ export default function WeekPage() {
   const { weekId } = useParams();
   const week = Number(weekId);
   const weekInfo = WEEKS.find((w) => w.id === week);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatPinned, setChatPinned] = useState(false);
+
+  const openChat = useCallback(() => setChatOpen(true), []);
+  const closeChat = useCallback(() => { setChatOpen(false); setChatPinned(false); }, []);
+  const togglePin = useCallback(() => setChatPinned((p) => !p), []);
 
   if (!weekInfo) {
     return (
@@ -41,6 +47,7 @@ export default function WeekPage() {
   }
 
   const VizComponent = weekComponents[week];
+  const showInGrid = chatOpen && chatPinned;
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -64,7 +71,7 @@ export default function WeekPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+      <div className={`grid gap-6 ${showInGrid ? "grid-cols-1 lg:grid-cols-[1fr_380px]" : "grid-cols-1"}`}>
         <div className="space-y-4 min-w-0">
           <div className="border border-gray-200 rounded-xl p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -115,10 +122,53 @@ export default function WeekPage() {
           </div>
         </div>
 
-        <div className="lg:sticky lg:top-6 lg:self-start">
-          <ChatPanel week={week} topic={weekInfo.topic} />
-        </div>
+        {/* Pinned: in-grid chat panel */}
+        {showInGrid && (
+          <div className="lg:sticky lg:top-6 lg:self-start">
+            <ChatPanel
+              week={week}
+              topic={weekInfo.topic}
+              pinned={chatPinned}
+              onClose={closeChat}
+              onTogglePin={togglePin}
+              onAutoOpen={openChat}
+            />
+          </div>
+        )}
       </div>
+
+      {/* Floating toggle button (when chat is closed) */}
+      {!chatOpen && (
+        <button
+          onClick={openChat}
+          className="fixed right-5 bottom-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all hover:shadow-xl cursor-pointer"
+        >
+          <span className="text-sm font-bold">AI</span>
+          <span className="text-sm">助教</span>
+        </button>
+      )}
+
+      {/* Slide-over panel (when open but not pinned) */}
+      {chatOpen && !chatPinned && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/20 z-40 lg:bg-transparent lg:pointer-events-none"
+            onClick={closeChat}
+          />
+          {/* Panel */}
+          <div className="fixed right-0 top-0 bottom-0 z-50 w-[380px] max-w-[90vw] shadow-2xl">
+            <ChatPanel
+              week={week}
+              topic={weekInfo.topic}
+              pinned={chatPinned}
+              onClose={closeChat}
+              onTogglePin={togglePin}
+              onAutoOpen={openChat}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
