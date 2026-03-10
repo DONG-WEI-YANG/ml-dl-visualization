@@ -73,9 +73,10 @@ def init_rag_tables():
 def ingest_chunks(chunks: list[dict]) -> int:
     """Insert or replace chunks into the store. Returns count."""
     conn = get_db()
-    # Clear existing data
+    # Clear existing data (including content hashes so web enrichment can re-add)
     conn.execute("DELETE FROM rag_chunks")
     conn.execute("DELETE FROM rag_fts")
+    conn.execute("DELETE FROM rag_content_hashes")
     for chunk in chunks:
         meta = chunk["metadata"]
         conn.execute(
