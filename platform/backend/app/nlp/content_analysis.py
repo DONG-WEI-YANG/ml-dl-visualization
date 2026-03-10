@@ -21,6 +21,8 @@ _rapidfuzz = None
 _textstat = None
 _jieba_posseg = None
 _ml_dict_loaded = False
+_flash_concept_proc = None
+_flash_entity_proc = None
 
 ML_TERMS_PATH = Path(__file__).parent / "data" / "ml_terms.txt"
 
@@ -80,6 +82,42 @@ def _get_textstat():
             logger.warning("textstat not available")
             _textstat = False
     return _textstat if _textstat is not False else None
+
+
+def _get_flash_concept_proc():
+    """Lazy-build FlashText KeywordProcessor for domain concepts (O(n) matching)."""
+    global _flash_concept_proc
+    if _flash_concept_proc is None:
+        try:
+            from flashtext import KeywordProcessor
+            kp = KeywordProcessor(case_sensitive=False)
+            for trigger, concept in CONCEPT_MAP.items():
+                kp.add_keyword(trigger, concept)
+            _flash_concept_proc = kp
+            logger.info("FlashText concept processor: %d keywords", len(CONCEPT_MAP))
+        except ImportError:
+            _flash_concept_proc = False
+    return _flash_concept_proc if _flash_concept_proc is not False else None
+
+
+def _get_flash_entity_proc():
+    """Lazy-build FlashText KeywordProcessor for NER (packages + algorithms)."""
+    global _flash_entity_proc
+    if _flash_entity_proc is None:
+        try:
+            from flashtext import KeywordProcessor
+            kp = KeywordProcessor(case_sensitive=False)
+            for pkg in ENTITY_PACKAGES:
+                kp.add_keyword(pkg, ("PACKAGE", pkg))
+            for algo in ENTITY_ALGORITHMS:
+                kp.add_keyword(algo, ("ALGORITHM", algo))
+            # Add metric names
+            for metric in ("accuracy", "precision", "recall", "f1", "auc", "rmse", "mae", "mse", "r2"):
+                kp.add_keyword(metric, ("METRIC", metric.upper()))
+            _flash_entity_proc = kp
+        except ImportError:
+            _flash_entity_proc = False
+    return _flash_entity_proc if _flash_entity_proc is not False else None
 
 
 # ── Domain concept map (expanded from existing topic.py) ──
@@ -158,19 +196,28 @@ def keyword_extractor(ctx: NLPContext) -> NLPContext:
 # ── L22: Domain Concept Matcher ──
 
 def domain_concept_matcher(ctx: NLPContext) -> NLPContext:
-    """L22: Match keywords to domain concepts using exact + fuzzy matching."""
-    fuzz = _get_rapidfuzz()
-    text_lower = ctx.user_message.lower()
+    """L22: Match keywords to domain concepts using FlashText (O(n)) + fuzzy fallback."""
     concepts = []
     seen = set()
 
-    # Exact match first
-    for trigger, concept in CONCEPT_MAP.items():
-        if trigger in text_lower and concept not in seen:
-            concepts.append(concept)
-            seen.add(concept)
+    # FlashText: O(n) keyword matching — much faster than iterating CONCEPT_MAP
+    flash_kp = _get_flash_concept_proc()
+    if flash_kp is not None:
+        matched = flash_kp.extract_keywords(ctx.user_message, span_info=False)
+        for concept in matched:
+            if concept not in seen:
+                concepts.append(concept)
+                seen.add(concept)
+    else:
+        # Fallback: exact match (original approach)
+        text_lower = ctx.user_message.lower()
+        for trigger, concept in CONCEPT_MAP.items():
+            if trigger in text_lower and concept not in seen:
+                concepts.append(concept)
+                seen.add(concept)
 
-    # Fuzzy match on keywords (only if rapidfuzz available)
+    # Fuzzy match on keywords for near-misses (only if rapidfuzz available)
+    fuzz = _get_rapidfuzz()
     if fuzz is not None:
         for kw in ctx.keywords[:5]:
             for trigger, concept in CONCEPT_MAP.items():
@@ -187,13 +234,22 @@ def domain_concept_matcher(ctx: NLPContext) -> NLPContext:
 # ── L23: Named Entity Recognizer (jieba custom dict + POS-based) ──
 
 def named_entity_recognizer(ctx: NLPContext) -> NLPContext:
-    """L23: Recognize ML/DL named entities using jieba custom dictionary + POS tags."""
+    """L23: Recognize ML/DL named entities using FlashText + jieba POS fallback."""
     text = ctx.user_message
     text_lower = text.lower()
     entities = []
     seen_texts = set()
 
-    # Try jieba.posseg with custom ML terms dictionary
+    # FlashText: O(n) entity extraction — packages, algorithms, metrics in one pass
+    flash_ep = _get_flash_entity_proc()
+    if flash_ep is not None:
+        matched = flash_ep.extract_keywords(text, span_info=False)
+        for etype, etext in matched:
+            if etext.lower() not in seen_texts:
+                entities.append({"text": etext, "type": etype})
+                seen_texts.add(etext.lower())
+
+    # jieba.posseg: catch ML_TERM and CONCEPT entities not in FlashText dict
     pseg = _get_jieba_posseg()
     if pseg is not None:
         try:
@@ -206,41 +262,32 @@ def named_entity_recognizer(ctx: NLPContext) -> NLPContext:
                 if word_lower in seen_texts:
                     continue
 
-                # nz = other proper noun (from custom dict), eng = English
                 if flag in ("nz", "eng"):
-                    # Determine entity type
-                    if word_lower in {p.lower() for p in ENTITY_PACKAGES}:
-                        entities.append({"text": word_stripped, "type": "PACKAGE"})
-                    elif word_stripped in ENTITY_ALGORITHMS or word_stripped.upper() in ENTITY_ALGORITHMS:
-                        entities.append({"text": word_stripped, "type": "ALGORITHM"})
-                    else:
+                    if word_lower not in seen_texts:
                         entities.append({"text": word_stripped, "type": "ML_TERM"})
-                    seen_texts.add(word_lower)
+                        seen_texts.add(word_lower)
                 elif flag == "n" and len(word_stripped) >= 2:
-                    # Check if it's a known domain concept
                     if word_lower in CONCEPT_MAP or word_stripped in CONCEPT_MAP:
                         entities.append({"text": word_stripped, "type": "CONCEPT"})
                         seen_texts.add(word_lower)
         except Exception as e:
             logger.warning("jieba NER failed: %s", e)
 
-    # Fallback / supplement: regex-based entity detection
-    for pkg in ENTITY_PACKAGES:
-        if pkg.lower() in text_lower and pkg.lower() not in seen_texts:
-            entities.append({"text": pkg, "type": "PACKAGE"})
-            seen_texts.add(pkg.lower())
-
-    for algo in ENTITY_ALGORITHMS:
-        if algo.lower() in text_lower and algo.lower() not in seen_texts:
-            entities.append({"text": algo, "type": "ALGORITHM"})
-            seen_texts.add(algo.lower())
-
-    # Detect metric names
-    metrics = re.findall(r'\b(accuracy|precision|recall|f1|auc|rmse|mae|mse|r2)\b', text_lower)
-    for m in metrics:
-        if m not in seen_texts:
-            entities.append({"text": m.upper(), "type": "METRIC"})
-            seen_texts.add(m)
+    # Fallback if FlashText wasn't available: regex-based detection
+    if flash_ep is None:
+        for pkg in ENTITY_PACKAGES:
+            if pkg.lower() in text_lower and pkg.lower() not in seen_texts:
+                entities.append({"text": pkg, "type": "PACKAGE"})
+                seen_texts.add(pkg.lower())
+        for algo in ENTITY_ALGORITHMS:
+            if algo.lower() in text_lower and algo.lower() not in seen_texts:
+                entities.append({"text": algo, "type": "ALGORITHM"})
+                seen_texts.add(algo.lower())
+        metrics = re.findall(r'\b(accuracy|precision|recall|f1|auc|rmse|mae|mse|r2)\b', text_lower)
+        for m in metrics:
+            if m not in seen_texts:
+                entities.append({"text": m.upper(), "type": "METRIC"})
+                seen_texts.add(m)
 
     ctx.named_entities = entities
     return ctx

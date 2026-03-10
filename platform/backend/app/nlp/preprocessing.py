@@ -19,6 +19,9 @@ _posseg = None
 _langdetect = None
 _sent_tokenize = None
 _zhconv = None
+_opencc = None
+_thulac = None
+_emoji_mod = None
 
 
 def _get_jieba():
@@ -69,6 +72,44 @@ def _get_zhconv():
     return _zhconv if _zhconv is not False else None
 
 
+def _get_opencc():
+    """Lazy-load OpenCC (more accurate than zhconv for Traditional Chinese)."""
+    global _opencc
+    if _opencc is None:
+        try:
+            from opencc import OpenCC
+            _opencc = OpenCC("s2twp")  # Simplified → Traditional (Taiwan phrases)
+            logger.info("OpenCC loaded (s2twp)")
+        except ImportError:
+            _opencc = False
+    return _opencc if _opencc is not False else None
+
+
+def _get_thulac():
+    """Lazy-load THULAC (Tsinghua Chinese segmenter)."""
+    global _thulac
+    if _thulac is None:
+        try:
+            import thulac as _thulac_mod
+            _thulac = _thulac_mod.thulac(seg_only=True)
+            logger.info("THULAC loaded (seg_only mode)")
+        except Exception:
+            _thulac = False
+    return _thulac if _thulac is not False else None
+
+
+def _get_emoji_mod():
+    """Lazy-load emoji package."""
+    global _emoji_mod
+    if _emoji_mod is None:
+        try:
+            import emoji
+            _emoji_mod = emoji
+        except ImportError:
+            _emoji_mod = False
+    return _emoji_mod if _emoji_mod is not False else None
+
+
 # ── Chinese + English stopwords ──
 
 STOPWORDS_ZH = {
@@ -89,12 +130,41 @@ except Exception:
                     "that", "how", "what", "why", "can", "do", "i", "my", "me", "be", "are"}
 
 
+# ── L0.5: Emoji Detector (runs before segmentation) ──
+
+def emoji_detector(ctx):
+    """L0.5: Detect and extract emoji from message."""
+    emo = _get_emoji_mod()
+    if emo is None:
+        return ctx
+    emoji_list = [c["emoji"] for c in emo.emoji_list(ctx.user_message)]
+    if emoji_list:
+        ctx.has_emoji = True
+        ctx.emoji_list = emoji_list
+    return ctx
+
+
 # ── L1: Chinese Segmenter ──
 
 def chinese_segmenter(ctx):
-    """L1: Segment text using jieba."""
+    """L1: Segment text using jieba + optional THULAC merge."""
     jieba = _get_jieba()
     ctx.tokens = list(jieba.cut(ctx.user_message))
+
+    # THULAC parallel segmentation: merge unique tokens from THULAC
+    thu = _get_thulac()
+    if thu is not None:
+        try:
+            thulac_result = thu.cut(ctx.user_message)
+            thulac_tokens = [w for w, _ in thulac_result if len(w.strip()) > 1]
+            jieba_set = set(ctx.tokens)
+            # Add THULAC-only tokens that jieba missed (often better compound words)
+            for t in thulac_tokens:
+                if t not in jieba_set and t in ctx.user_message:
+                    ctx.tokens.append(t)
+        except Exception as e:
+            logger.debug("THULAC merge failed: %s", e)
+
     return ctx
 
 
@@ -163,19 +233,41 @@ _FULLWIDTH_MAP = str.maketrans(
 
 
 def text_normalizer(ctx):
-    """L5: Normalize text — fullwidth->halfwidth, collapse whitespace, Traditional Chinese."""
+    """L5: Normalize text — fullwidth->halfwidth, collapse whitespace, Traditional Chinese.
+
+    Uses OpenCC (s2twp) for more accurate Simplified→Traditional (Taiwan phrases) conversion,
+    with zhconv as fallback.
+    """
     text = ctx.user_message
     # Fullwidth to halfwidth
     text = text.translate(_FULLWIDTH_MAP)
     # Collapse multiple spaces/newlines
     text = re.sub(r'\s+', ' ', text).strip()
-    # Convert to Traditional Chinese (zh-tw) for consistency
-    zc = _get_zhconv()
-    if zc is not None:
+    # Strip emoji text representations (keep original characters intact)
+    emo = _get_emoji_mod()
+    if emo is not None:
+        text = emo.replace_emoji(text, replace="")
+        text = re.sub(r'\s+', ' ', text).strip()
+    # Convert to Traditional Chinese — prefer OpenCC (more accurate), fallback to zhconv
+    occ = _get_opencc()
+    if occ is not None:
         try:
-            text = zc.convert(text, 'zh-tw')
+            text = occ.convert(text)
         except Exception:
-            pass
+            # Fallback to zhconv
+            zc = _get_zhconv()
+            if zc is not None:
+                try:
+                    text = zc.convert(text, 'zh-tw')
+                except Exception:
+                    pass
+    else:
+        zc = _get_zhconv()
+        if zc is not None:
+            try:
+                text = zc.convert(text, 'zh-tw')
+            except Exception:
+                pass
     ctx.normalized_text = text
     return ctx
 
@@ -191,6 +283,7 @@ def stopword_filter(ctx):
 
 # ── Public aliases (used by __init__.py FULL_PIPELINE) ──
 
+detect_emoji = emoji_detector
 segment_chinese = chinese_segmenter
 tag_pos = pos_tagger
 split_sentences = sentence_splitter

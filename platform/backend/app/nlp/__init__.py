@@ -7,7 +7,7 @@ Usage:
 """
 
 from .pipeline import NLPContext, run_pipeline
-from .preprocessing import (segment_chinese, tag_pos, split_sentences,
+from .preprocessing import (detect_emoji, segment_chinese, tag_pos, split_sentences,
                              detect_language, normalize_text, filter_stopwords)
 from .intent import detect_intent
 from .understanding import (detect_sub_intent, score_sentiment,
@@ -34,8 +34,9 @@ from .math_parser import parse_math_expressions
 FULL_PIPELINE = [
     # C3. Route Pipeline (informational, before preprocessing)
     route_pipeline,             # C3
-    # A. Text Preprocessing (L1-6)
-    segment_chinese,        # L1
+    # A. Text Preprocessing (L0.5-6)
+    detect_emoji,           # L0.5: emoji detection (emoji pkg)
+    segment_chinese,        # L1 (jieba + thulac merge)
     tag_pos,                # L2
     split_sentences,        # L3
     detect_language,        # L4

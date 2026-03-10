@@ -8,6 +8,21 @@ from app.rag.store import search_fts
 
 logger = logging.getLogger(__name__)
 
+_bm25_cls = None
+
+
+def _get_bm25_cls():
+    """Lazy-load BM25Okapi from rank_bm25."""
+    global _bm25_cls
+    if _bm25_cls is None:
+        try:
+            from rank_bm25 import BM25Okapi
+            _bm25_cls = BM25Okapi
+        except ImportError:
+            _bm25_cls = False
+    return _bm25_cls if _bm25_cls is not False else None
+
+
 # ── Cached corpus model ──
 _corpus_data = None
 _corpus_loaded = False
@@ -63,6 +78,26 @@ def _tfidf_rerank(query: str, results: list[dict], top_k: int = 5) -> list[dict]
         return results[:top_k]
 
 
+def _bm25_rerank(query: str, results: list[dict], top_k: int = 5) -> list[dict]:
+    """Re-rank FTS results using BM25Okapi (better IR ranking than TF-IDF cosine)."""
+    BM25Okapi = _get_bm25_cls()
+    if BM25Okapi is None or not results:
+        return results[:top_k]
+
+    try:
+        import jieba
+        # Tokenize documents and query with jieba for CJK support
+        docs_tokenized = [list(jieba.cut(r.get("content", ""))) for r in results]
+        query_tokenized = list(jieba.cut(query))
+        bm25 = BM25Okapi(docs_tokenized)
+        scores = bm25.get_scores(query_tokenized)
+        scored = sorted(zip(results, scores), key=lambda x: -x[1])
+        return [r for r, _ in scored[:top_k]]
+    except Exception as e:
+        logger.warning("BM25 rerank failed: %s", e)
+        return results[:top_k]
+
+
 def _faiss_rerank(query: str, results: list[dict], top_k: int = 5) -> list[dict]:
     """Re-rank FTS results using FAISS cosine similarity."""
     if not results:
@@ -104,10 +139,11 @@ def retrieve_and_rerank(ctx: NLPContext) -> NLPContext:
             clean_concept = concept.split("(")[0].strip()
             results = search_fts(clean_concept, week=ctx.week, top_k=2)
             if results:
-                # Try FAISS re-ranking first, fall back to TF-IDF
-                reranked = _faiss_rerank(ctx.user_message, results, top_k=2)
+                # Re-ranking cascade: BM25 → FAISS → TF-IDF
+                reranked = _bm25_rerank(ctx.user_message, results, top_k=2)
                 if all(r == results[i] for i, r in enumerate(reranked)):
-                    # FAISS didn't change order, try TF-IDF
+                    reranked = _faiss_rerank(ctx.user_message, results, top_k=2)
+                if all(r == results[i] for i, r in enumerate(reranked)):
                     reranked = _tfidf_rerank(ctx.user_message, results, top_k=2)
 
                 extra_parts = [

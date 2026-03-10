@@ -10,6 +10,19 @@ logger = logging.getLogger(__name__)
 _sympy_parser = None
 _sympy_latex = None
 _sympy_simplify = None
+_cn2an_mod = None
+
+
+def _get_cn2an():
+    """Lazy-load cn2an for Chinese number → Arabic conversion."""
+    global _cn2an_mod
+    if _cn2an_mod is None:
+        try:
+            import cn2an
+            _cn2an_mod = cn2an
+        except ImportError:
+            _cn2an_mod = False
+    return _cn2an_mod if _cn2an_mod is not False else None
 
 
 def _get_sympy():
@@ -78,12 +91,21 @@ def parse_math_expressions(ctx: NLPContext) -> NLPContext:
       - Keep unparseable expressions as-is
 
     Also detect common ML formulas from the message text.
+    Uses cn2an to convert Chinese numbers (e.g. 三百 → 300, 第三週 → 第3週).
     """
     parse_expr, latex_fn, simplify_fn = _get_sympy()
     if parse_expr is None:
         return ctx
 
     text = ctx.user_message
+
+    # cn2an: Convert Chinese numbers to Arabic for better parsing
+    cn2an = _get_cn2an()
+    if cn2an is not None:
+        try:
+            text = cn2an.transform(text, "cn2an")
+        except Exception:
+            pass  # Not all text contains Chinese numbers
 
     # Step 1: Detect additional ML formula patterns not already caught by regex
     for pattern in _ML_FORMULA_PATTERNS:
