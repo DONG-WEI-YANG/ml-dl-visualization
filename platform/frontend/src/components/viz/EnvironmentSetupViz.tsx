@@ -466,7 +466,7 @@ function TryItView() {
             {lineData.length === 2 && (
               <Scatter data={lineData} fill="none"
                 line={{ stroke: mode === "manual" ? "#f59e0b" : "#ef4444", strokeWidth: 2.5 }}
-                lineType="joint" shape={() => null} name="擬合線" legendType="none" />
+                lineType="joint" shape={() => <circle r={0} />} name="擬合線" legendType="none" />
             )}
           </ScatterChart>
         </ResponsiveContainer>
@@ -600,7 +600,7 @@ function OverfittingView() {
             <Scatter data={OVERFIT_TEST} fill="#f59e0b" r={5} name="測試資料" shape="diamond" />
             <Scatter data={curveData} fill="none"
               line={{ stroke: "#ef4444", strokeWidth: 2 }}
-              lineType="joint" shape={() => null} name="擬合曲線" legendType="none" />
+              lineType="joint" shape={() => <circle r={0} />} name="擬合曲線" legendType="none" />
           </ScatterChart>
         </ResponsiveContainer>
       </div>

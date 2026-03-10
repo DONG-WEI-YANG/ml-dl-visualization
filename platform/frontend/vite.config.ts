@@ -2,8 +2,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-export default defineConfig({
-  base: process.env.GITHUB_PAGES === 'true' ? '/ml-dl-visualization/' : '/',
+// https://vitejs.dev/config/
+export default defineConfig(({ mode }) => ({
+  base: mode === 'gh-pages' ? '/ml-dl-visualization/' : '/',
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
@@ -15,4 +16,4 @@ export default defineConfig({
       '/health': 'http://localhost:8000',
     },
   },
-})
+}))

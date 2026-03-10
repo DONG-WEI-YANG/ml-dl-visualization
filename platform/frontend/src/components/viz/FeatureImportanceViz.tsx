@@ -43,7 +43,7 @@ export default function FeatureImportanceViz() {
     setLoading(true);
     try {
       const { X, y, featureNames } = generateIrisLikeData();
-      const data = await fetchAPI("/api/models/tree", {
+      const data = await fetchAPI<Record<string, unknown>>("/api/models/tree", {
         X,
         y,
         model_type: modelType,

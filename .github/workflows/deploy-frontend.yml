@@ -34,9 +34,9 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run build
+      - run: npx tsc -b
+      - run: npx vite build --mode gh-pages
         env:
-          GITHUB_PAGES: 'true'
           VITE_API_BASE: https://ml-dl-viz-api.onrender.com
 
       - uses: actions/upload-pages-artifact@v3
