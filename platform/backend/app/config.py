@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-in-production-use-a-long-random-string"
     jwt_expire_minutes: int = 480
     default_admin_password: str = "admin123"
-    cors_origins: str = "http://localhost:5173,https://dong-wei-yang.github.io"
+    cors_origins: str = "http://localhost:5173,https://dong-wei-yang.github.io,https://kevin19830331-ml-dl-viz-api.hf.space"
 
     model_config = {"env_file": ".env"}
 

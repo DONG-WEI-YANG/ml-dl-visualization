@@ -37,7 +37,7 @@ jobs:
       - run: npx tsc -b
       - run: npx vite build --mode gh-pages
         env:
-          VITE_API_BASE: https://ml-dl-viz-api.onrender.com
+          VITE_API_BASE: https://kevin19830331-ml-dl-viz-api.hf.space
 
       - uses: actions/upload-pages-artifact@v3
         with:
