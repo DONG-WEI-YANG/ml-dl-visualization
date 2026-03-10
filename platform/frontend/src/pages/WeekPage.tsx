@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { WEEKS } from "../types";
+import { API_BASE } from "../lib/api";
 import ChatPanel from "../components/llm/ChatPanel";
 import QuizPanel from "../components/quiz/QuizPanel";
 import ConceptCards from "../components/concepts/ConceptCards";
@@ -99,7 +100,7 @@ export default function WeekPage() {
               ].map((item) => (
                 <a
                   key={item.name}
-                  href={`/api/curriculum/week/${week}/${item.type}`}
+                  href={`${API_BASE}/api/curriculum/week/${week}/${item.type}`}
                   download
                   className="flex items-center justify-between px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >

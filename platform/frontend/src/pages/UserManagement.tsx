@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { API_BASE } from "../lib/api";
 
 interface User {
   id: number;
@@ -58,7 +59,7 @@ export default function UserManagement() {
   const [teacherStudents, setTeacherStudents] = useState<User[]>([]);
 
   const authFetch = async (path: string, method = "GET", body?: unknown) => {
-    const res = await fetch(path, {
+    const res = await fetch(`${API_BASE}${path}`, {
       method,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: body ? JSON.stringify(body) : undefined,

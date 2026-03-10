@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { API_BASE } from "../lib/api";
 
 interface Question {
   id: string;
@@ -46,7 +47,7 @@ export default function QuizManagement() {
   const [form, setForm] = useState(EMPTY_FORM);
 
   const authFetch = async (path: string, method = "GET", body?: unknown) => {
-    const res = await fetch(path, {
+    const res = await fetch(`${API_BASE}${path}`, {
       method,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: body ? JSON.stringify(body) : undefined,

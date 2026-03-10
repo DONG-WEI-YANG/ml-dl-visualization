@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { API_BASE } from "../lib/api";
 
 interface ProviderInfo {
   id: string;
@@ -21,7 +22,7 @@ export default function AdminSettings() {
   const [trainMsg, setTrainMsg] = useState("");
 
   const authFetch = async <T,>(path: string, body?: unknown): Promise<T> => {
-    const res = await fetch(path, {
+    const res = await fetch(`${API_BASE}${path}`, {
       method: body ? "PUT" : "GET",
       headers: {
         "Content-Type": "application/json",
@@ -69,7 +70,7 @@ export default function AdminSettings() {
   const ingestRAG = async () => {
     setIngestMsg("索引中...");
     try {
-      const res = await fetch("/api/rag/ingest", {
+      const res = await fetch(`${API_BASE}/api/rag/ingest`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -83,7 +84,7 @@ export default function AdminSettings() {
   const trainNLP = async () => {
     setTrainMsg("訓練中...");
     try {
-      const res = await fetch("/api/admin/train-nlp", {
+      const res = await fetch(`${API_BASE}/api/admin/train-nlp`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
       });
