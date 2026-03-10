@@ -51,6 +51,17 @@ def init_db():
             value TEXT NOT NULL,
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
+
+        CREATE TABLE IF NOT EXISTS quiz_questions (
+            id TEXT PRIMARY KEY,
+            week INTEGER NOT NULL,
+            question TEXT NOT NULL,
+            options TEXT NOT NULL,
+            answer INTEGER NOT NULL,
+            explanation TEXT NOT NULL DEFAULT '',
+            category TEXT NOT NULL DEFAULT 'concept',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
     """)
     # Migration: add semester column if not exists
     try:

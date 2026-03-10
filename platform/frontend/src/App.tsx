@@ -7,6 +7,7 @@ import WeekPage from "./pages/WeekPage";
 import Dashboard from "./pages/Dashboard";
 import AdminSettings from "./pages/AdminSettings";
 import UserManagement from "./pages/UserManagement";
+import QuizManagement from "./pages/QuizManagement";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -43,6 +44,7 @@ export default function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="admin" element={<AdminSettings />} />
               <Route path="admin/users" element={<UserManagement />} />
+              <Route path="admin/quiz" element={<QuizManagement />} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>

@@ -133,20 +133,15 @@ export default function UserManagement() {
     }
   };
 
-  const handleToggleActive = async (u: User) => {
-    if (u.id === me?.id) { flash("無法停用自己的帳號", "err"); return; }
-    const action = u.is_active ? "停用" : "啟用";
-    if (!confirm(`確定要${action} ${u.display_name || u.username}？`)) return;
+  const handleDelete = async (u: User) => {
+    if (u.id === me?.id) { flash("無法刪除自己的帳號", "err"); return; }
+    if (!confirm(`確定要刪除 ${u.display_name || u.username}？此操作無法復原。`)) return;
     try {
-      if (u.is_active) {
-        await authFetch(`/api/admin/users/${u.id}`, "DELETE");
-      } else {
-        await authFetch(`/api/admin/users/${u.id}`, "PUT", { is_active: true });
-      }
-      flash(`已${action} ${u.display_name || u.username}`);
+      await authFetch(`/api/admin/users/${u.id}`, "DELETE");
+      flash(`已刪除 ${u.display_name || u.username}`);
       fetchUsers();
     } catch (err: unknown) {
-      flash((err as Error).message || `${action}失敗`, "err");
+      flash((err as Error).message || "刪除失敗", "err");
     }
   };
 
@@ -312,10 +307,10 @@ export default function UserManagement() {
                     )}
                     {u.id !== me?.id && (
                       <button
-                        onClick={() => handleToggleActive(u)}
-                        className={`px-2 py-1 text-xs rounded ${u.is_active ? "text-red-600 hover:bg-red-50" : "text-green-600 hover:bg-green-50"}`}
+                        onClick={() => handleDelete(u)}
+                        className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
                       >
-                        {u.is_active ? "停用" : "啟用"}
+                        刪除
                       </button>
                     )}
                   </td>

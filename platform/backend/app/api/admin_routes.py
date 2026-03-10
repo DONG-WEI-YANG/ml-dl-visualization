@@ -101,14 +101,17 @@ async def update_user(user_id: int, data: UserUpdate, admin: dict = Depends(requ
 
 
 @router.delete("/users/{user_id}")
-async def deactivate_user(user_id: int, admin: dict = Depends(require_admin)):
-    if user_id == admin["id"]:
-        raise HTTPException(status_code=400, detail="無法停用自己的帳號")
-    conn = get_db()
-    conn.execute("UPDATE users SET is_active = 0, updated_at = datetime('now') WHERE id = ?", (user_id,))
-    conn.commit()
-    conn.close()
-    return {"status": "deactivated"}
+async def delete_user(user_id: int, user=Depends(require_admin)):
+    if user["id"] == user_id:
+        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+    db = get_db()
+    db.execute("DELETE FROM teacher_students WHERE teacher_id = ? OR student_id = ?", (user_id, user_id))
+    db.execute("DELETE FROM learning_events WHERE student_id = ?", (user_id,))
+    cursor = db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    db.commit()
+    if cursor.rowcount == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"deleted": True}
 
 
 # ── Teacher-Student assignment (admin only) ──
@@ -214,3 +217,46 @@ async def train_nlp_models(admin: dict = Depends(require_admin)):
         return {"status": "trained", "results": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"訓練失敗: {str(e)}")
+
+
+# --- Quiz Management ---
+
+
+@router.get("/quiz/questions")
+async def admin_list_questions(week: int | None = None, _user=Depends(require_admin)):
+    from app.quiz.questions import list_all_questions
+    return {"questions": list_all_questions(week)}
+
+
+@router.post("/quiz/questions")
+async def admin_create_question(body: dict, _user=Depends(require_admin)):
+    from app.quiz.questions import create_question
+    required = {"id", "week", "question", "options", "answer"}
+    if not required.issubset(body.keys()):
+        raise HTTPException(400, f"Missing required fields: {required - body.keys()}")
+    if not isinstance(body["options"], list) or len(body["options"]) < 2:
+        raise HTTPException(400, "options must be a list with at least 2 items")
+    if not isinstance(body["answer"], int) or body["answer"] >= len(body["options"]):
+        raise HTTPException(400, "answer must be a valid index into options")
+    try:
+        q = create_question(body)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+    return {"question": q}
+
+
+@router.put("/quiz/questions/{question_id}")
+async def admin_update_question(question_id: str, body: dict, _user=Depends(require_admin)):
+    from app.quiz.questions import update_question
+    q = update_question(question_id, body)
+    if not q:
+        raise HTTPException(404, "Question not found")
+    return {"question": q}
+
+
+@router.delete("/quiz/questions/{question_id}")
+async def admin_delete_question(question_id: str, _user=Depends(require_admin)):
+    from app.quiz.questions import delete_question
+    if not delete_question(question_id):
+        raise HTTPException(404, "Question not found")
+    return {"deleted": True}

@@ -64,6 +64,17 @@ export default function Sidebar() {
               帳號管理
             </NavLink>
             <NavLink
+              to="/admin/quiz"
+              className={({ isActive }) =>
+                `flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+                  isActive ? "bg-orange-50 text-orange-700 font-medium" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                }`
+              }
+            >
+              <span className="text-base">&#128221;</span>
+              題庫管理
+            </NavLink>
+            <NavLink
               to="/admin"
               end
               className={({ isActive }) =>
