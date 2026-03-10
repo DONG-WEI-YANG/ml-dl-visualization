@@ -4,6 +4,7 @@ Uses SQLite Full-Text Search for keyword-based retrieval (zero external deps).
 Optionally supports embedding-based semantic search via chromadb if installed.
 """
 
+import hashlib
 import sqlite3
 import json
 import re
@@ -47,6 +48,22 @@ def init_rag_tables():
             content,
             title,
             tokenize='unicode61'
+        );
+
+        CREATE TABLE IF NOT EXISTS rag_content_hashes (
+            content_hash TEXT PRIMARY KEY,
+            chunk_id TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS rag_enrichment_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            source TEXT NOT NULL,
+            chunks_found INTEGER NOT NULL DEFAULT 0,
+            chunks_added INTEGER NOT NULL DEFAULT 0,
+            chunks_skipped INTEGER NOT NULL DEFAULT 0,
+            topics_searched TEXT NOT NULL DEFAULT ''
         );
     """)
     conn.commit()
@@ -176,3 +193,62 @@ def get_stats() -> dict:
         "total_chunks": total,
         "by_week": [{"week": r["week"], "count": r["cnt"]} for r in by_week],
     }
+
+
+def _content_hash(text: str) -> str:
+    """SHA256 hash of normalized text for deduplication."""
+    normalized = re.sub(r"\s+", " ", text.strip().lower())
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def append_chunks(chunks: list[dict]) -> dict:
+    """Append new chunks, skipping duplicates. Returns {added, skipped}."""
+    conn = get_db()
+    added = 0
+    skipped = 0
+    for chunk in chunks:
+        meta = chunk["metadata"]
+        h = _content_hash(chunk["content"])
+        # Check if content already exists
+        existing = conn.execute(
+            "SELECT 1 FROM rag_content_hashes WHERE content_hash = ?", (h,)
+        ).fetchone()
+        if existing:
+            skipped += 1
+            continue
+        # Insert chunk
+        conn.execute(
+            "INSERT OR REPLACE INTO rag_chunks (id, content, week, file_type, title, source) VALUES (?, ?, ?, ?, ?, ?)",
+            (chunk["id"], chunk["content"], meta["week"], meta["file_type"], meta["title"], meta["source"]),
+        )
+        conn.execute(
+            "INSERT INTO rag_fts (chunk_id, content, title) VALUES (?, ?, ?)",
+            (chunk["id"], _space_cjk(chunk["content"]), _space_cjk(meta["title"])),
+        )
+        conn.execute(
+            "INSERT OR IGNORE INTO rag_content_hashes (content_hash, chunk_id) VALUES (?, ?)",
+            (h, chunk["id"]),
+        )
+        added += 1
+    conn.commit()
+    conn.close()
+    return {"added": added, "skipped": skipped}
+
+
+def log_enrichment(source: str, chunks_found: int, chunks_added: int, chunks_skipped: int, topics: str):
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO rag_enrichment_log (source, chunks_found, chunks_added, chunks_skipped, topics_searched) VALUES (?, ?, ?, ?, ?)",
+        (source, chunks_found, chunks_added, chunks_skipped, topics),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_enrichment_history(limit: int = 20) -> list[dict]:
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM rag_enrichment_log ORDER BY run_at DESC LIMIT ?", (limit,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]

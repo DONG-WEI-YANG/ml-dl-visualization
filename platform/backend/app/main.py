@@ -72,6 +72,9 @@ from contextlib import asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
     init_rag_tables()
+    # Start daily web enrichment background task
+    from app.rag.web_enricher import start_daily_enrichment
+    start_daily_enrichment()
     logger.info("ML/DL Visualization Platform started (CORS origins: %s)", cors_origins)
     yield
 

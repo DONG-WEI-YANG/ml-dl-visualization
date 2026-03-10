@@ -219,6 +219,24 @@ async def train_nlp_models(admin: dict = Depends(require_admin)):
         raise HTTPException(status_code=500, detail=f"訓練失敗: {str(e)}")
 
 
+# --- Web Enrichment ---
+
+
+@router.post("/enrichment/trigger")
+async def trigger_enrichment(admin: dict = Depends(require_admin)):
+    """Manually trigger web enrichment. Admin only."""
+    from app.rag.web_enricher import enrich_from_web
+    result = await enrich_from_web()
+    return {"status": "ok", **result}
+
+
+@router.get("/enrichment/history")
+async def enrichment_history(admin: dict = Depends(require_admin)):
+    """Get enrichment run history. Admin only."""
+    from app.rag.store import get_enrichment_history
+    return {"history": get_enrichment_history()}
+
+
 # --- Quiz Management ---
 
 

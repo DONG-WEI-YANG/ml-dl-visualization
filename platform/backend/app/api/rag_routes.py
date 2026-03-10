@@ -16,10 +16,22 @@ class SearchRequest(BaseModel):
 
 @router.post("/ingest")
 async def ingest_curriculum(admin: dict = Depends(require_admin)):
-    """Parse and index all curriculum files. Admin only."""
+    """Parse and index all curriculum files from local filesystem. Admin only."""
     init_rag_tables()
     chunks = load_curriculum_chunks()
     count = ingest_chunks(chunks)
+    return {"status": "ok", "chunks_indexed": count}
+
+
+class BulkIngestRequest(BaseModel):
+    chunks: list[dict]
+
+
+@router.post("/ingest/bulk")
+async def ingest_bulk(req: BulkIngestRequest, admin: dict = Depends(require_admin)):
+    """Bulk ingest pre-chunked curriculum data via API. Admin only."""
+    init_rag_tables()
+    count = ingest_chunks(req.chunks)
     return {"status": "ok", "chunks_indexed": count}
 
 

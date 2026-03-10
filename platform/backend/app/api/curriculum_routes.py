@@ -7,7 +7,19 @@ from fastapi.responses import FileResponse, HTMLResponse
 
 router = APIRouter(prefix="/api/curriculum", tags=["curriculum"])
 
-CURRICULUM_DIR = Path(__file__).resolve().parents[4] / "curriculum"
+import os
+
+# In local dev: parents[4] = ml-dl-visualization root
+# In Docker container (/app/app/api/...): parents list is too short
+# Use env var override or try to resolve gracefully
+_CURRICULUM_ENV = os.environ.get("CURRICULUM_DIR")
+if _CURRICULUM_ENV:
+    CURRICULUM_DIR = Path(_CURRICULUM_ENV)
+else:
+    try:
+        CURRICULUM_DIR = Path(__file__).resolve().parents[4] / "curriculum"
+    except IndexError:
+        CURRICULUM_DIR = Path("/app/curriculum")  # fallback in container
 
 # Primary format, fallback format
 FILE_MAP = {

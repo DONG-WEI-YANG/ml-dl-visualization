@@ -72,7 +72,7 @@ export default function QuizManagement() {
       const qs = params.toString();
       const url = `/api/admin/quiz/questions${qs ? `?${qs}` : ""}`;
       const data = await authFetch(url);
-      setQuestions(data);
+      setQuestions(data.questions ?? []);
     } catch { flash("無法載入題目列表", "err"); }
     setLoading(false);
   };

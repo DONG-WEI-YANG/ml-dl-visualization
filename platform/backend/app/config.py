@@ -7,9 +7,9 @@ logger = logging.getLogger(__name__)
 class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openai_api_key: str = ""
-    llm_provider: str = "anthropic"
+    llm_provider: str = "local"
     ollama_base_url: str = "http://localhost:11434"
-    model_name: str = "claude-sonnet-4-20250514"
+    model_name: str = "local-nlp"
     jwt_secret: str = "change-me-in-production-use-a-long-random-string"
     jwt_expire_minutes: int = 480
     default_admin_password: str = "admin123"

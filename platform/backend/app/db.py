@@ -80,8 +80,8 @@ def init_db():
         )
     # Seed default LLM settings
     defaults = {
-        "llm_provider": "anthropic",
-        "llm_model": "claude-sonnet-4-20250514",
+        "llm_provider": "local",
+        "llm_model": "local-nlp",
         "rag_enabled": "true",
         "rag_top_k": "5",
         "current_semester": "114-2",

@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from app.llm.factory import create_llm_provider
 from app.llm.tutor import AITutor
 from app.llm.base import LLMMessage
+from app.config import settings
 from app.db import get_setting
 from app.auth.utils import decode_token
 
@@ -13,10 +14,22 @@ router = APIRouter(prefix="/api/llm", tags=["LLM"])
 
 
 def _get_provider():
-    """Create LLM provider from admin-configured settings."""
-    provider = get_setting("llm_provider", "anthropic")
+    """Create LLM provider from admin-configured settings.
+    Falls back to local NLP if the configured provider lacks API keys."""
+    provider = get_setting("llm_provider", "local")
     model = get_setting("llm_model", "")
-    return create_llm_provider(provider=provider, model=model or None)
+    try:
+        p = create_llm_provider(provider=provider, model=model or None)
+        # Verify API-based providers have keys
+        if provider == "anthropic" and not settings.anthropic_api_key:
+            logger.warning("No Anthropic API key, falling back to local NLP")
+            return create_llm_provider(provider="local")
+        if provider == "openai" and not settings.openai_api_key:
+            logger.warning("No OpenAI API key, falling back to local NLP")
+            return create_llm_provider(provider="local")
+        return p
+    except Exception:
+        return create_llm_provider(provider="local")
 
 
 def _rag_enabled() -> bool:
