@@ -1,8 +1,8 @@
 {
   "intent": {
-    "samples": 2831,
+    "samples": 3005,
     "classes": 19,
-    "cv_accuracy": 0.893262726842449
+    "cv_accuracy": 0.8804651768723625
   },
   "emotion": {
     "samples": 521,

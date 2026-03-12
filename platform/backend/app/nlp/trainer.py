@@ -401,6 +401,76 @@ def _generate_intent_data() -> tuple[list[str], list[str]]:
         "有推薦的YouTube頻道嗎",
     ] * 2)
 
+    # ── Edge case: compare with colloquial phrasing ──
+    add("compare", [
+        "L1跟L2怎麼取捨", "Adam跟SGD怎麼選比較好", "random forest跟xgboost哪個適合初學者",
+        "CNN跟全連接層差在哪裡", "bagging跟boosting哪個比較不會overfitting",
+        "MSE跟cross entropy什麼時候用哪個", "精確率跟召回率哪個重要",
+        "one-hot跟label encoding怎麼選", "grid search跟random search哪個快",
+        "standardization跟normalization搞混了", "validation跟test哪個先用",
+        "這兩種方法我一直搞不清楚差別", "哪種情況下要選哪一個",
+        "a跟b到底差在哪裡呀", "兩個都試了但不知道用哪個",
+    ] * 2)
+
+    # ── Edge case: parameter with consequence questions ──
+    add("parameter", [
+        "learning rate設太大會怎樣", "batch size設太小會怎樣",
+        "dropout設成0.8會不會太大", "epoch跑太多次會怎樣",
+        "hidden layer太多會overfitting嗎", "C在SVM裡面設多少",
+        "max_depth設太大會怎麼樣", "n_estimators要多少才夠",
+        "momentum有需要調嗎通常設多少", "weight decay是什麼要設多少",
+        "kernel size怎麼選3還是5", "stride跟padding怎麼算",
+        "k在KNN裡面通常設多少", "regularization strength怎麼決定",
+        "這些參數的預設值是什麼", "如果我全部用預設值結果會好嗎",
+        "參數設錯了loss會怎樣", "要怎麼知道參數設得好不好",
+    ] * 2)
+
+    # ── Edge case: troubleshoot with colloquial problem descriptions ──
+    add("troubleshoot", [
+        "jupyter notebook一直跑不起來", "Colab斷線了怎麼辦",
+        "pip install跑超久結果失敗", "我的conda環境壞了",
+        "虛擬環境切不過去", "GPU偵測不到怎麼辦", "CUDA版本配不上pytorch",
+        "requirements.txt裡的套件版本衝突", "M1 Mac裝tensorflow失敗",
+        "import之後說module not found", "我確定有裝了但還是找不到",
+        "PATH好像設錯了", "下載下來的code跑不動", "照著README的步驟做失敗了",
+        "downgrade版本之後其他套件也壞了", "accuracy低怎麼辦",
+    ] * 2)
+
+    # ── Edge case: debug with emotional/colloquial expressions ──
+    add("debug", [
+        "跑到一半就噴錯了救命", "我的code一直出現奇怪的結果",
+        "為什麼我的loss突然變成inf", "output全部是0怎麼回事",
+        "accuracy一直卡在chance level", "我照著教材的code打結果不一樣",
+        "model.predict結果全部一樣很奇怪", "gradient全部是0怎麼辦",
+    ] * 2)
+
+    # ── Edge case: debug with nan/inf (often confused with "why") ──
+    add("debug", [
+        "為什麼我的loss一直是nan", "loss變成nan了怎麼辦", "結果都是nan",
+        "output出現inf怎麼回事", "training loss突然爆到inf", "loss是nan不下降",
+        "gradient是nan怎麼解", "predict出來全部都是nan",
+    ] * 2)
+
+    # ── Edge case: how with "怎麼用" phrasing ──
+    add("how", [
+        "怎麼用sklearn寫SVM", "怎麼用pandas讀csv", "怎麼用matplotlib畫圖",
+        "怎麼用numpy做矩陣運算", "怎麼用pytorch建CNN", "怎麼用keras訓練模型",
+        "怎麼寫cross-validation的code", "怎麼寫一個training loop",
+    ] * 2)
+
+    # ── Edge case: example with demo/展示 ──
+    add("example", [
+        "可以demo一下嗎", "做個demo看看", "能不能展示一下",
+        "跑一個demo給我看", "live demo可以嗎", "用真實資料demo一遍",
+    ] * 2)
+
+    # ── Edge case: formula with 微分/導數 ──
+    add("formula", [
+        "softmax的微分怎麼算", "sigmoid的導數是什麼", "cross entropy的偏微分",
+        "怎麼算CNN的gradient", "chain rule怎麼展開算微分", "loss function的微分",
+        "activation function的導數公式", "backpropagation的微分推導",
+    ] * 2)
+
     return texts, labels
 
 

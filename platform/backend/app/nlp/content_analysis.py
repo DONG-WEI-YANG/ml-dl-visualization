@@ -21,7 +21,7 @@ _rapidfuzz = None
 _textstat = None
 _jieba_posseg = None
 _ml_dict_loaded = False
-_flash_concept_proc = None
+_flash_concept_proc = None   # Reset to None → rebuilt on first call with current CONCEPT_MAP
 _flash_entity_proc = None
 
 ML_TERMS_PATH = Path(__file__).parent / "data" / "ml_terms.txt"
@@ -149,6 +149,54 @@ CONCEPT_MAP = {
     "mlops": "MLOps", "mlflow": "MLflow",
     "bagging": "Bagging", "boosting": "Boosting", "gbdt": "梯度提升樹 (GBDT)",
     "正則化": "正則化 (Regularization)", "regularization": "正則化 (Regularization)",
+    # ── Fundamental ML/DL terms ──
+    "機器學習": "機器學習 (Machine Learning)", "machine learning": "機器學習 (Machine Learning)",
+    "深度學習": "深度學習 (Deep Learning)", "deep learning": "深度學習 (Deep Learning)",
+    "人工智慧": "人工智慧 (AI)", "artificial intelligence": "人工智慧 (AI)",
+    "監督式學習": "監督式學習 (Supervised Learning)", "supervised learning": "監督式學習 (Supervised Learning)",
+    "非監督式學習": "非監督式學習 (Unsupervised Learning)", "unsupervised learning": "非監督式學習 (Unsupervised Learning)",
+    "強化學習": "強化學習 (Reinforcement Learning)", "reinforcement learning": "強化學習 (Reinforcement Learning)",
+    # ── Metrics ──
+    "precision": "精確率 (Precision)", "精確率": "精確率 (Precision)",
+    "recall": "召回率 (Recall)", "召回率": "召回率 (Recall)",
+    "f1": "F1 分數 (F1-Score)", "f1-score": "F1 分數 (F1-Score)", "f1 score": "F1 分數 (F1-Score)",
+    "auc": "AUC (ROC 曲線下面積)", "roc": "ROC 曲線",
+    "confusion matrix": "混淆矩陣 (Confusion Matrix)", "混淆矩陣": "混淆矩陣 (Confusion Matrix)",
+    # ── Training concepts ──
+    "batch size": "批次大小 (Batch Size)", "批次大小": "批次大小 (Batch Size)",
+    "epoch": "訓練週期 (Epoch)", "訓練週期": "訓練週期 (Epoch)",
+    "iteration": "迭代 (Iteration)",
+    "梯度消失": "梯度消失 (Vanishing Gradient)", "vanishing gradient": "梯度消失 (Vanishing Gradient)",
+    "梯度爆炸": "梯度爆炸 (Exploding Gradient)", "exploding gradient": "梯度爆炸 (Exploding Gradient)",
+    "反向傳播": "反向傳播 (Backpropagation)", "backpropagation": "反向傳播 (Backpropagation)",
+    "softmax": "Softmax 函數", "交叉熵": "交叉熵 (Cross-Entropy)", "cross entropy": "交叉熵 (Cross-Entropy)",
+    "mse": "均方誤差 (MSE)", "mae": "平均絕對誤差 (MAE)",
+    # ── Architecture components ──
+    "convolution": "卷積 (Convolution)", "卷積": "卷積 (Convolution)",
+    "pooling": "池化 (Pooling)", "池化": "池化 (Pooling)",
+    "全連接": "全連接層 (Fully Connected)", "fully connected": "全連接層 (Fully Connected)",
+    "skip connection": "跳躍連接 (Skip Connection)", "殘差連接": "跳躍連接 (Skip Connection)",
+    "gan": "生成對抗網路 (GAN)", "生成對抗": "生成對抗網路 (GAN)",
+    "autoencoder": "自動編碼器 (Autoencoder)", "自動編碼器": "自動編碼器 (Autoencoder)",
+    "vae": "變分自動編碼器 (VAE)",
+    # ── Key concepts ──
+    "bias-variance": "偏差-方差權衡 (Bias-Variance Tradeoff)",
+    "偏差方差": "偏差-方差權衡 (Bias-Variance Tradeoff)",
+    "資料增強": "資料增強 (Data Augmentation)", "data augmentation": "資料增強 (Data Augmentation)",
+    "遷移學習": "遷移學習 (Transfer Learning)", "transfer learning": "遷移學習 (Transfer Learning)",
+    "集成學習": "集成學習 (Ensemble Learning)", "ensemble": "集成學習 (Ensemble Learning)",
+    "pca": "主成分分析 (PCA)", "主成分分析": "主成分分析 (PCA)",
+    "k-means": "K-Means 聚類", "聚類": "聚類 (Clustering)", "clustering": "聚類 (Clustering)",
+    "knn": "K 近鄰 (KNN)", "k近鄰": "K 近鄰 (KNN)",
+    "xgboost": "XGBoost", "lightgbm": "LightGBM", "adaboost": "AdaBoost",
+    "word2vec": "Word2Vec", "bert": "BERT", "gpt": "GPT",
+    "diffusion": "擴散模型 (Diffusion Model)",
+    "標準化": "標準化 (Standardization)", "standardization": "標準化 (Standardization)",
+    "正規化": "正規化 (Normalization)", "normalization": "正規化 (Normalization)",
+    "one-hot": "獨熱編碼 (One-Hot Encoding)", "獨熱編碼": "獨熱編碼 (One-Hot Encoding)",
+    "label encoding": "標籤編碼 (Label Encoding)",
+    "pipeline": "Pipeline (管線)", "管線": "Pipeline (管線)",
+    "grid search": "網格搜索 (Grid Search)", "random search": "隨機搜索 (Random Search)",
 }
 
 # ── Known entities (packages, models, algorithms) ──

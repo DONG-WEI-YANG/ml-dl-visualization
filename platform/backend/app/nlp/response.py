@@ -165,6 +165,75 @@ HOMEWORK_GUARD = (
 )
 
 
+def _digest_rag_context(rag_context: str, intent: str, rag_keywords: list) -> str:
+    """Digest raw RAG context into structured, readable sections.
+
+    Instead of pasting raw chunks, organize content with headers and bullet points.
+    """
+    if not rag_context:
+        return ""
+
+    # Split into paragraphs and clean up
+    paragraphs = [p.strip() for p in rag_context.split("\n\n") if p.strip()]
+    if not paragraphs:
+        return rag_context
+
+    # For short context (1-2 paragraphs), keep as-is but with formatting
+    if len(paragraphs) <= 2:
+        return rag_context
+
+    # For longer context, organize into sections
+    sections = []
+
+    # Group paragraphs: first 2 as main content, rest as supplementary
+    main_content = "\n\n".join(paragraphs[:3])
+    sections.append(main_content)
+
+    if len(paragraphs) > 3:
+        supplementary = paragraphs[3:]
+        # Summarize supplementary: take first sentence of each
+        supp_points = []
+        for p in supplementary[:4]:
+            # Take first sentence (up to first period/。)
+            import re
+            first_sent = re.split(r'[。\.\!\!]', p)[0]
+            if len(first_sent) > 10:
+                supp_points.append(f"- {first_sent.strip()}")
+        if supp_points:
+            sections.append("\n**補充說明：**\n" + "\n".join(supp_points))
+
+    return "\n\n".join(sections)
+
+
+def _build_takeaway(ctx: NLPContext, rag_keywords: list, nlp_topics: list) -> str:
+    """Build a concise key-takeaway section from NLP analysis results."""
+    items = []
+
+    # Add relevant domain concepts
+    if ctx.domain_concepts:
+        concepts_str = "、".join(ctx.domain_concepts[:4])
+        items.append(f"**核心概念：** {concepts_str}")
+
+    # Add RAG-derived keywords as learning focus
+    if rag_keywords and len(rag_keywords) >= 2:
+        kw_str = "、".join(rag_keywords[:4])
+        items.append(f"**學習重點：** {kw_str}")
+
+    # Add cross-week links if available
+    if ctx.cross_week_links:
+        links = ctx.cross_week_links[:3]
+        link_strs = [f"第{lnk.get('week', '?')}週「{lnk.get('title', '')}」"
+                     for lnk in links if isinstance(lnk, dict)]
+        if link_strs:
+            items.append(f"**相關教材：** {'、'.join(link_strs)}")
+
+    if not items:
+        return ""
+
+    header = "\n\n📝 **重點整理：**\n"
+    return header + "\n".join(f"- {item}" for item in items)
+
+
 def assemble_response(ctx: NLPContext) -> NLPContext:
     """Assemble the final response using all NLP layer outputs."""
     # --- NLP-enhanced topic extraction via jieba TF-IDF ---
@@ -205,12 +274,19 @@ def assemble_response(ctx: NLPContext) -> NLPContext:
     if prefix:
         parts.append(prefix)
 
-    # 2. Main content (intent template + RAG context)
-    # Use NLP-extracted topic for smarter template filling
+    # 2. Main content — digest RAG context into structured sections
     template = INTENT_TEMPLATES.get(ctx.intent, INTENT_TEMPLATES["general"])
-    parts.append(template.format(topic=topic, context=ctx.rag_context))
 
-    # 3. Domain concept note (enhanced with RAG keywords)
+    # Digest RAG: extract key sentences instead of raw paste
+    digested = _digest_rag_context(ctx.rag_context, ctx.intent, rag_keywords)
+    parts.append(template.format(topic=topic, context=digested))
+
+    # 3. Key takeaway section (concise summary of RAG content)
+    takeaway = _build_takeaway(ctx, rag_keywords, nlp_topics)
+    if takeaway:
+        parts.append(takeaway)
+
+    # 4. Domain concept note (enhanced with RAG keywords)
     concept_note = _concept_note(ctx)
     if concept_note:
         parts.append(concept_note)
