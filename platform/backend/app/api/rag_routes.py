@@ -19,6 +19,9 @@ async def ingest_curriculum(admin: dict = Depends(require_admin)):
     """Parse and index all curriculum files from local filesystem. Admin only."""
     init_rag_tables()
     chunks = load_curriculum_chunks()
+    if not chunks:
+        # Don't clear existing data when no local curriculum is found (cloud deploy)
+        return {"status": "ok", "chunks_indexed": 0}
     count = ingest_chunks(chunks)
     return {"status": "ok", "chunks_indexed": count}
 

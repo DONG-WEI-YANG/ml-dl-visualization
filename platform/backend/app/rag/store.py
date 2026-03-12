@@ -70,13 +70,28 @@ def init_rag_tables():
     conn.close()
 
 
+# File types that come from local curriculum (vs web enrichment)
+CURRICULUM_FILE_TYPES = {"lecture", "slides", "assignment", "syllabus"}
+
+
 def ingest_chunks(chunks: list[dict]) -> int:
-    """Insert or replace chunks into the store. Returns count."""
+    """Replace curriculum chunks while preserving web-enrichment data. Returns curriculum count."""
     conn = get_db()
-    # Clear existing data (including content hashes so web enrichment can re-add)
-    conn.execute("DELETE FROM rag_chunks")
-    conn.execute("DELETE FROM rag_fts")
-    conn.execute("DELETE FROM rag_content_hashes")
+
+    # Only delete curriculum chunks — leave web enrichment (web-zh, web-en) intact
+    curriculum_ids = [
+        r[0] for r in conn.execute(
+            "SELECT id FROM rag_chunks WHERE file_type IN ('lecture','slides','assignment','syllabus')"
+        ).fetchall()
+    ]
+    if curriculum_ids:
+        placeholders = ",".join("?" * len(curriculum_ids))
+        conn.execute(f"DELETE FROM rag_chunks WHERE id IN ({placeholders})", curriculum_ids)
+        conn.execute(f"DELETE FROM rag_fts WHERE chunk_id IN ({placeholders})", curriculum_ids)
+        conn.execute(
+            f"DELETE FROM rag_content_hashes WHERE chunk_id IN ({placeholders})", curriculum_ids
+        )
+
     for chunk in chunks:
         meta = chunk["metadata"]
         conn.execute(
@@ -189,9 +204,18 @@ def get_stats() -> dict:
     by_week = conn.execute(
         "SELECT week, COUNT(*) as cnt FROM rag_chunks GROUP BY week ORDER BY week"
     ).fetchall()
+    # Breakdown: curriculum vs web enrichment
+    curriculum_count = conn.execute(
+        "SELECT COUNT(*) FROM rag_chunks WHERE file_type IN ('lecture','slides','assignment','syllabus')"
+    ).fetchone()[0]
+    web_count = conn.execute(
+        "SELECT COUNT(*) FROM rag_chunks WHERE file_type IN ('web-zh','web-en')"
+    ).fetchone()[0]
     conn.close()
     return {
         "total_chunks": total,
+        "curriculum_chunks": curriculum_count,
+        "web_chunks": web_count,
         "by_week": [{"week": r["week"], "count": r["cnt"]} for r in by_week],
     }
 

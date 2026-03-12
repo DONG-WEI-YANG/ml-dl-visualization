@@ -20,6 +20,12 @@ export default function AdminSettings() {
   const [message, setMessage] = useState("");
   const [ingestMsg, setIngestMsg] = useState("");
   const [trainMsg, setTrainMsg] = useState("");
+  const [ragStats, setRagStats] = useState<{
+    total_chunks: number;
+    curriculum_chunks: number;
+    web_chunks: number;
+    by_week: { week: number; count: number }[];
+  } | null>(null);
 
   const authFetch = async <T,>(path: string, body?: unknown): Promise<T> => {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -38,11 +44,19 @@ export default function AdminSettings() {
     return res.json();
   };
 
+  const loadRagStats = () => {
+    fetch(`${API_BASE}/api/rag/stats`)
+      .then((r) => r.json())
+      .then(setRagStats)
+      .catch(() => {});
+  };
+
   useEffect(() => {
     if (!token) return;
     authFetch<SettingsData>("/api/admin/settings")
       .then(setData)
       .catch(() => setMessage("無法載入設定"));
+    loadRagStats();
   }, [token]);
 
   if (user?.role !== "admin") {
@@ -68,6 +82,13 @@ export default function AdminSettings() {
   };
 
   const ingestRAG = async () => {
+    if (ragStats && ragStats.total_chunks > 0) {
+      const ok = window.confirm(
+        `目前有 ${ragStats.curriculum_chunks} 個教材片段與 ${ragStats.web_chunks} 個網路知識片段。\n` +
+        "重新索引將替換教材片段，網路知識不受影響。\n確定繼續？"
+      );
+      if (!ok) return;
+    }
     setIngestMsg("索引中...");
     try {
       const res = await fetch(`${API_BASE}/api/rag/ingest`, {
@@ -75,7 +96,13 @@ export default function AdminSettings() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
-      setIngestMsg(`索引完成：${json.chunks_indexed} 個教材片段`);
+      const count = json.chunks_indexed;
+      if (count === 0) {
+        setIngestMsg("本機無教材檔案。請用 scripts/ingest_to_cloud.py 從本機上傳教材至雲端");
+      } else {
+        setIngestMsg(`索引完成：${count} 個教材片段（網路知識已保留）`);
+      }
+      loadRagStats();
     } catch {
       setIngestMsg("索引失敗");
     }
@@ -203,6 +230,23 @@ export default function AdminSettings() {
           </select>
         </div>
 
+        {ragStats && (
+          <div className="bg-gray-50 rounded-lg p-3 space-y-1">
+            <p className="text-sm font-medium text-gray-700">
+              目前索引：{ragStats.total_chunks} 個片段
+              {ragStats.by_week.length > 0 && (
+                <span className="text-gray-500 font-normal">
+                  （涵蓋 {ragStats.by_week.filter((w) => w.week > 0).length} 週）
+                </span>
+              )}
+            </p>
+            <div className="flex gap-4 text-xs text-gray-500">
+              <span>教材：{ragStats.curriculum_chunks}</span>
+              <span>網路知識：{ragStats.web_chunks}</span>
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center gap-3 pt-2">
           <button
             onClick={ingestRAG}
@@ -211,7 +255,11 @@ export default function AdminSettings() {
           >
             重新索引教材
           </button>
-          {ingestMsg && <span className="text-sm text-gray-600">{ingestMsg}</span>}
+          {ingestMsg && (
+            <span className={`text-sm ${ingestMsg.includes("失敗") || ingestMsg.includes("無教材") ? "text-amber-600" : "text-green-600"}`}>
+              {ingestMsg}
+            </span>
+          )}
         </div>
       </div>
 
