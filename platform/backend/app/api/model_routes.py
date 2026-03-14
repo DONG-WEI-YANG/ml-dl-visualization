@@ -13,6 +13,7 @@ class GradientDescentRequest(BaseModel):
     y: list[float]
     learning_rate: float = 0.01
     epochs: int = 100
+    surface_type: str = "bowl"
 
 
 @router.post("/gradient-descent")
@@ -26,12 +27,14 @@ class LossLandscapeRequest(BaseModel):
     w0_range: list[float] = [-5, 5]
     w1_range: list[float] = [-5, 5]
     resolution: int = 50
+    surface_type: str = "bowl"
 
 
 @router.post("/loss-landscape")
 async def loss_landscape(req: LossLandscapeRequest):
     return compute_loss_landscape(
-        req.X, req.y, tuple(req.w0_range), tuple(req.w1_range), req.resolution
+        req.X, req.y, tuple(req.w0_range), tuple(req.w1_range), req.resolution,
+        surface_type=req.surface_type,
     )
 
 
@@ -41,12 +44,14 @@ class DecisionBoundaryRequest(BaseModel):
     model_type: str = "logistic"
     C: float = 1.0
     kernel: str = "rbf"
+    n_features: int = 2
 
 
 @router.post("/decision-boundary")
 async def decision_boundary(req: DecisionBoundaryRequest):
     return train_and_get_decision_boundary(
-        req.X, req.y, req.model_type, req.C, req.kernel
+        req.X, req.y, req.model_type, req.C, req.kernel,
+        n_features=req.n_features,
     )
 
 

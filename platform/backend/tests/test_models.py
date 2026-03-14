@@ -42,3 +42,29 @@ def test_activation_functions():
     assert "sigmoid" in result
     assert "relu" in result
     assert len(result["x"]) == 200
+
+
+def test_loss_landscape_saddle():
+    result = compute_loss_landscape(X=[[1], [2], [3]], y=[2, 4, 6], resolution=10, surface_type="saddle")
+    assert "w0" in result and "w1" in result and "loss" in result
+    assert len(result["loss"]) == 10
+
+
+def test_loss_landscape_local_minima():
+    result = compute_loss_landscape(X=[[1], [2], [3]], y=[2, 4, 6], resolution=10, surface_type="local_minima")
+    assert len(result["loss"]) == 10
+
+
+def test_decision_boundary_3d():
+    import random
+    random.seed(42)
+    X_3d, y_3d = [], []
+    for _ in range(25):
+        X_3d.append([random.gauss(-1, 1), random.gauss(-1, 1), random.gauss(-1, 1)])
+        y_3d.append(0)
+        X_3d.append([random.gauss(1, 1), random.gauss(1, 1), random.gauss(1, 1)])
+        y_3d.append(1)
+    result = train_and_get_decision_boundary(X_3d, y_3d, n_features=3, resolution=10)
+    assert "mesh_vertices" in result
+    assert "mesh_faces" in result
+    assert len(result["X"][0]) == 3

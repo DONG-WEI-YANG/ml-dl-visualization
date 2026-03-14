@@ -48,6 +48,7 @@ def compute_loss_landscape(
     w0_range: tuple = (-5, 5),
     w1_range: tuple = (-5, 5),
     resolution: int = 50,
+    surface_type: str = "bowl",
 ) -> dict:
     X_arr = np.array(X)
     y_arr = np.array(y)
@@ -56,6 +57,11 @@ def compute_loss_landscape(
     Z = np.zeros((resolution, resolution))
     for i, w0 in enumerate(w0s):
         for j, w1 in enumerate(w1s):
-            pred = X_arr[:, 0] * w0 + w1
-            Z[i, j] = float(np.mean((pred - y_arr) ** 2))
+            if surface_type == "saddle":
+                Z[i, j] = w0**2 - w1**2
+            elif surface_type == "local_minima":
+                Z[i, j] = ((w0**2 + w1 - 11) ** 2 + (w0 + w1**2 - 7) ** 2) / 100
+            else:  # "bowl" — default MSE loss
+                pred = X_arr[:, 0] * w0 + w1
+                Z[i, j] = float(np.mean((pred - y_arr) ** 2))
     return {"w0": w0s.tolist(), "w1": w1s.tolist(), "loss": Z.tolist()}
