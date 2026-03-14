@@ -192,7 +192,7 @@ export default function EmbeddingSpace3D({
 
       {/* 3D canvas */}
       <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <Scene3D cameraPosition={[8, 6, 8]} showGrid>
+        <Scene3D cameraPosition={[5, 4, 5]} showGrid>
           <Axis3D
             labels={{ x: "Dim 1", y: "Dim 2", z: "Dim 3" }}
             range={{ x: [-5, 5], y: [-5, 5], z: [-5, 5] }}

@@ -62,14 +62,14 @@ export default function Scene3D({
   if (!webglOk) return <>{fallback}</>;
 
   return (
-    <div className={className} style={{ minHeight: 400, ...style }} aria-label={ariaLabel} role="img" tabIndex={0}>
+    <div className={className} style={{ height: 500, ...style }} aria-label={ariaLabel} role="img" tabIndex={0}>
       <Canvas
         camera={{ position: cameraPosition, fov: 50 }}
-        style={{ background: backgroundColor }}
+        style={{ background: backgroundColor, width: "100%", height: "100%" }}
       >
         <ambientLight intensity={0.4} />
         <directionalLight position={[10, 10, 5]} intensity={0.8} />
-        {showGrid && <gridHelper args={[20, 20, "#334155", "#1e293b"]} />}
+        {showGrid && <gridHelper args={[10, 10, "#334155", "#1e293b"]} />}
         <OrbitControls
           ref={controlsRef}
           enableDamping={enableDamping}

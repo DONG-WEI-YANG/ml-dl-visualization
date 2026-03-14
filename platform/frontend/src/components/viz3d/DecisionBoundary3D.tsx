@@ -233,7 +233,7 @@ export default function DecisionBoundary3D({
           </div>
         )}
         {!loading && result && (
-          <Scene3D cameraPosition={[5, 5, 5]} showGrid>
+          <Scene3D cameraPosition={[3.5, 3.5, 3.5]} showGrid>
             <Axis3D
               labels={{ x: "X₁", y: "X₂", z: "X₃" }}
               range={{ x: [-4, 4], y: [-4, 4], z: [-4, 4] }}

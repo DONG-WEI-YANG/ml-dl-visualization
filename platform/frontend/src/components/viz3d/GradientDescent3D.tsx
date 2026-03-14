@@ -365,7 +365,7 @@ export default function GradientDescent3D({ lr, onLrChange }: GradientDescent3DP
           </div>
         )}
         {!loading && data && (
-          <Scene3D cameraPosition={[6, 6, 6]} showGrid>
+          <Scene3D cameraPosition={[4, 4, 4]} showGrid>
             <Axis3D
               labels={{ x: "w₀", y: "Loss", z: "w₁" }}
               range={{ x: [-4, 4], y: [-4, 4], z: [-4, 4] }}
