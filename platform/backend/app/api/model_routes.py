@@ -22,8 +22,8 @@ async def gradient_descent(req: GradientDescentRequest):
 
 
 class LossLandscapeRequest(BaseModel):
-    X: list[list[float]]
-    y: list[float]
+    X: list[list[float]] = [[1], [2], [3]]
+    y: list[float] = [2, 4, 6]
     w0_range: list[float] = [-5, 5]
     w1_range: list[float] = [-5, 5]
     resolution: int = 50
