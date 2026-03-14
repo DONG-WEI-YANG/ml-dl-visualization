@@ -10,6 +10,12 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { fetchAPI } from "../../lib/api";
+import type { ActivationType } from "../nn/nn-types";
+
+interface ActivationFunctionVizProps {
+  selectedActivation?: ActivationType;
+  onActivationChange?: (fn: ActivationType) => void;
+}
 
 const COLORS: Record<string, string> = {
   sigmoid: "#2563eb",
@@ -27,7 +33,10 @@ const LABELS: Record<string, string> = {
   gelu: "GELU",
 };
 
-export default function ActivationFunctionViz() {
+export default function ActivationFunctionViz({
+  selectedActivation,
+  onActivationChange,
+}: ActivationFunctionVizProps = {}) {
   const [data, setData] = useState<any>(null);
   const [selected, setSelected] = useState<string[]>([
     "sigmoid",
@@ -59,6 +68,9 @@ export default function ActivationFunctionViz() {
     setSelected((prev) =>
       prev.includes(fn) ? prev.filter((f) => f !== fn) : [...prev, fn]
     );
+    if (onActivationChange) {
+      onActivationChange(fn as ActivationType);
+    }
   };
 
   return (
@@ -76,7 +88,7 @@ export default function ActivationFunctionViz() {
               selected.includes(fn)
                 ? "text-white border-transparent"
                 : "text-gray-600 border-gray-200 bg-white"
-            }`}
+            }${selectedActivation === fn ? " ring-2 ring-offset-1 ring-blue-400" : ""}`}
             style={
               selected.includes(fn) ? { backgroundColor: COLORS[fn] } : {}
             }

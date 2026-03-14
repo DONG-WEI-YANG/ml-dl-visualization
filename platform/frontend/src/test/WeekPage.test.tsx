@@ -9,6 +9,7 @@ vi.mock("../hooks/useChat", () => ({
 
 vi.mock("../lib/api", () => ({
   fetchAPI: vi.fn().mockResolvedValue({ questions: [] }),
+  API_BASE: "http://localhost:8000",
 }));
 
 function renderWeekPage(weekId: string) {
@@ -48,6 +49,7 @@ describe("WeekPage", () => {
 
   it("renders chat panel", () => {
     renderWeekPage("1");
-    expect(screen.getByText("AI 助教")).toBeInTheDocument();
+    expect(screen.getByText("AI")).toBeInTheDocument();
+    expect(screen.getByText("助教")).toBeInTheDocument();
   });
 });

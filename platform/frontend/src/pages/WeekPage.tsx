@@ -17,7 +17,7 @@ const weekComponents: Record<number, React.LazyExoticComponent<React.ComponentTy
   8: lazy(() => import("../components/viz/FeatureImportanceViz")),
   9: lazy(() => import("../components/viz/PipelineFlowViz")),
   10: lazy(() => import("../components/viz/LearningCurveViz")),
-  11: lazy(() => import("../components/viz/ActivationFunctionViz")),
+  11: lazy(() => import("../components/viz/Week11Compound")),
   12: lazy(() => import("../components/viz/CNNLayerViz")),
   13: lazy(() => import("../components/viz/AttentionViz")),
   14: lazy(() => import("../components/viz/TrainingComparisonViz")),

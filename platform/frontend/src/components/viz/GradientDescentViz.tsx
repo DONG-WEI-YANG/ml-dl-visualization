@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import {
   LineChart,
   Line,
@@ -17,6 +17,8 @@ interface GDResult {
   final_loss: number;
 }
 
+const GradientDescent3D = lazy(() => import("../viz3d/GradientDescent3D"));
+
 // 生成範例資料
 function generateData(n: number = 50) {
   const X: number[][] = [];
@@ -30,6 +32,7 @@ function generateData(n: number = 50) {
 }
 
 export default function GradientDescentViz() {
+  const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
   const [lr, setLr] = useState(0.01);
   const [epochs, setEpochs] = useState(100);
   const [result, setResult] = useState<GDResult | null>(null);
@@ -60,87 +63,103 @@ export default function GradientDescentViz() {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">
-        梯度下降視覺化 Gradient Descent
-      </h3>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm text-gray-600 mb-1">
-            學習率 Learning Rate: <strong>{lr}</strong>
-          </label>
-          <input
-            type="range"
-            min="0.001"
-            max="1"
-            step="0.001"
-            value={lr}
-            onChange={(e) => setLr(+e.target.value)}
-            className="w-full"
-          />
-        </div>
-        <div>
-          <label className="block text-sm text-gray-600 mb-1">
-            迭代次數 Epochs: <strong>{epochs}</strong>
-          </label>
-          <input
-            type="range"
-            min="10"
-            max="500"
-            step="10"
-            value={epochs}
-            onChange={(e) => setEpochs(+e.target.value)}
-            className="w-full"
-          />
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">梯度下降視覺化 Gradient Descent</h3>
+        <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+          <button onClick={() => setViewMode("2d")}
+            className={`px-3 py-1 ${viewMode === "2d" ? "bg-blue-500 text-white" : "bg-white text-gray-600"}`}>2D</button>
+          <button onClick={() => setViewMode("3d")}
+            className={`px-3 py-1 ${viewMode === "3d" ? "bg-blue-500 text-white" : "bg-white text-gray-600"}`}>3D</button>
         </div>
       </div>
 
-      <button
-        onClick={run}
-        disabled={loading}
-        className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-50"
-      >
-        {loading ? "訓練中..." : "執行梯度下降"}
-      </button>
+      {viewMode === "2d" && (
+        <>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">
+                學習率 Learning Rate: <strong>{lr}</strong>
+              </label>
+              <input
+                type="range"
+                min="0.001"
+                max="1"
+                step="0.001"
+                value={lr}
+                onChange={(e) => setLr(+e.target.value)}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">
+                迭代次數 Epochs: <strong>{epochs}</strong>
+              </label>
+              <input
+                type="range"
+                min="10"
+                max="500"
+                step="10"
+                value={epochs}
+                onChange={(e) => setEpochs(+e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
 
-      {result && (
-        <div className="space-y-4">
-          <div className="border border-gray-200 rounded-lg p-4">
-            <p className="text-sm text-gray-600 mb-2">
-              損失曲線 Loss Curve | 最終損失:{" "}
-              <strong>{result.final_loss.toFixed(4)}</strong>
-            </p>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={lossData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="epoch"
-                  label={{ value: "Epoch", position: "bottom" }}
-                />
-                <YAxis
-                  label={{ value: "Loss", angle: -90, position: "insideLeft" }}
-                />
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="loss"
-                  stroke="#2563eb"
-                  dot={false}
-                  strokeWidth={2}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-3 text-sm">
-            <p>
-              最終權重 Final Weights: [
-              {result.final_weights.map((w) => w.toFixed(4)).join(", ")}]
-            </p>
-            <p className="text-gray-500 text-xs mt-1">
-              真實值: w=2.0, b=3.0 | 預期收斂至接近此值
-            </p>
-          </div>
-        </div>
+          <button
+            onClick={run}
+            disabled={loading}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-50"
+          >
+            {loading ? "訓練中..." : "執行梯度下降"}
+          </button>
+
+          {result && (
+            <div className="space-y-4">
+              <div className="border border-gray-200 rounded-lg p-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  損失曲線 Loss Curve | 最終損失:{" "}
+                  <strong>{result.final_loss.toFixed(4)}</strong>
+                </p>
+                <ResponsiveContainer width="100%" height={250}>
+                  <LineChart data={lossData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                      dataKey="epoch"
+                      label={{ value: "Epoch", position: "bottom" }}
+                    />
+                    <YAxis
+                      label={{ value: "Loss", angle: -90, position: "insideLeft" }}
+                    />
+                    <Tooltip />
+                    <Line
+                      type="monotone"
+                      dataKey="loss"
+                      stroke="#2563eb"
+                      dot={false}
+                      strokeWidth={2}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                <p>
+                  最終權重 Final Weights: [
+                  {result.final_weights.map((w) => w.toFixed(4)).join(", ")}]
+                </p>
+                <p className="text-gray-500 text-xs mt-1">
+                  真實值: w=2.0, b=3.0 | 預期收斂至接近此值
+                </p>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {viewMode === "3d" && (
+        <Suspense fallback={<div className="text-gray-400 text-sm p-4">載入 3D 視覺化...</div>}>
+          <GradientDescent3D lr={lr} onLrChange={setLr} />
+        </Suspense>
       )}
     </div>
   );
