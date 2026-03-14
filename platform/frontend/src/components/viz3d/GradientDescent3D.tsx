@@ -281,7 +281,7 @@ export default function GradientDescent3D({ lr, onLrChange }: GradientDescent3DP
     try {
       const resp = await fetchAPI<LossLandscapeResponse>(
         "/api/models/loss-landscape",
-        { surface_type: type, resolution: 40 },
+        { X: [[1], [2], [3]], y: [2, 4, 6], surface_type: type, resolution: 40 },
       );
       setData(resp);
       setResetToken((t) => t + 1);
