@@ -150,7 +150,7 @@ function SurfaceMesh({
       for (let i = 0; i < nx; i++) {
         const x = (w0[i] - (xMin + xMax) / 2) * sx;
         const z = (w1[j] - (yMin + yMax) / 2) * sy;
-        const y = (loss[j][i] - minL) * sz - 2; // shift down a bit
+        const y = (loss[j][i] - minL) * sz; // height from 0 up
         positions.push(x, y, z);
 
         const t = (loss[j][i] - minL) / range;
@@ -251,7 +251,7 @@ function GDBall({
     const [lossVal] = sampleLoss(w0, w1, loss, wx, wy);
     meshRef.current.position.set(
       (wx - cx) * sx,
-      (lossVal - minL) * sz - 2 + 0.15,
+      (lossVal - minL) * sz + 0.15,
       (wy - cy) * sy,
     );
   });
@@ -365,7 +365,7 @@ export default function GradientDescent3D({ lr, onLrChange }: GradientDescent3DP
           </div>
         )}
         {!loading && data && (
-          <Scene3D cameraPosition={[4, 4, 4]} showGrid>
+          <Scene3D cameraPosition={[5, 6, 5]} showGrid>
             <Axis3D
               labels={{ x: "w₀", y: "Loss", z: "w₁" }}
               range={{ x: [-4, 4], y: [-4, 4], z: [-4, 4] }}

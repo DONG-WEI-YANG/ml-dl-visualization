@@ -64,7 +64,7 @@ export default function Scene3D({
   return (
     <div className={className} style={{ height: 500, ...style }} aria-label={ariaLabel} role="img" tabIndex={0}>
       <Canvas
-        camera={{ position: cameraPosition, fov: 50 }}
+        camera={{ position: cameraPosition, fov: 60 }}
         style={{ background: backgroundColor, width: "100%", height: "100%" }}
       >
         <ambientLight intensity={0.4} />
