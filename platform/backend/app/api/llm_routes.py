@@ -52,13 +52,18 @@ async def get_model_info():
     }
 
 
+def _safe_text(text: str) -> str:
+    """Remove Unicode surrogates that crash JSON serialization."""
+    return text.encode("utf-8", errors="replace").decode("utf-8")
+
+
 @router.post("/chat")
 async def chat(req: ChatRequest):
     try:
         provider = _get_provider()
         tutor = AITutor(provider, use_rag=_rag_enabled())
         response = await tutor.ask(req.messages, week=req.week, topic=req.topic, mode=req.mode)
-        return {"response": response.content, "model": response.model}
+        return {"response": _safe_text(response.content), "model": response.model}
     except Exception as e:
         logger.error("Chat error: %s", e, exc_info=True)
         return {"response": f"抱歉，處理你的問題時發生錯誤。請稍後再試。\n\n錯誤資訊：{type(e).__name__}", "model": "error"}
@@ -83,7 +88,7 @@ async def chat_ws(websocket: WebSocket, token: str = Query(default="")):
             provider = _get_provider()
             tutor = AITutor(provider, use_rag=_rag_enabled())
             async for chunk in tutor.ask_stream(messages, week=week, topic=topic, mode=mode):
-                await websocket.send_json({"type": "chunk", "content": chunk})
+                await websocket.send_json({"type": "chunk", "content": _safe_text(chunk)})
             await websocket.send_json({"type": "done"})
     except WebSocketDisconnect:
         pass

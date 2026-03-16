@@ -53,7 +53,10 @@ def _sanitize_content(text: str) -> str:
     text = re.sub(r"\s*\^\s*", "", text)  # Stray carets
     text = re.sub(r"\\[a-z]+", "", text)  # Remaining LaTeX commands
 
-    # 4. Collapse whitespace
+    # 4. Remove Unicode surrogates (invalid chars that crash JSON encoding)
+    text = text.encode("utf-8", errors="surrogatepass").decode("utf-8", errors="replace")
+
+    # 5. Collapse whitespace
     text = re.sub(r"\n{3,}", "\n\n", text)
     text = re.sub(r"  +", " ", text)
 
