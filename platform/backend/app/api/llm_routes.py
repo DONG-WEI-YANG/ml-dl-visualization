@@ -54,10 +54,14 @@ async def get_model_info():
 
 @router.post("/chat")
 async def chat(req: ChatRequest):
-    provider = _get_provider()
-    tutor = AITutor(provider, use_rag=_rag_enabled())
-    response = await tutor.ask(req.messages, week=req.week, topic=req.topic, mode=req.mode)
-    return {"response": response.content, "model": response.model}
+    try:
+        provider = _get_provider()
+        tutor = AITutor(provider, use_rag=_rag_enabled())
+        response = await tutor.ask(req.messages, week=req.week, topic=req.topic, mode=req.mode)
+        return {"response": response.content, "model": response.model}
+    except Exception as e:
+        logger.error("Chat error: %s", e, exc_info=True)
+        return {"response": f"抱歉，處理你的問題時發生錯誤。請稍後再試。\n\n錯誤資訊：{type(e).__name__}", "model": "error"}
 
 
 @router.websocket("/ws/chat")
