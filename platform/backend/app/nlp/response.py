@@ -295,6 +295,19 @@ def _digest_rag_context(rag_context: str, intent: str, rag_keywords: list) -> st
     return "\n\n".join(sections)
 
 
+def _clean_keywords(keywords: list, min_len: int = 2) -> list:
+    """Filter keywords: remove single chars, markdown artifacts, stopwords."""
+    import re
+    stopwords = {"的", "了", "是", "在", "和", "與", "或", "有", "這", "那", "也", "都",
+                 "就", "會", "可以", "什麼", "為什麼", "怎麼", "如何", "哪個", "嗎", "呢"}
+    clean = []
+    for kw in keywords:
+        kw = re.sub(r'[*#_`|]', '', kw).strip()  # Strip markdown symbols
+        if len(kw) >= min_len and kw not in stopwords:
+            clean.append(kw)
+    return clean
+
+
 def _build_takeaway(ctx: NLPContext, rag_keywords: list, nlp_topics: list) -> str:
     """Build a concise key-takeaway section from NLP analysis results."""
     items = []
@@ -304,24 +317,39 @@ def _build_takeaway(ctx: NLPContext, rag_keywords: list, nlp_topics: list) -> st
         concepts_str = "、".join(ctx.domain_concepts[:4])
         items.append(f"**核心概念：** {concepts_str}")
 
-    # Add RAG-derived keywords as learning focus
-    if rag_keywords and len(rag_keywords) >= 2:
-        kw_str = "、".join(rag_keywords[:4])
+    # Add RAG-derived keywords as learning focus (cleaned)
+    clean_kw = _clean_keywords(rag_keywords)
+    if clean_kw and len(clean_kw) >= 2:
+        kw_str = "、".join(clean_kw[:4])
         items.append(f"**學習重點：** {kw_str}")
 
-    # Add cross-week links if available
+    # Add cross-week links if available (skip empty titles)
     if ctx.cross_week_links:
         links = ctx.cross_week_links[:3]
-        link_strs = [f"第{lnk.get('week', '?')}週「{lnk.get('title', '')}」"
-                     for lnk in links if isinstance(lnk, dict)]
+        link_strs = []
+        for lnk in links:
+            if not isinstance(lnk, dict):
+                continue
+            title = lnk.get('title', '').strip()
+            week = lnk.get('week', '')
+            if title and week:
+                link_strs.append(f"第{week}週「{title}」")
         if link_strs:
             items.append(f"**相關教材：** {'、'.join(link_strs)}")
 
     if not items:
         return ""
 
-    header = "\n\n📝 **重點整理：**\n"
+    header = "\n\n**重點整理：**\n"
     return header + "\n".join(f"- {item}" for item in items)
+
+
+_QUESTION_STOPWORDS = {
+    "什麼", "為什麼", "怎麼", "如何", "哪個", "哪些", "是不是", "有沒有",
+    "可以", "能不能", "是", "的", "了", "嗎", "呢", "吧", "啊",
+    "請問", "想問", "請教", "告訴", "解釋", "說明",
+    "what", "why", "how", "which", "is", "are", "can", "do", "the",
+}
 
 
 def assemble_response(ctx: NLPContext) -> NLPContext:
@@ -332,15 +360,18 @@ def assemble_response(ctx: NLPContext) -> NLPContext:
         nlp_topics = jieba.analyse.extract_tags(ctx.user_message, topK=5)
     except Exception:
         pass
-    topic = "、".join(nlp_topics[:3]) if nlp_topics else (
-        "、".join(ctx.keywords[:3]) if ctx.keywords else ctx.user_message[:20]
-    )
+    # Filter question stopwords from displayed topic
+    filtered_topics = [t for t in nlp_topics if t not in _QUESTION_STOPWORDS and len(t) >= 2]
+    if not filtered_topics:
+        filtered_topics = [t for t in (ctx.keywords or []) if t not in _QUESTION_STOPWORDS and len(t) >= 2]
+    topic = "、".join(filtered_topics[:3]) if filtered_topics else ctx.user_message[:20]
 
-    # --- Extract RAG context keywords via SnowNLP ---
+    # --- Extract RAG context keywords via SnowNLP (cleaned) ---
     rag_keywords = []
     if ctx.rag_context:
         try:
-            rag_keywords = SnowNLP(ctx.rag_context).keywords(5)
+            raw_kw = SnowNLP(ctx.rag_context).keywords(8)
+            rag_keywords = _clean_keywords(raw_kw, min_len=2)
         except Exception:
             pass
 
@@ -382,7 +413,7 @@ def assemble_response(ctx: NLPContext) -> NLPContext:
         parts.append(concept_note)
     elif rag_keywords:
         kw_str = "、".join(rag_keywords[:3])
-        parts.append(f"\n\n📌 **相關關鍵詞：** {kw_str}\n")
+        parts.append(f"\n\n[Concept] **相關關鍵詞：** {kw_str}\n")
 
     # 4. Separator
     parts.append("\n---")

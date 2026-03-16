@@ -130,6 +130,13 @@ def retrieve_context(query: str, week: int, top_k: int = 5) -> str:
     if not clean_results:
         return ""
 
+    # Re-rank by file_type priority: lecture > slides > assignment > web
+    _FILE_TYPE_PRIORITY = {
+        "lecture": 0, "slides": 1, "syllabus": 2,
+        "assignment": 3, "web-zh": 4, "web-en": 5,
+    }
+    clean_results.sort(key=lambda r: _FILE_TYPE_PRIORITY.get(r["file_type"], 9))
+
     # Build context string
     parts = []
     total_chars = 0

@@ -201,7 +201,7 @@ def citation_injector(ctx: NLPContext) -> NLPContext:
     ctx.citations = final_sources if final_sources else unique_sources
 
     if ctx.citations:
-        citation_text = "\n\n\ud83d\udcd6 **\u53c3\u8003\u4f86\u6e90\uff1a**\n" + "\n".join([f"- {s}" for s in ctx.citations])
+        citation_text = "\n\n[Ref] **參考來源：**\n" + "\n".join([f"- {s}" for s in ctx.citations])
         ctx.response += citation_text
 
     return ctx
