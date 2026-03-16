@@ -8,9 +8,21 @@ import re
 import logging
 from .base import LLMProvider, LLMMessage, LLMResponse
 from app.nlp.pipeline import NLPContext, run_pipeline
-from app.nlp import FULL_PIPELINE
 
 logger = logging.getLogger(__name__)
+
+# Lazy-load FULL_PIPELINE to avoid importing all heavy NLP modules at startup
+_pipeline = None
+
+
+def _get_pipeline():
+    global _pipeline
+    if _pipeline is None:
+        logger.info("Loading full 42-layer NLP pipeline (first request)...")
+        from app.nlp import FULL_PIPELINE
+        _pipeline = FULL_PIPELINE
+        logger.info("NLP pipeline loaded (%d layers)", len(_pipeline))
+    return _pipeline
 
 
 class LocalProvider(LLMProvider):
@@ -69,7 +81,7 @@ class LocalProvider(LLMProvider):
             topic=topic,
             is_homework=is_homework,
         )
-        ctx = run_pipeline(ctx, FULL_PIPELINE)
+        ctx = run_pipeline(ctx, _get_pipeline())
 
         logger.info(
             "NLP pipeline: %d layers in %.0fms | intent=%s emotion=%s level=%s",
