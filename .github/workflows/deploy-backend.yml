@@ -1,0 +1,113 @@
+name: Deploy Backend to HF Space
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'platform/backend/**'
+      - 'curriculum/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: hf-space
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - run: pip install huggingface_hub
+
+      - name: Deploy backend to HF Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python - <<'SCRIPT'
+          import os
+          from huggingface_hub import HfApi
+
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          repo_id = "kevin19830331/ml-dl-viz-api"
+
+          # Upload backend code
+          api.upload_folder(
+              folder_path="platform/backend",
+              repo_id=repo_id,
+              repo_type="space",
+              ignore_patterns=[
+                  ".venv/*", "__pycache__/*", "*.pyc", "data/*.db",
+                  ".env", ".pytest_cache/*", ".coverage",
+                  "hf-space/*",
+              ],
+              commit_message=f"deploy: sync backend from GitHub Actions",
+          )
+          print("Backend uploaded!")
+
+          # Upload curriculum (for auto-ingest on startup)
+          api.upload_folder(
+              folder_path="curriculum",
+              path_in_repo="curriculum",
+              repo_id=repo_id,
+              repo_type="space",
+              commit_message="deploy: sync curriculum",
+          )
+          print("Curriculum uploaded!")
+
+          # Ensure correct Dockerfile (port 7860)
+          dockerfile = '''FROM python:3.11-slim
+
+          WORKDIR /app
+
+          COPY requirements.txt .
+          RUN pip install --no-cache-dir -r requirements.txt
+
+          COPY . .
+          RUN mkdir -p data
+
+          EXPOSE 7860
+
+          CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+          '''
+          import textwrap
+          dockerfile = textwrap.dedent(dockerfile).strip() + "\n"
+
+          api.upload_file(
+              path_or_fileobj=dockerfile.encode("utf-8"),
+              path_in_repo="Dockerfile",
+              repo_id=repo_id,
+              repo_type="space",
+              commit_message="deploy: ensure correct Dockerfile",
+          )
+          print("Dockerfile verified!")
+
+          # Ensure correct README (HF Space metadata)
+          readme = """---
+          title: ML/DL Viz API
+          emoji: "\U0001f9e0"
+          colorFrom: blue
+          colorTo: purple
+          sdk: docker
+          app_port: 7860
+          ---
+          """
+          readme = textwrap.dedent(readme).strip() + "\n"
+
+          api.upload_file(
+              path_or_fileobj=readme.encode("utf-8"),
+              path_in_repo="README.md",
+              repo_id=repo_id,
+              repo_type="space",
+              commit_message="deploy: ensure correct HF Space metadata",
+          )
+          print("README verified!")
+          print("Deployment complete!")
+          SCRIPT
