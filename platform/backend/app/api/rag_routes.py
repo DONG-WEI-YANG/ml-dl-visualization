@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from app.auth.dependencies import require_admin
 from app.rag.chunker import load_curriculum_chunks
-from app.rag.store import ingest_chunks, search_fts, get_stats, init_rag_tables
+from app.rag.store import ingest_chunks, search_fts, get_stats, init_rag_tables, cleanup_garbage_chunks
 from app.rag.retriever import retrieve_context
 
 router = APIRouter(prefix="/api/rag", tags=["RAG"])
@@ -56,3 +56,11 @@ async def get_context(req: SearchRequest):
     """Get formatted RAG context for a query (what the LLM sees)."""
     context = retrieve_context(req.query, week=req.week or 1, top_k=req.top_k)
     return {"context": context}
+
+
+@router.post("/cleanup")
+async def cleanup_rag(admin: dict = Depends(require_admin)):
+    """Clean garbage chunks from RAG store: remove Simplified Chinese,
+    Wikipedia redirects, LaTeX artifacts. Admin only."""
+    result = cleanup_garbage_chunks()
+    return {"status": "ok", **result}

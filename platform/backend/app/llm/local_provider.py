@@ -1,48 +1,23 @@
 """Local NLP provider — no external API needed.
 
-Uses a 7-layer NLP pipeline for question analysis and response generation.
+Uses the FULL 42-layer NLP pipeline for deep question analysis and response generation.
 Works offline, zero cost, always available.
 """
 
 import re
+import logging
 from .base import LLMProvider, LLMMessage, LLMResponse
-from app.nlp.pipeline import NLPContext
-from app.nlp.intent import detect_intent
-from app.nlp.emotion import detect_emotion
-from app.nlp.difficulty import assess_difficulty
-from app.nlp.topic import extract_topics
-from app.nlp.context_tracker import track_conversation
-from app.nlp.reranker import retrieve_and_rerank
-from app.nlp.response import assemble_response
+from app.nlp.pipeline import NLPContext, run_pipeline
+from app.nlp import FULL_PIPELINE
 
-
-def run_pipeline(user_message: str, history: list[dict], week: int, topic: str, is_homework: bool) -> NLPContext:
-    """Run all 7 NLP layers in sequence."""
-    ctx = NLPContext(
-        user_message=user_message,
-        conversation_history=history,
-        week=week,
-        topic=topic,
-        is_homework=is_homework,
-    )
-
-    # Layer 1-7 in sequence, each enriching the shared context
-    ctx = detect_intent(ctx)        # L1: What type of question?
-    ctx = detect_emotion(ctx)       # L2: How is the student feeling?
-    ctx = assess_difficulty(ctx)    # L3: What's their level?
-    ctx = extract_topics(ctx)       # L4: What concepts are involved?
-    ctx = track_conversation(ctx)   # L5: Multi-turn context
-    ctx = retrieve_and_rerank(ctx)  # L6: Find relevant curriculum
-    ctx = assemble_response(ctx)    # L7: Build adaptive response
-
-    return ctx
+logger = logging.getLogger(__name__)
 
 
 class LocalProvider(LLMProvider):
-    """Local NLP provider using 7-layer pipeline. No API needed."""
+    """Local NLP provider using full 42-layer pipeline. No API needed."""
 
     def __init__(self):
-        self.model_name = "local-nlp-v2"
+        self.model_name = "local-nlp-v3"
 
     async def chat(self, messages: list[LLMMessage], system: str = "") -> LLMResponse:
         response_text = self._generate(messages, system)
@@ -51,6 +26,7 @@ class LocalProvider(LLMProvider):
     async def stream(self, messages: list[LLMMessage], system: str = ""):
         """Simulate streaming by yielding chunks of the full response."""
         response_text = self._generate(messages, system)
+        # Split at sentence boundaries for natural streaming
         chunks = re.split(r"(?<=[。！？\n])", response_text)
         for chunk in chunks:
             if chunk:
@@ -85,7 +61,20 @@ class LocalProvider(LLMProvider):
         # Build conversation history
         history = [{"role": m.role, "content": m.content} for m in messages]
 
-        # Run the full NLP pipeline
-        ctx = run_pipeline(user_msg, history, week, topic, is_homework)
+        # Run the FULL 42-layer NLP pipeline
+        ctx = NLPContext(
+            user_message=user_msg,
+            conversation_history=history,
+            week=week,
+            topic=topic,
+            is_homework=is_homework,
+        )
+        ctx = run_pipeline(ctx, FULL_PIPELINE)
+
+        logger.info(
+            "NLP pipeline: %d layers in %.0fms | intent=%s emotion=%s level=%s",
+            len(ctx.layers_executed), ctx.total_processing_ms,
+            ctx.intent, ctx.emotion, ctx.student_level,
+        )
 
         return ctx.response

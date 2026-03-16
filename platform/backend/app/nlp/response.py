@@ -165,42 +165,92 @@ HOMEWORK_GUARD = (
 )
 
 
-def _digest_rag_context(rag_context: str, intent: str, rag_keywords: list) -> str:
-    """Digest raw RAG context into structured, readable sections.
+def _extract_source_blocks(rag_context: str) -> list[dict]:
+    """Parse RAG context into individual source blocks with metadata."""
+    import re
+    blocks = rag_context.split("\n\n---\n\n")
+    result = []
+    source_re = re.compile(r"^\[來源：第(\d+)週\s+(\S+)\s+—\s+(.+?)\]\n(.+)", re.DOTALL)
+    for block in blocks:
+        block = block.strip()
+        if not block:
+            continue
+        m = source_re.match(block)
+        if m:
+            result.append({
+                "week": int(m.group(1)),
+                "file_type": m.group(2),
+                "title": m.group(3),
+                "content": m.group(4).strip(),
+            })
+        else:
+            result.append({"week": 0, "file_type": "", "title": "", "content": block})
+    return result
 
-    Instead of pasting raw chunks, organize content with headers and bullet points.
+
+def _summarize_block(content: str, max_sentences: int = 4) -> str:
+    """Extract key sentences from a content block using SnowNLP + heuristics."""
+    import re
+    # Split into sentences (Chinese and English)
+    sentences = re.split(r'(?<=[。！？\.\!\?])\s*', content)
+    sentences = [s.strip() for s in sentences if len(s.strip()) > 8]
+
+    if len(sentences) <= max_sentences:
+        return content
+
+    # Score sentences: prefer those with keywords, definitions, explanations
+    scored = []
+    definition_signals = ["是", "為", "指", "定義", "means", "is a", "refers"]
+    explanation_signals = ["因為", "所以", "由於", "例如", "比如", "包括", "such as", "because"]
+    for i, sent in enumerate(sentences):
+        score = 0
+        # First sentence bonus (usually the definition)
+        if i == 0:
+            score += 3
+        # Definition/explanation signals
+        for sig in definition_signals:
+            if sig in sent:
+                score += 2
+                break
+        for sig in explanation_signals:
+            if sig in sent:
+                score += 1
+                break
+        # Penalize very short or very long
+        if len(sent) < 15:
+            score -= 1
+        if len(sent) > 300:
+            score -= 1
+        scored.append((score, i, sent))
+
+    # Take top sentences, maintaining original order
+    scored.sort(key=lambda x: x[0], reverse=True)
+    top_indices = sorted([s[1] for s in scored[:max_sentences]])
+    return "".join(sentences[i] for i in top_indices)
+
+
+def _digest_rag_context(rag_context: str, intent: str, rag_keywords: list) -> str:
+    """Digest raw RAG context into structured, readable response.
+
+    Instead of pasting raw chunks, extracts key sentences and synthesizes.
     """
     if not rag_context:
         return ""
 
-    # Split into paragraphs and clean up
-    paragraphs = [p.strip() for p in rag_context.split("\n\n") if p.strip()]
-    if not paragraphs:
+    blocks = _extract_source_blocks(rag_context)
+    if not blocks:
         return rag_context
 
-    # For short context (1-2 paragraphs), keep as-is but with formatting
-    if len(paragraphs) <= 2:
-        return rag_context
-
-    # For longer context, organize into sections
     sections = []
+    for block in blocks[:3]:  # Max 3 source blocks
+        content = block["content"]
+        # Summarize each block to key sentences
+        summary = _summarize_block(content, max_sentences=3)
+        if summary and len(summary) > 15:
+            sections.append(summary)
 
-    # Group paragraphs: first 2 as main content, rest as supplementary
-    main_content = "\n\n".join(paragraphs[:3])
-    sections.append(main_content)
-
-    if len(paragraphs) > 3:
-        supplementary = paragraphs[3:]
-        # Summarize supplementary: take first sentence of each
-        supp_points = []
-        for p in supplementary[:4]:
-            # Take first sentence (up to first period/。)
-            import re
-            first_sent = re.split(r'[。\.\!\!]', p)[0]
-            if len(first_sent) > 10:
-                supp_points.append(f"- {first_sent.strip()}")
-        if supp_points:
-            sections.append("\n**補充說明：**\n" + "\n".join(supp_points))
+    if not sections:
+        return rag_context
 
     return "\n\n".join(sections)
 

@@ -15,11 +15,39 @@ import httpx
 from .store import append_chunks, log_enrichment, init_rag_tables
 
 try:
+    from opencc import OpenCC
+    _opencc = OpenCC("s2twp")  # Simplified → Traditional (Taiwan phrases)
+except ImportError:
+    _opencc = None
+
+try:
     from zhconv import convert as zhconv_convert
 except ImportError:
     zhconv_convert = None
 
 logger = logging.getLogger(__name__)
+
+# ── Simplified Chinese detection regex ──
+# Common Simplified-only characters NOT shared with Traditional
+_SIMPLIFIED_ONLY = re.compile(
+    r"[么个们仅从仓仿伙优伤体佣侠侣俩俪债倾偻储催像儿兑关兰兹养减凑几凤刘则创剂剑剧劝办务动劳势勋包协单卤卫却厅厌厍厕发变叠叹吓吕呐响哑哟唤啸嘘团园圆坏块坛坝坞垃垒垦垫场壮声处备够头夸夺奋奖奥妇妈姗娇婴媪嫔学宁宝实审宽将尝对导专属岁岗岛岭帅师帜帧帮干并广庆库应废开异弃张弹归当录彦忆志忧怀态怂怜总恋恻悦惊惧愿慑懒戏户才扑执扩扫扬扰找护报拟拥拧拨择挡挤挥挨捞损换据搅携摄撑撵撸操擞收效斗断旋无既时旷旸昙显晓晕暂术机杀杂权条来杨极构枪柜柠查栏标栈样桥档梦检棂椁榄槛横樱欢款歼毁毕毙氢汇汉汤汹沈沟沪泛泞洒浅济涌涛涩淀渊渔渗温湿溃滚滞满滤潇潜澜灭灯灵灿炉炼烁烂烧热焕煌熏爱爷牍犊状独狭狱猎猪猫献玛环现珐琼瓶璃瓮电疗疯盏盐监盖盘着矫矿硕碍础确码磷祝禀种稳窃窍窑窜竞笔笼筑简箩篓籁籴粗粮纠纤纪纫纱纯纸纹纺纽线绅练组细绊绍经绑绘结绝给统绣继绩绪续绳维绵综绿缅缓编缘缝缠缩缭缰缴网罗罚罢罴翘翠翻耀耸聂职联聪肃肤肠肾胀胁胆脉脑脓脸腊腻腾臭舰艰艺节芦苇苍范茧荆荣荤莱莲获萧萨蒋蒙蓝蔑蔡蔬虏虑虽蚀蛮蜗蝇蝉术袜装裤裹观览觉规视觉览证评诊词译试诗诚话诞误说请诸读课谁调谅谊谋谜谢谣谨谱贝贞负贡财贤败账货质贪贫贱购贯贰资赁赃赋赌赏赔赖赚赛赞赢赢赵趋跃踊踪蹄蹈蹑蹬轧轨轩轮软轴轻载辅辆辈辉辑输辩辫边达迁过运近返还这进远连迟适选递逊通逻遗邮邻郁鄙酝酱酿释里钉钓钙钟钢钥钩钮钱铁铃铅银铜铝铸铺链锁锅锈错锡键锣锤锥锦锰锻镇镊镐镜镰长门闭问闰闲间闷闹闻阀阁阅阉阔阙阳阴阵阶阻际陆陈陕陨险随隐隶难雾霸靓静韩韭顶顿颁颂预领颓颖频颜颠颤风饥饭饮饰饱饲饵饶饿馁馅馆馈馋馐馒驭驰驱驳驴驶驻驼驾骂骄骆骇验骗骚骤髓鬓鬼魂鱼鲁鲜鸟鸡鸣鸭鸿鹅鹊鹏鹤鹰麦麻黄龄龙龟]"
+)
+
+# Wikipedia garbage patterns to filter out
+_WIKI_GARBAGE_PATTERNS = [
+    re.compile(r"簡繁重定向"),
+    re.compile(r"本重定向用來避免"),
+    re.compile(r"請勿使用管道連結"),
+    re.compile(r"並非純簡繁字體差異"),
+    re.compile(r"使用了本連結的頁面可能需要更新"),
+    re.compile(r"消歧義|消歧义"),
+    re.compile(r"本條目存在以下問題"),
+    re.compile(r"此條目需要"),
+    re.compile(r"stub|小作品|小條目"),
+    re.compile(r"^分類[:：]", re.MULTILINE),
+    re.compile(r"Template[:：]"),
+    re.compile(r"^\s*\|\s*\w+\s*=", re.MULTILINE),  # Wiki table params
+]
 
 # ── Course topic → Wikipedia article mapping ──
 # Each entry: (week, zh_title, en_title) — fetches both languages
@@ -126,10 +154,37 @@ def _clean_wiki_text(text: str) -> str:
 
 
 def _to_traditional(text: str) -> str:
-    """Convert simplified Chinese to traditional Chinese."""
+    """Convert simplified Chinese to traditional Chinese.
+    Prefers OpenCC (s2twp) for accuracy, falls back to zhconv."""
+    if _opencc is not None:
+        try:
+            return _opencc.convert(text)
+        except Exception:
+            pass
     if zhconv_convert:
         return zhconv_convert(text, "zh-tw")
     return text
+
+
+def _is_garbage_chunk(text: str) -> bool:
+    """Detect Wikipedia redirect, disambiguation, and metadata garbage."""
+    for pat in _WIKI_GARBAGE_PATTERNS:
+        if pat.search(text):
+            return True
+    # Too short to be useful
+    if len(text.strip()) < 40:
+        return True
+    # Mostly LaTeX/math symbols (more than 30% non-CJK non-ASCII non-alpha)
+    alpha_cjk = len(re.findall(r'[\w\u4e00-\u9fff]', text))
+    if len(text) > 50 and alpha_cjk / len(text) < 0.4:
+        return True
+    return False
+
+
+def _strip_remaining_simplified(text: str) -> str:
+    """Replace any remaining Simplified-only characters with empty string.
+    This is a safety net after OpenCC conversion."""
+    return _SIMPLIFIED_ONLY.sub("", text)
 
 
 async def fetch_wikipedia_article(title: str, lang: str = "zh") -> str | None:
@@ -228,6 +283,13 @@ async def enrich_from_web() -> dict:
         if text:
             chunks = _chunk_article(text)
             for i, chunk in enumerate(chunks):
+                # Filter garbage chunks (redirect pages, disambiguation, etc.)
+                if _is_garbage_chunk(chunk):
+                    continue
+                # Safety net: strip any remaining Simplified characters
+                chunk = _strip_remaining_simplified(chunk)
+                if len(chunk.strip()) < 40:
+                    continue
                 # Extract first line as title
                 first_line = chunk.split("\n")[0].strip().strip("= ")
                 title = first_line[:60] if first_line else f"{zh_title} 段落{i+1}"

@@ -277,3 +277,94 @@ def get_enrichment_history(limit: int = 20) -> list[dict]:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def cleanup_garbage_chunks() -> dict:
+    """Remove garbage web-enrichment chunks from the RAG store.
+
+    Targets: Wikipedia redirects, disambiguation, Simplified Chinese remnants,
+    and chunks with too much LaTeX/math noise.
+    """
+    try:
+        from opencc import OpenCC
+        occ = OpenCC("s2twp")
+    except ImportError:
+        occ = None
+
+    # Garbage indicators
+    garbage_texts = [
+        "簡繁重定向", "本重定向用來", "請勿使用管道連結",
+        "消歧義", "消歧义", "本條目存在以下問題",
+        "Template:", "分類:",
+    ]
+    # Simplified-only character pattern
+    simplified_re = re.compile(
+        r"[么个们仅从优体儿关兴养减几则创办务动劳单卫发变响团园圆坏块场声处备够头夸奋奖妇学宁宝实审宽将对导专岁岛帅师帮干并广庆库应废开异弃张弹归当录忆志忧怀态总恋惊愿懒戏户扑执扩扫扬护报拟拥择挡挤挥损换据携操收斗断无时显晓暂术机杀杂权条来杨极构档梦检样桥欢毁毕汇汉汤济温满灭灯灵烂烧热爱状独狭猎环现电疗盐监盖矫矿硕础确码种稳窃竞笔笼简粮纠纤纪纯纸线练组细经绘结给统继绩绪续维综绿编缘缝缩网罗翘职联聪肤肠脑腾艰艺节荣获蓝虑虽装观览觉规视证评词译试话说请读课调谢资赋赏赔赖赚赛赞趋跃踪轨轮软轴轻载辅辆辈辉辑输辩边达迁过运近还这进远连迟适选递通遗邻释里钟钢钱铁银链锁错键长门闭问闲间闻阀阅阳阴阶阻际陆陈险随隐难雾静韩顶顿预领频颜风饭饮饰馆驰驱验骗鱼鸟鸡龙龟]"
+    )
+
+    conn = get_db()
+    # Get all web-enrichment chunks
+    rows = conn.execute(
+        "SELECT id, content FROM rag_chunks WHERE file_type IN ('web-zh', 'web-en')"
+    ).fetchall()
+
+    removed = 0
+    cleaned = 0
+    ids_to_remove = []
+
+    for row in rows:
+        chunk_id = row["id"]
+        content = row["content"]
+
+        # Check for garbage
+        is_garbage = False
+        for gt in garbage_texts:
+            if gt in content:
+                is_garbage = True
+                break
+
+        if is_garbage or len(content.strip()) < 30:
+            ids_to_remove.append(chunk_id)
+            removed += 1
+            continue
+
+        # Clean Simplified Chinese
+        new_content = content
+        if occ is not None:
+            try:
+                new_content = occ.convert(new_content)
+            except Exception:
+                pass
+        new_content = simplified_re.sub("", new_content)
+
+        # Clean LaTeX artifacts
+        new_content = re.sub(r"\\(?:displaystyle|alpha|beta|gamma|delta|sigma|theta|lambda|nabla|partial|hat|vec|frac|sqrt|sum|prod|int|lim|operatorname|left|right|cdot|times)\b", "", new_content)
+        new_content = re.sub(r"[{}]", "", new_content)
+        new_content = re.sub(r"\n{3,}", "\n\n", new_content)
+        new_content = re.sub(r"  +", " ", new_content).strip()
+
+        if len(new_content) < 30:
+            ids_to_remove.append(chunk_id)
+            removed += 1
+            continue
+
+        if new_content != content:
+            conn.execute("UPDATE rag_chunks SET content = ? WHERE id = ?", (new_content, chunk_id))
+            # Update FTS index
+            conn.execute("DELETE FROM rag_fts WHERE chunk_id = ?", (chunk_id,))
+            conn.execute(
+                "INSERT INTO rag_fts (chunk_id, content, title) VALUES (?, ?, ?)",
+                (chunk_id, _space_cjk(new_content), _space_cjk(chunk_id)),
+            )
+            cleaned += 1
+
+    # Remove garbage chunks
+    if ids_to_remove:
+        placeholders = ",".join("?" * len(ids_to_remove))
+        conn.execute(f"DELETE FROM rag_chunks WHERE id IN ({placeholders})", ids_to_remove)
+        conn.execute(f"DELETE FROM rag_fts WHERE chunk_id IN ({placeholders})", ids_to_remove)
+        conn.execute(f"DELETE FROM rag_content_hashes WHERE chunk_id IN ({placeholders})", ids_to_remove)
+
+    conn.commit()
+    conn.close()
+    return {"removed": removed, "cleaned": cleaned, "total_processed": len(rows)}
