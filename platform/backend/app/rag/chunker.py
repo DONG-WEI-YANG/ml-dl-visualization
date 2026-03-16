@@ -3,7 +3,13 @@
 import re
 from pathlib import Path
 
-CURRICULUM_DIR = Path(__file__).parent.parent.parent.parent.parent / "curriculum"
+# Try multiple paths: local dev, Docker container, relative
+_CANDIDATES = [
+    Path(__file__).parent.parent.parent.parent.parent / "curriculum",  # local dev
+    Path(__file__).parent.parent.parent / "curriculum",                # /app/curriculum in Docker
+    Path("/app/curriculum"),                                           # absolute Docker path
+]
+CURRICULUM_DIR = next((p for p in _CANDIDATES if p.exists()), _CANDIDATES[0])
 
 # Files worth indexing per week (skip rubric / teacher-guide for student-facing RAG)
 INDEXABLE_FILES = ["lecture.md", "slides.md", "assignment.md"]
