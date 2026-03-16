@@ -188,69 +188,109 @@ def _extract_source_blocks(rag_context: str) -> list[dict]:
     return result
 
 
-def _summarize_block(content: str, max_sentences: int = 4) -> str:
-    """Extract key sentences from a content block using SnowNLP + heuristics."""
+def _clean_for_display(text: str) -> str:
+    """Clean text for user display: remove source markers, math fragments, metadata."""
     import re
+    # Remove [來源：...] markers
+    text = re.sub(r"\[來源：[^\]]+\]", "", text)
+    # Remove markdown section headers like ## 作業五：...
+    text = re.sub(r"^#{1,4}\s+", "", text, flags=re.MULTILINE)
+    # Remove orphaned math: lines with mostly symbols
+    text = re.sub(r"^[\s\d\.\,\;\:\(\)\[\]\|×→←↔≤≥=+\-*/^_\\$]+$", "", text, flags=re.MULTILINE)
+    # Remove empty parentheses and brackets
+    text = re.sub(r"[\(\)]\s*[\(\)]", "", text)
+    # Remove "參考文獻", "另見", "閱讀更多" sections
+    text = re.sub(r"\n(?:參考文獻|另見|閱讀更多|References|See also)[\s\S]*$", "", text)
+    # Collapse whitespace
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def _summarize_block(content: str, max_sentences: int = 3) -> str:
+    """Extract key sentences from a content block using scoring heuristics."""
+    import re
+    content = _clean_for_display(content)
+
     # Split into sentences (Chinese and English)
     sentences = re.split(r'(?<=[。！？\.\!\?])\s*', content)
-    sentences = [s.strip() for s in sentences if len(s.strip()) > 8]
+    sentences = [s.strip() for s in sentences if len(s.strip()) > 10]
 
+    if not sentences:
+        return ""
     if len(sentences) <= max_sentences:
-        return content
+        return " ".join(sentences)
 
-    # Score sentences: prefer those with keywords, definitions, explanations
+    # Score sentences: prefer definitions and explanations
+    definition_signals = ["是", "為", "指", "定義", "稱為", "means", "is a", "refers", "defined"]
+    explanation_signals = ["因為", "所以", "由於", "例如", "比如", "包括", "目的", "用於",
+                           "such as", "because", "used for", "purpose"]
+    junk_signals = ["頁面存檔", "外部連結", "stub", "小作品", "ISBN", "doi:", "arXiv"]
+
     scored = []
-    definition_signals = ["是", "為", "指", "定義", "means", "is a", "refers"]
-    explanation_signals = ["因為", "所以", "由於", "例如", "比如", "包括", "such as", "because"]
     for i, sent in enumerate(sentences):
         score = 0
-        # First sentence bonus (usually the definition)
+        # Skip junk
+        if any(j in sent for j in junk_signals):
+            continue
+        # First sentence bonus
         if i == 0:
             score += 3
-        # Definition/explanation signals
-        for sig in definition_signals:
-            if sig in sent:
-                score += 2
-                break
-        for sig in explanation_signals:
-            if sig in sent:
-                score += 1
-                break
+        # Definition signals
+        if any(sig in sent for sig in definition_signals):
+            score += 2
+        # Explanation signals
+        if any(sig in sent for sig in explanation_signals):
+            score += 1
         # Penalize very short or very long
         if len(sent) < 15:
-            score -= 1
+            score -= 2
         if len(sent) > 300:
             score -= 1
+        # Penalize sentences with too many English fragments (likely math/code)
+        eng_ratio = len(re.findall(r'[a-zA-Z]', sent)) / max(len(sent), 1)
+        if eng_ratio > 0.6:
+            score -= 2
         scored.append((score, i, sent))
+
+    if not scored:
+        return ""
 
     # Take top sentences, maintaining original order
     scored.sort(key=lambda x: x[0], reverse=True)
     top_indices = sorted([s[1] for s in scored[:max_sentences]])
-    return "".join(sentences[i] for i in top_indices)
+    result = " ".join(sentences[i] for i in top_indices)
+
+    # Hard limit: 500 chars max per block
+    if len(result) > 500:
+        result = result[:497] + "..."
+    return result
 
 
 def _digest_rag_context(rag_context: str, intent: str, rag_keywords: list) -> str:
-    """Digest raw RAG context into structured, readable response.
+    """Digest raw RAG context into concise, readable response.
 
-    Instead of pasting raw chunks, extracts key sentences and synthesizes.
+    Extracts key sentences from each source block and combines them.
     """
     if not rag_context:
         return ""
 
     blocks = _extract_source_blocks(rag_context)
     if not blocks:
-        return rag_context
+        return _clean_for_display(rag_context)[:600]
 
     sections = []
-    for block in blocks[:3]:  # Max 3 source blocks
+    total_len = 0
+    for block in blocks[:2]:  # Max 2 source blocks for conciseness
         content = block["content"]
-        # Summarize each block to key sentences
         summary = _summarize_block(content, max_sentences=3)
-        if summary and len(summary) > 15:
+        if summary and len(summary) > 20:
             sections.append(summary)
+            total_len += len(summary)
+            if total_len > 800:  # Hard total limit
+                break
 
     if not sections:
-        return rag_context
+        return _clean_for_display(rag_context)[:400]
 
     return "\n\n".join(sections)
 

@@ -35,23 +35,38 @@ _LATEX_CLEANUP = re.compile(
 )
 
 
+def _has_simplified(text: str) -> bool:
+    """Check if text contains Simplified-only characters (needs conversion)."""
+    return bool(_SIMPLIFIED_RE.search(text))
+
+
 def _sanitize_content(text: str) -> str:
     """Clean retrieved content: fix encoding, strip Simplified, remove LaTeX artifacts."""
-    # 1. Convert any remaining Simplified → Traditional
-    if _retriever_occ is not None:
+    # 1. Convert Simplified → Traditional ONLY if Simplified chars detected
+    #    (avoids double-conversion like 演算法→演演算法)
+    if _retriever_occ is not None and _has_simplified(text):
         try:
             text = _retriever_occ.convert(text)
         except Exception:
             pass
 
-    # 2. Strip remaining Simplified-only characters
+    # 2. Strip any remaining Simplified-only characters
     text = _SIMPLIFIED_RE.sub("", text)
 
-    # 3. Clean LaTeX artifacts
+    # 3. Clean LaTeX artifacts — comprehensive patterns
+    #    Remove $...$ and $$...$$ inline/block math
+    text = re.sub(r"\$\$[^$]+\$\$", "", text)
+    text = re.sub(r"\$[^$]+\$", "", text)
+    #    Remove \command patterns
     text = _LATEX_CLEANUP.sub("", text)
-    text = re.sub(r"[{}]", "", text)  # Stray braces
-    text = re.sub(r"\s*\^\s*", "", text)  # Stray carets
-    text = re.sub(r"\\[a-z]+", "", text)  # Remaining LaTeX commands
+    text = re.sub(r"\\[a-zA-Z]+", "", text)  # Any remaining \commands
+    #    Remove braces, carets, underscores from math notation
+    text = re.sub(r"[{}]", "", text)
+    text = re.sub(r"\s*[\^_]\s*", " ", text)
+    #    Remove orphaned math symbols and fragments
+    text = re.sub(r"[∑∏∫∂∇∈∉⊂⊃∪∩≤≥≠≈≡∞∀∃⟨⟩]", "", text)
+    #    Remove lines that are mostly symbols/numbers (math fragments)
+    text = re.sub(r"^[\s\d\.\,\;\:\(\)\[\]\|×→←↔≤≥=+\-*/^_]+$", "", text, flags=re.MULTILINE)
 
     # 4. Remove Unicode surrogates (invalid chars that crash JSON encoding)
     text = text.encode("utf-8", errors="surrogatepass").decode("utf-8", errors="replace")
