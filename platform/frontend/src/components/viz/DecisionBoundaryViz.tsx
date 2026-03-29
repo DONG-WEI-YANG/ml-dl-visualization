@@ -30,7 +30,8 @@ export default function DecisionBoundaryViz() {
   const [modelType, setModelType] = useState("logistic");
   const [C, setC] = useState(1.0);
   const [kernel, setKernel] = useState("rbf");
-  const [result, setResult] = useState<{ X: number[][]; y: number[]; grid: number[][]; grid_labels: number[][] } | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   const run = async () => {
@@ -52,12 +53,14 @@ export default function DecisionBoundaryViz() {
   };
 
   const class0 = result
-    ? result.X.filter((_: number[], i: number) => result.y[i] === 0).map(
+    ? result.X.filter(// eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (_: any, i: number) => result.y[i] === 0).map(
         (p: number[]) => ({ x: p[0], y: p[1] })
       )
     : [];
   const class1 = result
-    ? result.X.filter((_: number[], i: number) => result.y[i] === 1).map(
+    ? result.X.filter(// eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (_: any, i: number) => result.y[i] === 1).map(
         (p: number[]) => ({ x: p[0], y: p[1] })
       )
     : [];

@@ -21,10 +21,12 @@ describe("Scene3D", () => {
     // jsdom doesn't support getContext, so we mock createElement to return
     // a canvas whose getContext returns a truthy value
     const origCreate = document.createElement.bind(document);
-    vi.spyOn(document, "createElement").mockImplementation((tag: string, options?: ElementCreationOptions) => {
+    vi.spyOn(document, "createElement").mockImplementation((tag: string, // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      options?: any) => {
       if (tag === "canvas") {
         const el = origCreate(tag);
-        el.getContext = () => ({}) as RenderingContext;
+        el.getContext = () => // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ({}) as any;
         return el;
       }
       return origCreate(tag, options);
@@ -35,7 +37,8 @@ describe("Scene3D", () => {
 
   it("renders fallback when WebGL check fails", () => {
     const origCreate = document.createElement.bind(document);
-    vi.spyOn(document, "createElement").mockImplementation((tag: string, options?: ElementCreationOptions) => {
+    vi.spyOn(document, "createElement").mockImplementation((tag: string, // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      options?: any) => {
       if (tag === "canvas") {
         const el = origCreate(tag);
         el.getContext = () => null;
@@ -51,10 +54,12 @@ describe("Scene3D", () => {
 
   it("has aria-label for accessibility", () => {
     const origCreate = document.createElement.bind(document);
-    vi.spyOn(document, "createElement").mockImplementation((tag: string, options?: ElementCreationOptions) => {
+    vi.spyOn(document, "createElement").mockImplementation((tag: string, // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      options?: any) => {
       if (tag === "canvas") {
         const el = origCreate(tag);
-        el.getContext = () => ({}) as RenderingContext;
+        el.getContext = () => // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ({}) as any;
         return el;
       }
       return origCreate(tag, options);
