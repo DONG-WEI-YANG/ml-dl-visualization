@@ -33,7 +33,7 @@ export default function Scene3D({
   ariaLabel = "3D 視覺化場景",
 }: Scene3DProps & { ariaLabel?: string }) {
   const [webglOk, setWebglOk] = useState(true);
-  const controlsRef = useRef<any>(null);
+  const controlsRef = useRef<React.ComponentRef<typeof OrbitControls>>(null);
 
   useEffect(() => {
     setWebglOk(checkWebGL());

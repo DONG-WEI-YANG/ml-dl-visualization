@@ -21,10 +21,10 @@ describe("Scene3D", () => {
     // jsdom doesn't support getContext, so we mock createElement to return
     // a canvas whose getContext returns a truthy value
     const origCreate = document.createElement.bind(document);
-    vi.spyOn(document, "createElement").mockImplementation((tag: string, options?: any) => {
+    vi.spyOn(document, "createElement").mockImplementation((tag: string, options?: ElementCreationOptions) => {
       if (tag === "canvas") {
         const el = origCreate(tag);
-        el.getContext = () => ({}) as any;
+        el.getContext = () => ({}) as RenderingContext;
         return el;
       }
       return origCreate(tag, options);
@@ -35,7 +35,7 @@ describe("Scene3D", () => {
 
   it("renders fallback when WebGL check fails", () => {
     const origCreate = document.createElement.bind(document);
-    vi.spyOn(document, "createElement").mockImplementation((tag: string, options?: any) => {
+    vi.spyOn(document, "createElement").mockImplementation((tag: string, options?: ElementCreationOptions) => {
       if (tag === "canvas") {
         const el = origCreate(tag);
         el.getContext = () => null;
@@ -51,10 +51,10 @@ describe("Scene3D", () => {
 
   it("has aria-label for accessibility", () => {
     const origCreate = document.createElement.bind(document);
-    vi.spyOn(document, "createElement").mockImplementation((tag: string, options?: any) => {
+    vi.spyOn(document, "createElement").mockImplementation((tag: string, options?: ElementCreationOptions) => {
       if (tag === "canvas") {
         const el = origCreate(tag);
-        el.getContext = () => ({}) as any;
+        el.getContext = () => ({}) as RenderingContext;
         return el;
       }
       return origCreate(tag, options);

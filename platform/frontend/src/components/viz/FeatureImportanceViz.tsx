@@ -36,7 +36,7 @@ function generateIrisLikeData() {
 export default function FeatureImportanceViz() {
   const [modelType, setModelType] = useState("random_forest");
   const [maxDepth, setMaxDepth] = useState(5);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<{ featureNames: string[]; feature_importances: number[]; accuracy: number } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const run = async () => {
@@ -63,7 +63,7 @@ export default function FeatureImportanceViz() {
           name,
           importance: +(result.feature_importances[i] * 100).toFixed(1),
         }))
-        .sort((a: any, b: any) => b.importance - a.importance)
+        .sort((a: { importance: number }, b: { importance: number }) => b.importance - a.importance)
     : [];
 
   return (

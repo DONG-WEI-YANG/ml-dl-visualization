@@ -37,7 +37,7 @@ export default function ActivationFunctionViz({
   selectedActivation,
   onActivationChange,
 }: ActivationFunctionVizProps = {}) {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<Record<string, { y: number[]; dy?: number[] }> & { x: number[] }>(null!);
   const [selected, setSelected] = useState<string[]>([
     "sigmoid",
     "relu",
@@ -55,7 +55,7 @@ export default function ActivationFunctionViz({
     return <div className="text-gray-400 text-sm p-4">載入中...</div>;
 
   const chartData = data.x.map((x: number, i: number) => {
-    const point: any = { x: +x.toFixed(2) };
+    const point: Record<string, number> = { x: +x.toFixed(2) };
     for (const fn of selected) {
       if (data[fn]) {
         point[fn] = showDerivative ? data[fn].dy?.[i] : data[fn].y[i];

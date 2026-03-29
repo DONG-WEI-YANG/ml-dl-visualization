@@ -166,7 +166,7 @@ export default function QuizPanel({ week }: { week: number }) {
             })}
           </div>
           <p className="text-[10px] text-gray-400 mt-1.5">
-            ✓ 表現優良（≥80%）　✗ 需加強（&lt;60%）
+            ✓ 表現優良（≥80%） ✗ 需加強（&lt;60%）
           </p>
         </div>
       )}
