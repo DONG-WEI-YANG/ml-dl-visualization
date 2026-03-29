@@ -23,7 +23,7 @@ const weekComponents: Record<number, React.LazyExoticComponent<React.ComponentTy
   14: lazy(() => import("../components/viz/TrainingComparisonViz")),
   15: lazy(() => import("../components/viz/FairnessViz")),
   16: lazy(() => import("../components/viz/MLOpsFlowViz")),
-  17: lazy(() => import("../components/viz/EmbeddingSpaceViz")),
+  17: lazy(() => import("../components/viz/Week17Compound")),
   18: lazy(() => import("../components/viz/ProjectShowcaseViz")),
 };
 

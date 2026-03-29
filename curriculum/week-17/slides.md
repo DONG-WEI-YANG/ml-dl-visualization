@@ -84,6 +84,67 @@ Token4  [1 1 1 1]   ← 看全部
 
 ---
 
+## Slide 7-A（補充）: 為什麼需要 Tokenization？
+### 模型看不到文字，只能處理數字
+
+```
+「深度學習很有趣」
+    ↓ Tokenization
+["深度", "學習", "很", "有趣"]
+    ↓ Token → ID
+[15234, 8721, 403, 19087]
+    ↓ Embedding → 向量
+送入 Transformer
+```
+
+### 三種分詞粒度
+
+| 粒度 | 範例「深度學習」 | Token 數 | 特點 |
+|------|------------------|----------|------|
+| 字元級 | 深 / 度 / 學 / 習 | 4 | 永不 OOV，但序列太長 |
+| 詞級 | 深度學習 | 1 | 語義清晰，但新詞無法處理 |
+| **子詞 Subword** | **深度 / 學習** | **2** | **平衡！主流 LLM 都用這個** |
+
+---
+
+## Slide 7-B（補充）: BPE 演算法圖解
+### Byte Pair Encoding — GPT/Claude 的分詞核心
+
+```
+語料: [low, low, lower, lowest]
+
+Step 0  l | o | w | </w>         ← 從字元開始
+Step 1  lo | w | </w>            ← 合併 l+o (頻率 4)
+Step 2  low | </w>               ← 合併 lo+w (頻率 4)
+Step 3  low</w>                  ← "low" 成為完整 token！
+        low | e | r | </w>       ← "lower" 拆為已知的 low + er
+        low | e | s | t | </w>   ← "lowest" 拆為 low + est
+```
+
+**關鍵**：常見詞 → 完整 token | 罕見詞 → 拆成已知子片段
+
+---
+
+## Slide 7-C（補充）: 中文 vs. 英文 Token 成本
+### 同樣語意，中文通常需要更多 Token
+
+```
+英文  "AI transforms healthcare"
+      → [AI, transforms, healthcare]     = 3 tokens
+
+中文  "人工智慧改變醫療產業"
+      → [人工, 智, 慧, 改變, 醫, 療, 產, 業] = 8 tokens
+```
+
+### 實務影響
+- 中文 prompt → Token 數多 30%-50% → **API 費用更高**
+- 設計 RAG chunk 大小時需考慮語言差異
+- 上下文窗口的「有效容量」因語言而異
+
+> 原因：Tokenizer 以英文語料為主訓練，英文高頻詞早已合併為單一 token
+
+---
+
 ## Slide 8: 文字嵌入 Text Embeddings
 ### 將文字映射為向量
 ```

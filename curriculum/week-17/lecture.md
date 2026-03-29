@@ -80,6 +80,134 @@ Tokenization 結果（示意）: ["Machine", " learning", " is", " fun"]
 
 **重要概念**：LLM 的輸入和輸出都有 Token 數量限制，稱為**上下文窗口 (Context Window)**。例如 Claude 3.5 Sonnet 支援 200K Token 的上下文窗口。
 
+### 1.4 補充：深入理解 Tokenization
+
+> 以下為補充教材，幫助同學更深入理解 Token 的意義與 Tokenization 的運作方式。
+
+#### 補充一：為什麼 Tokenization 如此重要？
+
+Tokenization 是所有 NLP/LLM 系統的**第一步**——模型看不到「文字」，只能處理「數字」。Token 就是文字與數字之間的橋樑。
+
+```
+人類看到的：「深度學習很有趣」
+                ↓ Tokenization
+Token 序列：  ["深度", "學習", "很", "有趣"]
+                ↓ Token → ID 查表
+數字序列：    [15234, 8721, 403, 19087]
+                ↓ Embedding
+向量序列：    [[0.21, -0.53, ...], [0.87, 0.12, ...], ...]
+                ↓ 送入 Transformer
+模型處理
+```
+
+Tokenization 的品質**直接影響**模型的能力：
+
+| 影響面向 | 說明 |
+|----------|------|
+| 詞彙表大小 (Vocabulary Size) | Token 總數。太大浪費記憶體，太小表達力不足。主流 LLM 約 32K–100K |
+| 序列長度 | 同一段文字，分詞粒度越細 → Token 數越多 → 佔用更多上下文窗口 |
+| 未知詞 (OOV) 處理 | 字元級永遠不會 OOV；詞級遇到新詞就崩潰；Subword 取得平衡 |
+| 語義保留 | 好的 Tokenization 保留語義邊界（如「機器」+「學習」而非「機器學」+「習」） |
+
+#### 補充二：三種分詞粒度比較 Three Levels of Tokenization
+
+```
+原文：「我喜歡深度學習」
+
+1️⃣ 字元級 Character-level
+   → ["我", "喜", "歡", "深", "度", "學", "習"]
+   Token 數：7
+   特點：永遠不會 OOV，但序列太長，模型難學到詞意
+
+2️⃣ 詞級 Word-level
+   → ["我", "喜歡", "深度學習"]
+   Token 數：3
+   特點：語義清晰，但遇到「深度強化學習」等新詞就無法處理
+
+3️⃣ 子詞級 Subword（現代 LLM 的主流選擇）
+   → ["我", "喜歡", "深度", "學習"]
+   Token 數：4
+   特點：常見詞保持完整，罕見詞拆成已知子片段
+```
+
+```
+英文範例：「unbelievably」
+
+1️⃣ 字元級 → ["u", "n", "b", "e", "l", "i", "e", "v", "a", "b", "l", "y"]  (12 tokens)
+2️⃣ 詞級   → ["unbelievably"]  (1 token，但詞彙表必須收錄此詞)
+3️⃣ Subword → ["un", "believ", "ably"]  (3 tokens，有意義的子片段)
+```
+
+#### 補充三：BPE 演算法圖解 BPE Algorithm Walkthrough
+
+BPE (Byte Pair Encoding) 是目前最常見的 Tokenization 演算法。GPT 系列、Claude 等主流 LLM 都使用 BPE 的變體。
+
+**核心思想：從最小單位（字元）開始，反覆合併出現頻率最高的相鄰 pair。**
+
+以訓練語料 `["low", "low", "lower", "lowest"]` 為例：
+
+```
+步驟 0（初始化）：將每個詞拆成字元 + 結尾符 </w>
+  l o w </w>        (出現 2 次)
+  l o w e r </w>    (出現 1 次)
+  l o w e s t </w>  (出現 1 次)
+
+步驟 1：統計相鄰 pair 頻率
+  l+o: 4次  o+w: 4次  w+</w>: 2次  w+e: 2次  e+r: 1次  ...
+  → 合併最高頻的 l+o → 「lo」
+
+  lo w </w>
+  lo w e r </w>
+  lo w e s t </w>
+
+步驟 2：再次統計
+  lo+w: 4次  w+</w>: 2次  w+e: 2次  ...
+  → 合併 lo+w → 「low」
+
+  low </w>
+  low e r </w>
+  low e s t </w>
+
+步驟 3：
+  low+</w>: 2次  low+e: 2次  e+r: 1次  ...
+  → 合併 low+</w> → 「low</w>」（完整詞）
+
+  low</w>           ← "low" 成為完整 token！
+  low e r </w>
+  low e s t </w>
+
+...持續合併，直到達到目標詞彙表大小。
+```
+
+**結果**：常見詞 "low" 成為單一 Token，而罕見詞 "lowest" 被拆為 "low" + "est" + "</w>"。
+
+#### 補充四：中文 vs. 英文的 Token 差異
+
+主流 LLM 的 Tokenizer 主要以英文語料訓練。這導致一個重要的實務差異：
+
+```
+英文: "Artificial intelligence is transforming healthcare"
+Token: ["Art", "ificial", " intelligence", " is", " transform", "ing", " healthcare"]
+→ 7 tokens，約 49 個字母
+
+中文: "人工智慧正在改變醫療產業"
+Token: ["人工", "智", "慧", "正在", "改變", "醫", "療", "產", "業"]
+→ 9 tokens，只有 10 個字
+```
+
+**實務影響**：
+
+| 面向 | 英文 | 中文 |
+|------|------|------|
+| 每個 Token 承載的資訊量 | ~4-5 個字母 | ~1-2 個漢字 |
+| 表達相同語意所需 Token 數 | 較少 | 通常多 30%-50% |
+| API 費用 | 基準 | 相同字數下偏高 |
+| 上下文窗口的有效利用 | 較充分 | 較不經濟 |
+
+**為什麼會這樣？** 因為 BPE 合併是基於頻率的——英文語料中 "the"、"ing" 等出現極頻繁，很早就被合併為單一 Token。中文字的組合雖然有規律，但在以英文為主的訓練語料中出現較少，合併機會不多。
+
+> **小提醒**：這就是為什麼在使用 LLM API 時，同樣一段內容用中文寫 prompt 會比英文消耗更多 Token（= 更多費用）。在 Token 有限的情境下（如 RAG 的 chunk 大小設計），也需要考量這個差異。
+
 ---
 
 ## 2. Transformer 架構回顧 Transformer Architecture Review
