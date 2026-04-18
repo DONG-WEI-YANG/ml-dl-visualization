@@ -51,16 +51,57 @@ FILE_MAP = {
 }
 
 
+def _inline(text: str) -> str:
+    """Apply inline markdown (bold, inline code) to a text fragment."""
+    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+    text = re.sub(r'`(.+?)`', r'<code class="inline">\1</code>', text)
+    return text
+
+
+def _parse_row(line: str) -> list[str]:
+    return [c.strip() for c in line.strip().strip('|').split('|')]
+
+
+def _is_separator_row(line: str) -> bool:
+    s = line.strip()
+    if not (s.startswith('|') and s.endswith('|')):
+        return False
+    cells = _parse_row(line)
+    return len(cells) >= 1 and all(re.match(r'^:?-+:?$', c) for c in cells)
+
+
+def _is_table_row(line: str) -> bool:
+    s = line.strip()
+    return len(s) > 1 and s.startswith('|') and s.endswith('|')
+
+
 def _md_to_html(md_path: Path, title: str) -> str:
     """Convert markdown to a styled printable HTML page."""
     content = md_path.read_text(encoding="utf-8")
     escaped = html.escape(content)
-    # Simple markdown rendering: headers, bold, code blocks, lists
     lines = escaped.split("\n")
-    html_lines = []
+    html_lines: list[str] = []
     in_code = False
+    in_table = False
+    pending_header: list[str] | None = None
+
+    def flush_pending_header() -> None:
+        nonlocal pending_header
+        if pending_header is not None:
+            html_lines.append(f"<p>| {' | '.join(pending_header)} |</p>")
+            pending_header = None
+
+    def close_table() -> None:
+        nonlocal in_table
+        if in_table:
+            html_lines.append("</tbody></table>")
+            in_table = False
+
     for line in lines:
+        # Code fence toggling
         if line.startswith("```"):
+            close_table()
+            flush_pending_header()
             if in_code:
                 html_lines.append("</code></pre>")
                 in_code = False
@@ -71,6 +112,34 @@ def _md_to_html(md_path: Path, title: str) -> str:
         if in_code:
             html_lines.append(line)
             continue
+
+        # Table state machine
+        if pending_header is not None:
+            if _is_separator_row(line):
+                html_lines.append('<table class="md-table">')
+                header_cells = "".join(f"<th>{_inline(c)}</th>" for c in pending_header)
+                html_lines.append(f"<thead><tr>{header_cells}</tr></thead><tbody>")
+                in_table = True
+                pending_header = None
+                continue
+            if line.strip() == "":
+                continue  # tolerate blank line between header and separator
+            flush_pending_header()  # was not a real table; fall through
+
+        if in_table:
+            if _is_table_row(line):
+                cells = _parse_row(line)
+                row = "".join(f"<td>{_inline(c)}</td>" for c in cells)
+                html_lines.append(f"<tr>{row}</tr>")
+                continue
+            if line.strip() == "":
+                continue  # tolerate blank lines inside a table
+            close_table()  # non-table line ends the table; fall through
+
+        if _is_table_row(line):
+            pending_header = _parse_row(line)
+            continue
+
         if line.startswith("### "):
             html_lines.append(f"<h3>{line[4:]}</h3>")
         elif line.startswith("## "):
@@ -78,14 +147,16 @@ def _md_to_html(md_path: Path, title: str) -> str:
         elif line.startswith("# "):
             html_lines.append(f"<h1>{line[2:]}</h1>")
         elif line.startswith("- "):
-            html_lines.append(f"<li>{line[2:]}</li>")
+            html_lines.append(f"<li>{_inline(line[2:])}</li>")
         elif line.strip() == "":
             html_lines.append("<br/>")
         else:
-            # Bold
-            line = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', line)
-            line = re.sub(r'`(.+?)`', r'<code class="inline">\1</code>', line)
-            html_lines.append(f"<p>{line}</p>")
+            html_lines.append(f"<p>{_inline(line)}</p>")
+
+    close_table()
+    flush_pending_header()
+    if in_code:
+        html_lines.append("</code></pre>")
 
     body = "\n".join(html_lines)
     return f"""<!DOCTYPE html>
@@ -102,6 +173,11 @@ def _md_to_html(md_path: Path, title: str) -> str:
   code {{ font-family: "Consolas", monospace; font-size: 14px; }}
   code.inline {{ background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 13px; }}
   li {{ margin-left: 20px; }}
+  table.md-table {{ border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }}
+  table.md-table th, table.md-table td {{ border: 1px solid #d1d5db; padding: 8px 12px; text-align: left; vertical-align: top; }}
+  table.md-table thead {{ background: #eff6ff; }}
+  table.md-table thead th {{ color: #1e3a5f; font-weight: 600; }}
+  table.md-table tbody tr:nth-child(even) {{ background: #fafafa; }}
   mjx-container {{ overflow-x: auto; overflow-y: hidden; }}
   @media print {{ body {{ margin: 20px; }} }}
 </style>
