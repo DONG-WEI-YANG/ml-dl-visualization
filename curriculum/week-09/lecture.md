@@ -30,32 +30,75 @@
 
 ### 1.2 特徵工程的完整流程 Feature Engineering Pipeline
 
-```
-原始資料 Raw Data
-  │
-  ├─ 1. 資料理解 Data Understanding
-  │     └── EDA、領域知識 Domain Knowledge
-  │
-  ├─ 2. 缺失值處理 Missing Value Handling
-  │     └── 刪除 / 填補 Imputation
-  │
-  ├─ 3. 類別特徵編碼 Categorical Encoding
-  │     └── One-Hot / Label / Target Encoding
-  │
-  ├─ 4. 數值特徵縮放 Numerical Scaling
-  │     └── StandardScaler / MinMaxScaler / RobustScaler
-  │
-  ├─ 5. 特徵建構 Feature Construction
-  │     └── 交互特徵 / 多項式特徵 / 領域特徵
-  │
-  ├─ 6. 特徵選擇 Feature Selection
-  │     └── Filter / Wrapper / Embedded
-  │
-  ├─ 7. 維度縮減 Dimensionality Reduction (optional)
-  │     └── PCA / t-SNE / UMAP
-  │
-  └─ 8. Pipeline 整合 Pipeline Integration
-        └── ColumnTransformer + Pipeline
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 680 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="特徵工程流程圖">
+  <rect x="0" y="0" width="680" height="380" fill="#ffffff"/>
+  <defs>
+    <marker id="flowArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/></marker>
+  </defs>
+  <!-- Row 1 -->
+  <rect x="20" y="30" width="130" height="60" rx="8" fill="#e0e7ff" stroke="#4338ca" stroke-width="1.5"/>
+  <text x="85" y="56" text-anchor="middle" font-size="12" fill="#312e81" font-weight="600">原始資料</text>
+  <text x="85" y="74" text-anchor="middle" font-size="10" fill="#4338ca">Raw Data</text>
+  <line x1="150" y1="60" x2="185" y2="60" stroke="#374151" stroke-width="1.5" marker-end="url(#flowArr)"/>
+  <rect x="190" y="30" width="130" height="60" rx="8" fill="#dbeafe" stroke="#1e40af" stroke-width="1.5"/>
+  <text x="255" y="52" text-anchor="middle" font-size="12" fill="#1e3a8a" font-weight="600">1. 資料理解</text>
+  <text x="255" y="70" text-anchor="middle" font-size="10" fill="#1e40af">EDA・領域知識</text>
+  <text x="255" y="82" text-anchor="middle" font-size="9" fill="#6b7280">Understanding</text>
+  <line x1="320" y1="60" x2="355" y2="60" stroke="#374151" stroke-width="1.5" marker-end="url(#flowArr)"/>
+  <rect x="360" y="30" width="130" height="60" rx="8" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/>
+  <text x="425" y="52" text-anchor="middle" font-size="12" fill="#92400e" font-weight="600">2. 缺失值</text>
+  <text x="425" y="70" text-anchor="middle" font-size="10" fill="#b45309">刪除・填補</text>
+  <text x="425" y="82" text-anchor="middle" font-size="9" fill="#6b7280">Imputation</text>
+  <line x1="490" y1="60" x2="525" y2="60" stroke="#374151" stroke-width="1.5" marker-end="url(#flowArr)"/>
+  <rect x="530" y="30" width="130" height="60" rx="8" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/>
+  <text x="595" y="52" text-anchor="middle" font-size="12" fill="#92400e" font-weight="600">3. 類別編碼</text>
+  <text x="595" y="70" text-anchor="middle" font-size="10" fill="#b45309">One-Hot / Target</text>
+  <text x="595" y="82" text-anchor="middle" font-size="9" fill="#6b7280">Encoding</text>
+  <!-- Connector down -->
+  <path d="M 595 90 L 595 105 L 85 105 L 85 120" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#flowArr)"/>
+  <!-- Row 2 -->
+  <rect x="20" y="125" width="130" height="60" rx="8" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/>
+  <text x="85" y="147" text-anchor="middle" font-size="12" fill="#92400e" font-weight="600">4. 數值縮放</text>
+  <text x="85" y="165" text-anchor="middle" font-size="10" fill="#b45309">Standard / MinMax</text>
+  <text x="85" y="177" text-anchor="middle" font-size="9" fill="#6b7280">Scaling</text>
+  <line x1="150" y1="155" x2="185" y2="155" stroke="#374151" stroke-width="1.5" marker-end="url(#flowArr)"/>
+  <rect x="190" y="125" width="130" height="60" rx="8" fill="#d1fae5" stroke="#059669" stroke-width="1.5"/>
+  <text x="255" y="147" text-anchor="middle" font-size="12" fill="#065f46" font-weight="600">5. 特徵建構</text>
+  <text x="255" y="165" text-anchor="middle" font-size="10" fill="#059669">交互・多項式</text>
+  <text x="255" y="177" text-anchor="middle" font-size="9" fill="#6b7280">Construction</text>
+  <line x1="320" y1="155" x2="355" y2="155" stroke="#374151" stroke-width="1.5" marker-end="url(#flowArr)"/>
+  <rect x="360" y="125" width="130" height="60" rx="8" fill="#d1fae5" stroke="#059669" stroke-width="1.5"/>
+  <text x="425" y="147" text-anchor="middle" font-size="12" fill="#065f46" font-weight="600">6. 特徵選擇</text>
+  <text x="425" y="165" text-anchor="middle" font-size="10" fill="#059669">Filter / Wrapper</text>
+  <text x="425" y="177" text-anchor="middle" font-size="9" fill="#6b7280">Selection</text>
+  <line x1="490" y1="155" x2="525" y2="155" stroke="#374151" stroke-width="1.5" marker-end="url(#flowArr)"/>
+  <rect x="530" y="125" width="130" height="60" rx="8" fill="#d1fae5" stroke="#059669" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="595" y="147" text-anchor="middle" font-size="12" fill="#065f46" font-weight="600">7. 降維 (選)</text>
+  <text x="595" y="165" text-anchor="middle" font-size="10" fill="#059669">PCA / t-SNE</text>
+  <text x="595" y="177" text-anchor="middle" font-size="9" fill="#6b7280">Dim-Reduction</text>
+  <!-- Connector down -->
+  <path d="M 595 185 L 595 200 L 340 200 L 340 215" fill="none" stroke="#374151" stroke-width="1.5" marker-end="url(#flowArr)"/>
+  <!-- Row 3: final integration -->
+  <rect x="220" y="220" width="240" height="60" rx="8" fill="#fecaca" stroke="#991b1b" stroke-width="1.5"/>
+  <text x="340" y="244" text-anchor="middle" font-size="13" fill="#7f1d1d" font-weight="600">8. Pipeline 整合</text>
+  <text x="340" y="262" text-anchor="middle" font-size="11" fill="#991b1b">ColumnTransformer + Pipeline</text>
+  <text x="340" y="276" text-anchor="middle" font-size="10" fill="#6b7280">（防洩漏・可重現・可部署）</text>
+  <!-- Down to model -->
+  <line x1="340" y1="280" x2="340" y2="310" stroke="#374151" stroke-width="1.5" marker-end="url(#flowArr)"/>
+  <rect x="220" y="315" width="240" height="40" rx="8" fill="#111827"/>
+  <text x="340" y="340" text-anchor="middle" font-size="13" fill="#ffffff" font-weight="600">建模 Model Training</text>
+  <!-- Category legend -->
+  <rect x="25" y="365" width="12" height="10" fill="#fef3c7" stroke="#b45309"/>
+  <text x="42" y="374" font-size="10" fill="#374151">清理 Cleaning</text>
+  <rect x="150" y="365" width="12" height="10" fill="#d1fae5" stroke="#059669"/>
+  <text x="167" y="374" font-size="10" fill="#374151">轉換 Transformation</text>
+  <rect x="300" y="365" width="12" height="10" fill="#fecaca" stroke="#991b1b"/>
+  <text x="317" y="374" font-size="10" fill="#374151">整合 Integration</text>
+</svg>
+<figcaption>示意圖：特徵工程八步流程。黃色步驟屬資料清理、綠色屬特徵轉換、紅色為整合環節。第 8 步的 Pipeline 將前七步封裝為單一物件，fit/transform 僅在訓練集執行，確保後續交叉驗證與推論都不會發生資料洩漏。</figcaption>
+</figure>
 ```
 
 ### 1.3 資料洩漏警告 Data Leakage Warning
@@ -64,6 +107,73 @@
 
 - **錯誤做法：** 先在全部資料上做 fit_transform，再分割訓練/測試集
 - **正確做法：** 先分割資料，再在訓練集上 fit，用 transform 套用到測試集
+
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 680 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Data Leakage 錯誤 vs 正確做法對比">
+  <rect x="0" y="0" width="680" height="360" fill="#ffffff"/>
+  <defs>
+    <marker id="leakArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/></marker>
+  </defs>
+  <!-- LEFT: WRONG -->
+  <g transform="translate(20,30)">
+    <text x="150" y="0" text-anchor="middle" font-size="14" fill="#991b1b" font-weight="700">❌ 錯誤：fit 於全部資料</text>
+    <!-- Full dataset -->
+    <rect x="20" y="20" width="260" height="40" fill="#e5e7eb" stroke="#6b7280" stroke-width="1.5"/>
+    <text x="150" y="44" text-anchor="middle" font-size="12" fill="#111827" font-weight="600">完整資料集 X</text>
+    <!-- scaler.fit_transform(X) -->
+    <path d="M 150 60 L 150 85" stroke="#dc2626" stroke-width="2" marker-end="url(#leakArr)"/>
+    <rect x="40" y="88" width="220" height="32" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+    <text x="150" y="108" text-anchor="middle" font-size="12" fill="#7f1d1d" font-weight="600">scaler.fit_transform(X)</text>
+    <text x="150" y="138" text-anchor="middle" font-size="10" fill="#991b1b" font-weight="600">← 測試集統計量已被洩漏</text>
+    <!-- Then split -->
+    <path d="M 150 144 L 150 165" stroke="#dc2626" stroke-width="2" marker-end="url(#leakArr)"/>
+    <rect x="20" y="170" width="180" height="38" fill="#dbeafe" stroke="#1e40af"/>
+    <rect x="200" y="170" width="80" height="38" fill="#fecaca" stroke="#991b1b"/>
+    <text x="110" y="194" text-anchor="middle" font-size="12" fill="#1e3a8a" font-weight="600">X_train</text>
+    <text x="240" y="194" text-anchor="middle" font-size="12" fill="#7f1d1d" font-weight="600">X_test</text>
+    <!-- Warning banner -->
+    <rect x="20" y="230" width="260" height="80" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="150" y="252" text-anchor="middle" font-size="12" fill="#991b1b" font-weight="600">⚠ 後果 Consequences</text>
+    <text x="35" y="272" font-size="11" fill="#7f1d1d">• 測試集分數過度樂觀</text>
+    <text x="35" y="290" font-size="11" fill="#7f1d1d">• 上線後模型效能大跌</text>
+    <text x="35" y="308" font-size="11" fill="#7f1d1d">• CV 結果失真、難以排錯</text>
+  </g>
+  <!-- Divider -->
+  <line x1="340" y1="40" x2="340" y2="330" stroke="#e5e7eb" stroke-width="1"/>
+  <!-- RIGHT: CORRECT -->
+  <g transform="translate(360,30)">
+    <text x="150" y="0" text-anchor="middle" font-size="14" fill="#065f46" font-weight="700">✓ 正確：先分割，僅於訓練集 fit</text>
+    <!-- Full dataset -->
+    <rect x="20" y="20" width="260" height="40" fill="#e5e7eb" stroke="#6b7280" stroke-width="1.5"/>
+    <text x="150" y="44" text-anchor="middle" font-size="12" fill="#111827" font-weight="600">完整資料集 X</text>
+    <!-- split first -->
+    <path d="M 150 60 L 150 85" stroke="#059669" stroke-width="2" marker-end="url(#leakArr)"/>
+    <rect x="20" y="88" width="180" height="40" fill="#dbeafe" stroke="#1e40af"/>
+    <rect x="200" y="88" width="80" height="40" fill="#fecaca" stroke="#991b1b"/>
+    <text x="110" y="113" text-anchor="middle" font-size="12" fill="#1e3a8a" font-weight="600">X_train</text>
+    <text x="240" y="113" text-anchor="middle" font-size="12" fill="#7f1d1d" font-weight="600">X_test</text>
+    <!-- fit only on train -->
+    <path d="M 110 128 L 110 155" stroke="#059669" stroke-width="2" marker-end="url(#leakArr)"/>
+    <rect x="30" y="158" width="160" height="30" fill="#d1fae5" stroke="#059669" stroke-width="1.5"/>
+    <text x="110" y="178" text-anchor="middle" font-size="11" fill="#065f46" font-weight="600">scaler.fit(X_train)</text>
+    <!-- transform both -->
+    <path d="M 110 188 L 110 208" stroke="#059669" stroke-width="2" marker-end="url(#leakArr)"/>
+    <path d="M 110 198 L 240 198 L 240 208" stroke="#059669" stroke-width="2" marker-end="url(#leakArr)"/>
+    <rect x="40" y="211" width="140" height="28" fill="#d1fae5" stroke="#059669" stroke-width="1.5"/>
+    <text x="110" y="229" text-anchor="middle" font-size="10" fill="#065f46">transform(X_train)</text>
+    <rect x="190" y="211" width="100" height="28" fill="#d1fae5" stroke="#059669" stroke-width="1.5"/>
+    <text x="240" y="229" text-anchor="middle" font-size="10" fill="#065f46">transform(X_test)</text>
+    <!-- Benefits banner -->
+    <rect x="20" y="255" width="260" height="70" fill="#ecfdf5" stroke="#059669" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="150" y="276" text-anchor="middle" font-size="12" fill="#065f46" font-weight="600">✓ 優點 Benefits</text>
+    <text x="35" y="295" font-size="11" fill="#065f46">• 測試集保持獨立、評估可信</text>
+    <text x="35" y="313" font-size="11" fill="#065f46">• Pipeline 可自動強制此順序</text>
+  </g>
+</svg>
+<figcaption>示意圖：資料洩漏的錯誤 vs 正確做法。左側把 fit 放在分割之前，測試集的均值、標準差、類別頻率等統計量悄悄流入 scaler 參數；右側先分割後 fit，測試集完全未被偷看。使用 sklearn Pipeline + cross_val_score 會自動把 fit 限制在每一 fold 的訓練部分。</figcaption>
+</figure>
+```
 
 ```python
 # 錯誤 WRONG

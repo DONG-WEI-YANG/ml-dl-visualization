@@ -19,11 +19,73 @@
 
 **多類別混淆矩陣的結構：**
 
-|  | 預測 A | 預測 B | 預測 C |
-|--|:---:|:---:|:---:|
-| **實際 A** | TP_A | E_AB | E_AC |
-| **實際 B** | E_BA | TP_B | E_BC |
-| **實際 C** | E_CA | E_CB | TP_C |
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 520 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="多類別混淆矩陣熱圖">
+  <rect x="0" y="0" width="520" height="380" fill="#ffffff"/>
+  <defs>
+    <linearGradient id="cmGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
+    </linearGradient>
+  </defs>
+  <text x="260" y="24" text-anchor="middle" font-size="14" fill="#111827" font-weight="600">多類別混淆矩陣 (K=3, 範例：setosa / versicolor / virginica)</text>
+  <!-- Column headers (預測) -->
+  <text x="280" y="70" text-anchor="middle" font-size="12" fill="#111827" font-weight="600">預測類別 Predicted</text>
+  <g font-size="12" fill="#111827" text-anchor="middle">
+    <text x="180" y="92">setosa</text><text x="280" y="92">versicolor</text><text x="380" y="92">virginica</text>
+  </g>
+  <!-- Row headers (實際) -->
+  <text x="70" y="200" text-anchor="middle" font-size="12" fill="#111827" font-weight="600" transform="rotate(-90 70 200)">實際類別 Actual</text>
+  <g font-size="12" fill="#111827" text-anchor="end">
+    <text x="125" y="145">setosa</text><text x="125" y="205">versicolor</text><text x="125" y="265">virginica</text>
+  </g>
+  <!-- Grid 3x3 (heatmap) -->
+  <!-- Row setosa — perfect -->
+  <rect x="135" y="108" width="90" height="60" fill="#1e3a8a" opacity="0.9" stroke="#475569"/>
+  <rect x="225" y="108" width="90" height="60" fill="#e5e7eb" stroke="#d1d5db"/>
+  <rect x="315" y="108" width="90" height="60" fill="#e5e7eb" stroke="#d1d5db"/>
+  <!-- Row versicolor — mostly correct, confused with virginica -->
+  <rect x="135" y="168" width="90" height="60" fill="#e5e7eb" stroke="#d1d5db"/>
+  <rect x="225" y="168" width="90" height="60" fill="#1e3a8a" opacity="0.8" stroke="#475569"/>
+  <rect x="315" y="168" width="90" height="60" fill="#60a5fa" opacity="0.5" stroke="#475569"/>
+  <!-- Row virginica — confused more often with versicolor -->
+  <rect x="135" y="228" width="90" height="60" fill="#e5e7eb" stroke="#d1d5db"/>
+  <rect x="225" y="228" width="90" height="60" fill="#60a5fa" opacity="0.55" stroke="#475569"/>
+  <rect x="315" y="228" width="90" height="60" fill="#1e3a8a" opacity="0.75" stroke="#475569"/>
+  <!-- Counts overlay -->
+  <g font-size="15" fill="#ffffff" text-anchor="middle" font-weight="700">
+    <text x="180" y="145">50</text><text x="280" y="205">45</text><text x="360" y="265">42</text>
+  </g>
+  <g font-size="13" fill="#111827" text-anchor="middle">
+    <text x="280" y="145">0</text><text x="360" y="145">0</text>
+    <text x="180" y="205">0</text>
+  </g>
+  <g font-size="13" fill="#1e3a8a" text-anchor="middle" font-weight="600">
+    <text x="360" y="205">5</text>
+    <text x="280" y="265">8</text>
+    <text x="180" y="265">0</text>
+  </g>
+  <!-- Annotation arrows -->
+  <path d="M 420 145 Q 455 145 450 200" fill="none" stroke="#059669" stroke-width="1.2" marker-end="url(#cmArr)"/>
+  <defs>
+    <marker id="cmArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#059669"/></marker>
+  </defs>
+  <text x="460" y="130" font-size="10" fill="#065f46" font-weight="600">對角線 = TP</text>
+  <text x="460" y="144" font-size="10" fill="#065f46">（正確分類）</text>
+  <text x="460" y="230" font-size="10" fill="#991b1b" font-weight="600">非對角 = 誤分類</text>
+  <text x="460" y="244" font-size="10" fill="#991b1b">versi↔virgi 常混淆</text>
+  <!-- Color scale bar -->
+  <rect x="135" y="310" width="270" height="12" fill="url(#cmGrad)" stroke="#d1d5db"/>
+  <text x="135" y="338" font-size="10" fill="#6b7280">0</text>
+  <text x="405" y="338" text-anchor="end" font-size="10" fill="#6b7280">50</text>
+  <text x="270" y="338" text-anchor="middle" font-size="10" fill="#6b7280">樣本數</text>
+  <!-- Diagonal accuracy summary -->
+  <text x="260" y="362" text-anchor="middle" font-size="11" fill="#111827">Accuracy = (50+45+42)/150 = 91.3% ・ versicolor 與 virginica 之間為主要混淆來源</text>
+</svg>
+<figcaption>示意圖：3 類別混淆矩陣熱圖。深色對角線代表各類別被正確分類的樣本數（TP）；非對角線的淺藍格反映模型在 versicolor 與 virginica 之間混淆，這類混淆資訊無法從單一 accuracy 數字看出，須透過矩陣診斷。</figcaption>
+</figure>
+```
 
 - 對角線元素 (Diagonal Elements) 代表正確分類
 - 非對角線元素代表誤分類，可以看出「哪個類別最容易被混淆成哪個類別」
@@ -206,6 +268,57 @@ plt.title('Calibration Curve (Reliability Diagram)')
 ### 4.2 人口統計均等 Demographic Parity (Statistical Parity)
 
 **定義：** 模型的正向預測率 (Positive Prediction Rate) 在所有群體間應相等。
+
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="群組公平性差距示意圖">
+  <rect x="0" y="0" width="680" height="340" fill="#ffffff"/>
+  <text x="340" y="24" text-anchor="middle" font-size="14" fill="#111827" font-weight="600">公平性指標：三群組的正向預測率比較</text>
+  <!-- Axes -->
+  <line x1="110" y1="260" x2="620" y2="260" stroke="#374151" stroke-width="1.2"/>
+  <line x1="110" y1="60" x2="110" y2="260" stroke="#374151" stroke-width="1.2"/>
+  <!-- Y ticks -->
+  <g font-size="10" fill="#6b7280" text-anchor="end">
+    <text x="102" y="264">0%</text><text x="102" y="220">20%</text><text x="102" y="180">40%</text>
+    <text x="102" y="140">60%</text><text x="102" y="100">80%</text><text x="102" y="64">100%</text>
+  </g>
+  <g stroke="#e5e7eb" stroke-width="0.8" stroke-dasharray="3 3">
+    <line x1="110" y1="220" x2="620" y2="220"/><line x1="110" y1="180" x2="620" y2="180"/>
+    <line x1="110" y1="140" x2="620" y2="140"/><line x1="110" y1="100" x2="620" y2="100"/>
+  </g>
+  <text x="50" y="160" text-anchor="middle" font-size="12" fill="#111827" font-weight="600" transform="rotate(-90 50 160)">正向預測率 P(Ŷ=1 | A)</text>
+  <!-- Bars: Group A 72%, Group B 45%, Group C 58% -->
+  <!-- Group A -->
+  <rect x="170" y="116" width="80" height="144" fill="#2563eb" stroke="#1e3a8a" stroke-width="1.5"/>
+  <text x="210" y="110" text-anchor="middle" font-size="13" fill="#1e3a8a" font-weight="700">72%</text>
+  <text x="210" y="280" text-anchor="middle" font-size="12" fill="#111827">群組 A (優勢)</text>
+  <text x="210" y="295" text-anchor="middle" font-size="10" fill="#6b7280">Base rate: 65%</text>
+  <!-- Group B — the disadvantaged group -->
+  <rect x="310" y="170" width="80" height="90" fill="#f87171" stroke="#991b1b" stroke-width="1.5"/>
+  <text x="350" y="164" text-anchor="middle" font-size="13" fill="#7f1d1d" font-weight="700">45%</text>
+  <text x="350" y="280" text-anchor="middle" font-size="12" fill="#111827">群組 B (弱勢)</text>
+  <text x="350" y="295" text-anchor="middle" font-size="10" fill="#6b7280">Base rate: 63%</text>
+  <!-- Group C -->
+  <rect x="450" y="144" width="80" height="116" fill="#a78bfa" stroke="#5b21b6" stroke-width="1.5"/>
+  <text x="490" y="138" text-anchor="middle" font-size="13" fill="#5b21b6" font-weight="700">58%</text>
+  <text x="490" y="280" text-anchor="middle" font-size="12" fill="#111827">群組 C</text>
+  <text x="490" y="295" text-anchor="middle" font-size="10" fill="#6b7280">Base rate: 64%</text>
+  <!-- Gap indicator between A and B -->
+  <line x1="250" y1="116" x2="310" y2="116" stroke="#d97706" stroke-width="1.5"/>
+  <line x1="250" y1="116" x2="250" y2="170" stroke="#d97706" stroke-width="1.5" stroke-dasharray="3 2"/>
+  <line x1="310" y1="170" x2="310" y2="170" stroke="#d97706" stroke-width="1.5"/>
+  <line x1="250" y1="170" x2="310" y2="170" stroke="#d97706" stroke-width="1.5"/>
+  <text x="280" y="108" text-anchor="middle" font-size="12" fill="#b45309" font-weight="700">DPD = 27pp</text>
+  <!-- 4/5 rule threshold: Group B should be ≥ 80% of Group A = 72%*0.8 = 57.6% -->
+  <line x1="140" y1="146" x2="600" y2="146" stroke="#059669" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <text x="595" y="142" text-anchor="end" font-size="10" fill="#065f46" font-weight="600">4/5 規則門檻 = 57.6% (= 72%·0.8)</text>
+  <!-- Verdict banner -->
+  <rect x="130" y="310" width="490" height="24" fill="#fee2e2" stroke="#991b1b" stroke-width="1"/>
+  <text x="375" y="326" text-anchor="middle" font-size="12" fill="#7f1d1d" font-weight="600">⚠ 群組 B 的 45% 低於 4/5 門檻 57.6%，疑似違反 EEOC Disparate Impact 準則</text>
+</svg>
+<figcaption>示意圖：群組公平性差距。儘管三群組 base rate 幾乎相同（63–65%），模型對群組 B 的正向預測率（45%）顯著低於群組 A（72%）。Demographic Parity Difference（DPD）= |72% - 45%| = 27 個百分點；依美國 EEOC 4/5 規則，弱勢群體正向率應 ≥ 優勢群體 ×0.8 = 57.6%，此模型未達標。</figcaption>
+</figure>
+```
 
 $$P(\hat{Y}=1 | A=a) = P(\hat{Y}=1 | A=b), \quad \forall a, b$$
 

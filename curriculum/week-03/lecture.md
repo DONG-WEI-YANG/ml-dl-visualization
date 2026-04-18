@@ -75,14 +75,31 @@
 
 最基本的分割方式是將資料分為兩部分：
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                    完整資料集 Full Dataset                 │
-├────────────────────────────────┬─────────────────────────┤
-│       訓練集 Training Set       │    測試集 Test Set       │
-│          (70-80%)              │      (20-30%)           │
-│    用於學習模型參數              │    用於最終效能評估        │
-└────────────────────────────────┴─────────────────────────┘
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="訓練測試驗證分割示意圖">
+  <rect x="0" y="0" width="640" height="200" fill="#ffffff"/>
+  <!-- TWO-WAY SPLIT -->
+  <text x="320" y="26" text-anchor="middle" font-size="13" fill="#111827" font-weight="600">二分法：Training / Test</text>
+  <rect x="40" y="40" width="420" height="44" fill="#dbeafe" stroke="#1e40af" stroke-width="1.5"/>
+  <rect x="460" y="40" width="140" height="44" fill="#fecaca" stroke="#991b1b" stroke-width="1.5"/>
+  <text x="250" y="68" text-anchor="middle" font-size="13" fill="#1e3a8a" font-weight="600">訓練集 Training (75%)</text>
+  <text x="530" y="68" text-anchor="middle" font-size="13" fill="#7f1d1d" font-weight="600">測試 Test (25%)</text>
+  <!-- THREE-WAY SPLIT -->
+  <text x="320" y="116" text-anchor="middle" font-size="13" fill="#111827" font-weight="600">三分法：Training / Validation / Test</text>
+  <rect x="40" y="130" width="340" height="44" fill="#dbeafe" stroke="#1e40af" stroke-width="1.5"/>
+  <rect x="380" y="130" width="110" height="44" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/>
+  <rect x="490" y="130" width="110" height="44" fill="#fecaca" stroke="#991b1b" stroke-width="1.5"/>
+  <text x="210" y="158" text-anchor="middle" font-size="13" fill="#1e3a8a" font-weight="600">訓練 Training (60%)</text>
+  <text x="435" y="158" text-anchor="middle" font-size="12" fill="#92400e" font-weight="600">驗證 Val (20%)</text>
+  <text x="545" y="158" text-anchor="middle" font-size="12" fill="#7f1d1d" font-weight="600">測試 Test (20%)</text>
+  <!-- Usage notes under each segment -->
+  <text x="210" y="192" text-anchor="middle" font-size="10" fill="#6b7280">學習參數</text>
+  <text x="435" y="192" text-anchor="middle" font-size="10" fill="#6b7280">選超參數</text>
+  <text x="545" y="192" text-anchor="middle" font-size="10" fill="#6b7280">最終評估（僅一次）</text>
+</svg>
+<figcaption>示意圖：資料分割。二分法只切訓練與測試；三分法多出驗證集用於超參數選擇，測試集保留到最後一次使用，避免資訊洩漏。</figcaption>
+</figure>
 ```
 
 - **訓練集 (Training Set)**：模型從中學習規律（調整參數）
@@ -280,6 +297,41 @@ degree=1                 degree=4               degree=15
 
 **關鍵洞察：** 隨著模型複雜度增加，偏差通常下降但變異上升。最佳模型複雜度在兩者的交叉點附近。
 
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 640 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="偏差-變異權衡曲線">
+  <rect x="0" y="0" width="640" height="320" fill="#ffffff"/>
+  <!-- Plot area -->
+  <rect x="80" y="40" width="500" height="220" fill="#fafafa" stroke="#e5e7eb"/>
+  <!-- Axes -->
+  <line x1="80" y1="260" x2="580" y2="260" stroke="#374151" stroke-width="1.2"/>
+  <line x1="80" y1="40" x2="80" y2="260" stroke="#374151" stroke-width="1.2"/>
+  <!-- Axis labels -->
+  <text x="330" y="295" text-anchor="middle" font-size="12" fill="#111827">模型複雜度 Model Complexity →</text>
+  <text x="40" y="150" text-anchor="middle" font-size="12" fill="#111827" transform="rotate(-90 40 150)">誤差 Error</text>
+  <text x="100" y="275" font-size="10" fill="#6b7280">欠擬合 Underfit</text>
+  <text x="560" y="275" text-anchor="end" font-size="10" fill="#6b7280">過擬合 Overfit</text>
+  <!-- Bias² curve — starts HIGH, decays toward 0 -->
+  <path d="M 80 70 Q 180 100 280 170 T 500 245 L 580 250" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+  <text x="140" y="92" font-size="12" fill="#1e3a8a" font-weight="600">Bias²（偏差²）</text>
+  <!-- Variance curve — starts LOW, grows superlinearly -->
+  <path d="M 80 252 Q 200 245 300 225 T 480 140 Q 540 70 580 50" fill="none" stroke="#ef4444" stroke-width="2.5"/>
+  <text x="520" y="60" text-anchor="end" font-size="12" fill="#991b1b" font-weight="600">Variance（變異）</text>
+  <!-- Total error — U shape = bias + variance + irreducible noise -->
+  <path d="M 80 80 Q 200 150 330 130 Q 420 120 480 160 Q 540 200 580 220" fill="none" stroke="#111827" stroke-width="3"/>
+  <text x="340" y="118" text-anchor="middle" font-size="12" fill="#111827" font-weight="700">Total Error（總誤差）</text>
+  <!-- Irreducible noise floor -->
+  <line x1="80" y1="230" x2="580" y2="230" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4 3"/>
+  <text x="575" y="224" text-anchor="end" font-size="10" fill="#6b7280">不可約誤差 Irreducible noise</text>
+  <!-- Optimum marker -->
+  <line x1="335" y1="40" x2="335" y2="260" stroke="#059669" stroke-width="1.5" stroke-dasharray="6 3"/>
+  <circle cx="335" cy="127" r="5" fill="#059669" stroke="#065f46" stroke-width="1.5"/>
+  <text x="335" y="34" text-anchor="middle" font-size="11" fill="#065f46" font-weight="600">最佳複雜度 Sweet spot</text>
+</svg>
+<figcaption>示意圖：偏差-變異權衡。隨模型複雜度提升，Bias² 單調下降、Variance 單調上升；兩者之和加上不可約噪聲構成總誤差（黑線呈 U 型）。最佳複雜度位於 U 型曲線的谷底，即 Bias² 與 Variance 大致平衡之處。</figcaption>
+</figure>
+```
+
 ---
 
 ## 5. 交叉驗證 Cross-Validation
@@ -298,17 +350,66 @@ degree=1                 degree=4               degree=15
 
 **原理：** 將資料均等分割為 $k$ 份 (Folds)，輪流用其中 1 份作為驗證集、其餘 $k-1$ 份作為訓練集，共進行 $k$ 次訓練與評估。
 
-```
-5-Fold Cross-Validation 範例：
-
-Fold 1: [驗證 Val] [訓練 Train] [訓練 Train] [訓練 Train] [訓練 Train]
-Fold 2: [訓練 Train] [驗證 Val] [訓練 Train] [訓練 Train] [訓練 Train]
-Fold 3: [訓練 Train] [訓練 Train] [驗證 Val] [訓練 Train] [訓練 Train]
-Fold 4: [訓練 Train] [訓練 Train] [訓練 Train] [驗證 Val] [訓練 Train]
-Fold 5: [訓練 Train] [訓練 Train] [訓練 Train] [訓練 Train] [驗證 Val]
-
-最終分數 = 五次驗證分數的平均值 ± 標準差
-Final Score = Mean ± Std of 5 validation scores
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 680 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="5-Fold Cross-Validation 示意圖">
+  <rect x="0" y="0" width="680" height="360" fill="#ffffff"/>
+  <text x="340" y="26" text-anchor="middle" font-size="14" fill="#111827" font-weight="600">5-Fold Cross-Validation</text>
+  <!-- Column header (5 equal folds) -->
+  <g font-size="11" fill="#6b7280" text-anchor="middle">
+    <text x="155" y="50">Fold 1</text><text x="255" y="50">Fold 2</text><text x="355" y="50">Fold 3</text><text x="455" y="50">Fold 4</text><text x="555" y="50">Fold 5</text>
+  </g>
+  <!-- Row labels (iterations) -->
+  <g font-size="12" fill="#111827" text-anchor="end" font-weight="600">
+    <text x="95" y="84">Iter 1</text><text x="95" y="124">Iter 2</text><text x="95" y="164">Iter 3</text><text x="95" y="204">Iter 4</text><text x="95" y="244">Iter 5</text>
+  </g>
+  <!-- Grid of 5 rows × 5 columns: validation cell per row shifts -->
+  <!-- Iter 1 — val = fold 1 -->
+  <rect x="105" y="68" width="100" height="24" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/>
+  <rect x="205" y="68" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="305" y="68" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="405" y="68" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="505" y="68" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <!-- Iter 2 — val = fold 2 -->
+  <rect x="105" y="108" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="205" y="108" width="100" height="24" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/>
+  <rect x="305" y="108" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="405" y="108" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="505" y="108" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <!-- Iter 3 — val = fold 3 -->
+  <rect x="105" y="148" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="205" y="148" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="305" y="148" width="100" height="24" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/>
+  <rect x="405" y="148" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="505" y="148" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <!-- Iter 4 — val = fold 4 -->
+  <rect x="105" y="188" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="205" y="188" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="305" y="188" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="405" y="188" width="100" height="24" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/>
+  <rect x="505" y="188" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <!-- Iter 5 — val = fold 5 -->
+  <rect x="105" y="228" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="205" y="228" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="305" y="228" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="405" y="228" width="100" height="24" fill="#dbeafe" stroke="#1e40af"/>
+  <rect x="505" y="228" width="100" height="24" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/>
+  <!-- Per-iter score labels on the right -->
+  <g font-size="11" fill="#111827" text-anchor="start">
+    <text x="620" y="84">0.83</text><text x="620" y="124">0.86</text><text x="620" y="164">0.81</text><text x="620" y="204">0.85</text><text x="620" y="244">0.84</text>
+  </g>
+  <text x="620" y="62" font-size="10" fill="#6b7280">score</text>
+  <!-- Legend -->
+  <rect x="120" y="284" width="16" height="14" fill="#dbeafe" stroke="#1e40af"/>
+  <text x="144" y="296" font-size="12" fill="#1e3a8a">訓練 Train</text>
+  <rect x="260" y="284" width="16" height="14" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/>
+  <text x="284" y="296" font-size="12" fill="#92400e">驗證 Validation</text>
+  <!-- Final score formula -->
+  <rect x="105" y="318" width="500" height="32" fill="#f3f4f6" stroke="#d1d5db"/>
+  <text x="355" y="338" text-anchor="middle" font-size="12" fill="#111827">最終分數 = mean(scores) ± std(scores) = <tspan font-weight="600">0.838 ± 0.019</tspan></text>
+</svg>
+<figcaption>示意圖：5-Fold Cross-Validation。資料均等分為 5 折，每次迭代用其中 1 折當驗證（黃色）、其餘 4 折當訓練（藍色）；共跑 5 次得到 5 個分數，最終以均值 ± 標準差作為穩健效能估計。k 越大偏差越小但計算量越大。</figcaption>
+</figure>
 ```
 
 **使用 scikit-learn 實作：**
