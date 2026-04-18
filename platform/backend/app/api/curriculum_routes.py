@@ -102,8 +102,20 @@ def _md_to_html(md_path: Path, title: str) -> str:
   code {{ font-family: "Consolas", monospace; font-size: 14px; }}
   code.inline {{ background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 13px; }}
   li {{ margin-left: 20px; }}
+  mjx-container {{ overflow-x: auto; overflow-y: hidden; }}
   @media print {{ body {{ margin: 20px; }} }}
 </style>
+<script>
+  window.MathJax = {{
+    tex: {{
+      inlineMath: [['$', '$'], ['\\\\(', '\\\\)']],
+      displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']],
+      processEscapes: true
+    }},
+    options: {{ skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] }}
+  }};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
 </head>
 <body>{body}</body>
 </html>"""
