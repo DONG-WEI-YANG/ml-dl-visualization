@@ -82,20 +82,100 @@
 
 ### 2.2 RNN 的摺疊與展開表示 Folded vs Unfolded Representation
 
-```
-摺疊表示 (Folded)：              展開表示 (Unfolded)：
-
-                                     y(t-1)     y(t)      y(t+1)
-                                       ↑          ↑          ↑
-    y                                ┌────┐    ┌────┐    ┌────┐
-    ↑                                │    │    │    │    │    │
-  ┌────┐                   h(t-2) →  │h(t-1)│→  │ h(t)│→  │h(t+1)│→ ...
-  │    │←─╮                          │    │    │    │    │    │
-  │ h  │   │ (自迴圈)                └────┘    └────┘    └────┘
-  │    │──╯                            ↑          ↑          ↑
-  └────┘                             x(t-1)     x(t)      x(t+1)
-    ↑
-    x                              時間步 t-1    時間步 t    時間步 t+1
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 720 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="RNN 摺疊 vs 展開表示">
+  <rect x="0" y="0" width="720" height="320" fill="#ffffff"/>
+  <!-- LEFT: folded -->
+  <g transform="translate(30,40)">
+    <text x="90" y="-12" text-anchor="middle" font-size="13" fill="#111827" font-weight="600">摺疊 Folded</text>
+    <!-- x -->
+    <g fill="#dbeafe" stroke="#2563eb" stroke-width="1.5"><circle cx="90" cy="220" r="18"/></g>
+    <text x="90" y="224" text-anchor="middle" font-size="12" fill="#1e3a5f">x</text>
+    <!-- h (with self loop) -->
+    <g fill="#fef3c7" stroke="#d97706" stroke-width="1.5"><circle cx="90" cy="130" r="24"/></g>
+    <text x="90" y="134" text-anchor="middle" font-size="13" fill="#7f1d1d" font-weight="600">h</text>
+    <!-- Self loop on h -->
+    <path d="M 112 115 C 145 100 145 145 112 143" fill="none" stroke="#d97706" stroke-width="1.5" marker-end="url(#loopArr)"/>
+    <text x="150" y="134" font-size="11" fill="#b45309" font-weight="600">W_hh</text>
+    <!-- y -->
+    <g fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"><circle cx="90" cy="45" r="18"/></g>
+    <text x="90" y="49" text-anchor="middle" font-size="12" fill="#7f1d1d">y</text>
+    <!-- Edges x->h->y -->
+    <line x1="90" y1="202" x2="90" y2="154" stroke="#374151" stroke-width="1.5" marker-end="url(#foldArr)"/>
+    <line x1="90" y1="106" x2="90" y2="63" stroke="#374151" stroke-width="1.5" marker-end="url(#foldArr)"/>
+    <defs>
+      <marker id="foldArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/></marker>
+      <marker id="loopArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706"/></marker>
+      <marker id="unfoldArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/></marker>
+    </defs>
+    <text x="100" y="178" font-size="10" fill="#6b7280">W_xh</text>
+    <text x="100" y="88" font-size="10" fill="#6b7280">W_hy</text>
+  </g>
+  <!-- "展開" arrow between -->
+  <g transform="translate(180,160)">
+    <path d="M 0 0 L 60 0" stroke="#374151" stroke-width="2" marker-end="url(#unfoldBigArr)"/>
+    <defs>
+      <marker id="unfoldBigArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/></marker>
+    </defs>
+    <text x="30" y="-10" text-anchor="middle" font-size="12" fill="#111827" font-weight="600">沿時間展開</text>
+    <text x="30" y="22" text-anchor="middle" font-size="10" fill="#6b7280">unfold over t</text>
+  </g>
+  <!-- RIGHT: unfolded over 3 time steps -->
+  <g transform="translate(270,40)">
+    <text x="200" y="-12" text-anchor="middle" font-size="13" fill="#111827" font-weight="600">展開 Unfolded（參數共享）</text>
+    <!-- time labels (bottom) -->
+    <text x="50" y="260" text-anchor="middle" font-size="11" fill="#6b7280">t-1</text>
+    <text x="180" y="260" text-anchor="middle" font-size="11" fill="#6b7280">t</text>
+    <text x="310" y="260" text-anchor="middle" font-size="11" fill="#6b7280">t+1</text>
+    <!-- Inputs -->
+    <g fill="#dbeafe" stroke="#2563eb" stroke-width="1.5">
+      <circle cx="50" cy="220" r="16"/><circle cx="180" cy="220" r="16"/><circle cx="310" cy="220" r="16"/>
+    </g>
+    <g font-size="11" fill="#1e3a5f" text-anchor="middle">
+      <text x="50" y="224">xₜ₋₁</text><text x="180" y="224">xₜ</text><text x="310" y="224">xₜ₊₁</text>
+    </g>
+    <!-- Hidden states -->
+    <g fill="#fef3c7" stroke="#d97706" stroke-width="1.5">
+      <circle cx="50" cy="130" r="22"/><circle cx="180" cy="130" r="22"/><circle cx="310" cy="130" r="22"/>
+    </g>
+    <g font-size="12" fill="#7f1d1d" text-anchor="middle" font-weight="600">
+      <text x="50" y="134">hₜ₋₁</text><text x="180" y="134">hₜ</text><text x="310" y="134">hₜ₊₁</text>
+    </g>
+    <!-- Output -->
+    <g fill="#fee2e2" stroke="#dc2626" stroke-width="1.5">
+      <circle cx="50" cy="45" r="16"/><circle cx="180" cy="45" r="16"/><circle cx="310" cy="45" r="16"/>
+    </g>
+    <g font-size="11" fill="#7f1d1d" text-anchor="middle">
+      <text x="50" y="49">yₜ₋₁</text><text x="180" y="49">yₜ</text><text x="310" y="49">yₜ₊₁</text>
+    </g>
+    <!-- x → h edges -->
+    <g stroke="#374151" stroke-width="1.2" fill="none">
+      <line x1="50" y1="204" x2="50" y2="152" marker-end="url(#unfoldArr)"/>
+      <line x1="180" y1="204" x2="180" y2="152" marker-end="url(#unfoldArr)"/>
+      <line x1="310" y1="204" x2="310" y2="152" marker-end="url(#unfoldArr)"/>
+    </g>
+    <!-- h → y edges -->
+    <g stroke="#374151" stroke-width="1.2" fill="none">
+      <line x1="50" y1="108" x2="50" y2="63" marker-end="url(#unfoldArr)"/>
+      <line x1="180" y1="108" x2="180" y2="63" marker-end="url(#unfoldArr)"/>
+      <line x1="310" y1="108" x2="310" y2="63" marker-end="url(#unfoldArr)"/>
+    </g>
+    <!-- h_{t-1} → h_t → h_{t+1} (time-directed recurrence) -->
+    <g stroke="#d97706" stroke-width="1.8" fill="none">
+      <line x1="72" y1="130" x2="158" y2="130" marker-end="url(#unfoldArr)"/>
+      <line x1="202" y1="130" x2="288" y2="130" marker-end="url(#unfoldArr)"/>
+      <!-- From prev (dashed) -->
+      <line x1="0" y1="130" x2="28" y2="130" stroke-dasharray="3 3" marker-end="url(#unfoldArr)"/>
+      <line x1="332" y1="130" x2="360" y2="130" stroke-dasharray="3 3"/>
+    </g>
+    <text x="115" y="122" text-anchor="middle" font-size="10" fill="#b45309">W_hh</text>
+    <text x="245" y="122" text-anchor="middle" font-size="10" fill="#b45309">W_hh</text>
+    <text x="365" y="132" font-size="10" fill="#6b7280">...</text>
+  </g>
+</svg>
+<figcaption>示意圖：RNN 摺疊 vs 展開表示。左側用自迴圈表示 hidden state h 的遞迴；右側沿時間軸展開：同一組權重 (W_xh, W_hh, W_hy) 在所有時間步共享，隱藏狀態 hₜ 同時承載當前輸入 xₜ 與歷史資訊 hₜ₋₁。</figcaption>
+</figure>
 ```
 
 ### 2.3 RNN 的數學公式 Mathematical Formulation
@@ -485,6 +565,99 @@ Decoder:           s(t-1) + context → s(t) → y(t)
 ### 8.2 Self-Attention 自注意力機制
 
 Self-Attention 的核心想法是讓序列中的**每個位置**都能直接關注序列中的**所有其他位置**，從而捕捉全局依賴關係。
+
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 640 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Self-Attention 權重熱圖示意">
+  <rect x="0" y="0" width="640" height="440" fill="#ffffff"/>
+  <defs>
+    <linearGradient id="attnGrad" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#eff6ff"/>
+      <stop offset="50%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
+    </linearGradient>
+  </defs>
+  <text x="320" y="28" text-anchor="middle" font-size="14" fill="#111827" font-weight="600">Self-Attention 權重矩陣：句子 "The cat sat on the mat ."</text>
+  <!-- Tokens along top (Key) -->
+  <g font-size="12" fill="#111827" font-family="serif" text-anchor="middle">
+    <text x="140" y="70">The</text><text x="195" y="70">cat</text><text x="250" y="70">sat</text>
+    <text x="305" y="70">on</text><text x="360" y="70">the</text><text x="415" y="70">mat</text><text x="470" y="70">.</text>
+  </g>
+  <text x="305" y="52" text-anchor="middle" font-size="11" fill="#6b7280">Key ↑（被關注的位置）</text>
+  <!-- Tokens along left (Query) -->
+  <g font-size="12" fill="#111827" font-family="serif" text-anchor="end">
+    <text x="108" y="105">The</text><text x="108" y="160">cat</text><text x="108" y="215">sat</text>
+    <text x="108" y="270">on</text><text x="108" y="325">the</text><text x="108" y="380">mat</text><text x="108" y="430">.</text>
+  </g>
+  <text x="60" y="250" text-anchor="middle" font-size="11" fill="#6b7280" transform="rotate(-90 60 250)">Query（發出查詢的位置）</text>
+  <!-- Grid 7x7 with varying opacity simulating softmax weights -->
+  <g stroke="#d1d5db" stroke-width="0.5">
+    <!-- Row 1: The -->
+    <rect x="115" y="82" width="50" height="40" fill="#1e3a8a" opacity="0.85"/>
+    <rect x="170" y="82" width="50" height="40" fill="#60a5fa" opacity="0.35"/>
+    <rect x="225" y="82" width="50" height="40" fill="#60a5fa" opacity="0.15"/>
+    <rect x="280" y="82" width="50" height="40" fill="#60a5fa" opacity="0.1"/>
+    <rect x="335" y="82" width="50" height="40" fill="#60a5fa" opacity="0.55"/>
+    <rect x="390" y="82" width="50" height="40" fill="#60a5fa" opacity="0.2"/>
+    <rect x="445" y="82" width="50" height="40" fill="#60a5fa" opacity="0.05"/>
+    <!-- Row 2: cat -->
+    <rect x="115" y="137" width="50" height="40" fill="#60a5fa" opacity="0.6"/>
+    <rect x="170" y="137" width="50" height="40" fill="#1e3a8a" opacity="0.9"/>
+    <rect x="225" y="137" width="50" height="40" fill="#60a5fa" opacity="0.55"/>
+    <rect x="280" y="137" width="50" height="40" fill="#60a5fa" opacity="0.15"/>
+    <rect x="335" y="137" width="50" height="40" fill="#60a5fa" opacity="0.1"/>
+    <rect x="390" y="137" width="50" height="40" fill="#60a5fa" opacity="0.2"/>
+    <rect x="445" y="137" width="50" height="40" fill="#60a5fa" opacity="0.05"/>
+    <!-- Row 3: sat -->
+    <rect x="115" y="192" width="50" height="40" fill="#60a5fa" opacity="0.15"/>
+    <rect x="170" y="192" width="50" height="40" fill="#1e3a8a" opacity="0.7"/>
+    <rect x="225" y="192" width="50" height="40" fill="#1e3a8a" opacity="0.85"/>
+    <rect x="280" y="192" width="50" height="40" fill="#60a5fa" opacity="0.5"/>
+    <rect x="335" y="192" width="50" height="40" fill="#60a5fa" opacity="0.15"/>
+    <rect x="390" y="192" width="50" height="40" fill="#60a5fa" opacity="0.35"/>
+    <rect x="445" y="192" width="50" height="40" fill="#60a5fa" opacity="0.05"/>
+    <!-- Row 4: on -->
+    <rect x="115" y="247" width="50" height="40" fill="#60a5fa" opacity="0.1"/>
+    <rect x="170" y="247" width="50" height="40" fill="#60a5fa" opacity="0.3"/>
+    <rect x="225" y="247" width="50" height="40" fill="#60a5fa" opacity="0.55"/>
+    <rect x="280" y="247" width="50" height="40" fill="#1e3a8a" opacity="0.8"/>
+    <rect x="335" y="247" width="50" height="40" fill="#60a5fa" opacity="0.2"/>
+    <rect x="390" y="247" width="50" height="40" fill="#60a5fa" opacity="0.55"/>
+    <rect x="445" y="247" width="50" height="40" fill="#60a5fa" opacity="0.05"/>
+    <!-- Row 5: the -->
+    <rect x="115" y="302" width="50" height="40" fill="#60a5fa" opacity="0.55"/>
+    <rect x="170" y="302" width="50" height="40" fill="#60a5fa" opacity="0.15"/>
+    <rect x="225" y="302" width="50" height="40" fill="#60a5fa" opacity="0.1"/>
+    <rect x="280" y="302" width="50" height="40" fill="#60a5fa" opacity="0.2"/>
+    <rect x="335" y="302" width="50" height="40" fill="#1e3a8a" opacity="0.8"/>
+    <rect x="390" y="302" width="50" height="40" fill="#60a5fa" opacity="0.7"/>
+    <rect x="445" y="302" width="50" height="40" fill="#60a5fa" opacity="0.05"/>
+    <!-- Row 6: mat -->
+    <rect x="115" y="357" width="50" height="40" fill="#60a5fa" opacity="0.25"/>
+    <rect x="170" y="357" width="50" height="40" fill="#60a5fa" opacity="0.3"/>
+    <rect x="225" y="357" width="50" height="40" fill="#60a5fa" opacity="0.4"/>
+    <rect x="280" y="357" width="50" height="40" fill="#60a5fa" opacity="0.55"/>
+    <rect x="335" y="357" width="50" height="40" fill="#60a5fa" opacity="0.65"/>
+    <rect x="390" y="357" width="50" height="40" fill="#1e3a8a" opacity="0.85"/>
+    <rect x="445" y="357" width="50" height="40" fill="#60a5fa" opacity="0.1"/>
+    <!-- Row 7: . -->
+    <rect x="115" y="412" width="50" height="20" fill="#60a5fa" opacity="0.12"/>
+    <rect x="170" y="412" width="50" height="20" fill="#60a5fa" opacity="0.1"/>
+    <rect x="225" y="412" width="50" height="20" fill="#60a5fa" opacity="0.15"/>
+    <rect x="280" y="412" width="50" height="20" fill="#60a5fa" opacity="0.1"/>
+    <rect x="335" y="412" width="50" height="20" fill="#60a5fa" opacity="0.15"/>
+    <rect x="390" y="412" width="50" height="20" fill="#60a5fa" opacity="0.5"/>
+    <rect x="445" y="412" width="50" height="20" fill="#1e3a8a" opacity="0.7"/>
+  </g>
+  <!-- Color scale on right -->
+  <rect x="520" y="82" width="14" height="350" fill="url(#attnGrad)" stroke="#d1d5db"/>
+  <text x="542" y="92" font-size="10" fill="#111827">高</text>
+  <text x="542" y="260" font-size="10" fill="#6b7280">權重</text>
+  <text x="542" y="430" font-size="10" fill="#111827">低</text>
+</svg>
+<figcaption>示意圖：Self-Attention 權重熱圖。每一列是某個 Query token 對所有 Key token 的 softmax 注意力分布（每列和為 1）。對角線通常最深代表 token 關注自己；"sat" 同時關注 "cat"（主詞）與自己；"mat" 關注 "the"（冠詞）與自己，反映句法依存。實務中 Multi-Head Attention 會並行多個這種熱圖，每個 head 學到不同的語言模式。</figcaption>
+</figure>
+```
 
 #### Query-Key-Value (QKV) 框架
 

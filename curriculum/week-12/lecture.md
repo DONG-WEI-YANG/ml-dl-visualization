@@ -60,6 +60,90 @@ CNN 可以看作兩部分：
 
 卷積運算可以想像成一個小窗口（卷積核）在影像上滑動，每到一個位置就與覆蓋區域做加權求和 (Weighted Sum)。這個過程類似於用一個模板在影像中尋找特定的局部模式。
 
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 720 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="2D 卷積運算滑動示意圖">
+  <rect x="0" y="0" width="720" height="300" fill="#ffffff"/>
+  <!-- LEFT: input image 5x5 with 3x3 kernel highlighted at position (0,0) -->
+  <g transform="translate(20,40)">
+    <text x="100" y="-10" text-anchor="middle" font-size="13" fill="#111827" font-weight="600">輸入 Input (5×5)</text>
+    <!-- 5x5 grid -->
+    <g stroke="#9ca3af" stroke-width="1">
+      <!-- cells -->
+      <g fill="#ffffff">
+        <rect x="0" y="0" width="40" height="40"/><rect x="40" y="0" width="40" height="40"/><rect x="80" y="0" width="40" height="40"/><rect x="120" y="0" width="40" height="40"/><rect x="160" y="0" width="40" height="40"/>
+        <rect x="0" y="40" width="40" height="40"/><rect x="40" y="40" width="40" height="40"/><rect x="80" y="40" width="40" height="40"/><rect x="120" y="40" width="40" height="40"/><rect x="160" y="40" width="40" height="40"/>
+        <rect x="0" y="80" width="40" height="40"/><rect x="40" y="80" width="40" height="40"/><rect x="80" y="80" width="40" height="40"/><rect x="120" y="80" width="40" height="40"/><rect x="160" y="80" width="40" height="40"/>
+        <rect x="0" y="120" width="40" height="40"/><rect x="40" y="120" width="40" height="40"/><rect x="80" y="120" width="40" height="40"/><rect x="120" y="120" width="40" height="40"/><rect x="160" y="120" width="40" height="40"/>
+        <rect x="0" y="160" width="40" height="40"/><rect x="40" y="160" width="40" height="40"/><rect x="80" y="160" width="40" height="40"/><rect x="120" y="160" width="40" height="40"/><rect x="160" y="160" width="40" height="40"/>
+      </g>
+    </g>
+    <!-- Kernel overlay: solid box at top-left 3x3 -->
+    <rect x="0" y="0" width="120" height="120" fill="#fef08a" opacity="0.55" stroke="#d97706" stroke-width="3"/>
+    <!-- Ghost box at one-step-right position (dashed) -->
+    <rect x="40" y="0" width="120" height="120" fill="none" stroke="#d97706" stroke-width="1.5" stroke-dasharray="5 3"/>
+    <!-- Arrow showing sliding direction -->
+    <path d="M 150 60 L 175 60" stroke="#d97706" stroke-width="2" marker-end="url(#slideArr)"/>
+    <defs>
+      <marker id="slideArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d97706"/></marker>
+    </defs>
+    <text x="188" y="64" font-size="11" fill="#b45309">stride=1</text>
+    <!-- Sample values in overlapped region -->
+    <g font-size="12" fill="#111827" text-anchor="middle">
+      <text x="20" y="24">1</text><text x="60" y="24">2</text><text x="100" y="24">3</text><text x="140" y="24">0</text><text x="180" y="24">1</text>
+      <text x="20" y="64">0</text><text x="60" y="64">1</text><text x="100" y="64">2</text><text x="140" y="64">3</text><text x="180" y="64">0</text>
+      <text x="20" y="104">2</text><text x="60" y="104">1</text><text x="100" y="104">0</text><text x="140" y="104">1</text><text x="180" y="104">2</text>
+      <text x="20" y="144">1</text><text x="60" y="144">0</text><text x="100" y="144">1</text><text x="140" y="144">2</text><text x="180" y="144">1</text>
+      <text x="20" y="184">0</text><text x="60" y="184">1</text><text x="100" y="184">2</text><text x="140" y="184">0</text><text x="180" y="184">1</text>
+    </g>
+  </g>
+  <!-- Kernel (3x3) in middle -->
+  <g transform="translate(280,80)">
+    <text x="60" y="-15" text-anchor="middle" font-size="13" fill="#111827" font-weight="600">卷積核 Kernel</text>
+    <text x="60" y="-2" text-anchor="middle" font-size="10" fill="#6b7280">(3×3 邊緣偵測)</text>
+    <g stroke="#d97706" stroke-width="2" fill="#fef08a">
+      <rect x="0" y="0" width="40" height="40"/><rect x="40" y="0" width="40" height="40"/><rect x="80" y="0" width="40" height="40"/>
+      <rect x="0" y="40" width="40" height="40"/><rect x="40" y="40" width="40" height="40"/><rect x="80" y="40" width="40" height="40"/>
+      <rect x="0" y="80" width="40" height="40"/><rect x="40" y="80" width="40" height="40"/><rect x="80" y="80" width="40" height="40"/>
+    </g>
+    <g font-size="12" fill="#111827" text-anchor="middle" font-weight="600">
+      <text x="20" y="24">-1</text><text x="60" y="24">-1</text><text x="100" y="24">-1</text>
+      <text x="20" y="64">-1</text><text x="60" y="64">8</text><text x="100" y="64">-1</text>
+      <text x="20" y="104">-1</text><text x="60" y="104">-1</text><text x="100" y="104">-1</text>
+    </g>
+    <text x="60" y="145" text-anchor="middle" font-size="14" fill="#111827">⊛</text>
+  </g>
+  <!-- Arrow from input+kernel to output -->
+  <g transform="translate(440,150)">
+    <path d="M 0 0 L 50 0" stroke="#374151" stroke-width="2" marker-end="url(#convArr)"/>
+    <defs>
+      <marker id="convArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/></marker>
+    </defs>
+    <text x="25" y="-8" text-anchor="middle" font-size="11" fill="#6b7280">Σ wx</text>
+  </g>
+  <!-- RIGHT: output feature map 3x3 -->
+  <g transform="translate(520,80)">
+    <text x="60" y="-15" text-anchor="middle" font-size="13" fill="#111827" font-weight="600">特徵圖 Feature Map</text>
+    <text x="60" y="-2" text-anchor="middle" font-size="10" fill="#6b7280">(3×3)</text>
+    <g stroke="#9ca3af" stroke-width="1" fill="#dbeafe">
+      <rect x="0" y="0" width="40" height="40"/><rect x="40" y="0" width="40" height="40"/><rect x="80" y="0" width="40" height="40"/>
+      <rect x="0" y="40" width="40" height="40"/><rect x="40" y="40" width="40" height="40"/><rect x="80" y="40" width="40" height="40"/>
+      <rect x="0" y="80" width="40" height="40"/><rect x="40" y="80" width="40" height="40"/><rect x="80" y="80" width="40" height="40"/>
+    </g>
+    <!-- First cell highlighted (result of first kernel position) -->
+    <rect x="0" y="0" width="40" height="40" fill="#3b82f6" stroke="#1e40af" stroke-width="2"/>
+    <g font-size="12" text-anchor="middle">
+      <text x="20" y="24" fill="#ffffff" font-weight="600">4</text>
+      <text x="60" y="24" fill="#111827">-2</text><text x="100" y="24" fill="#111827">1</text>
+      <text x="20" y="64" fill="#111827">0</text><text x="60" y="64" fill="#111827">-3</text><text x="100" y="64" fill="#111827">2</text>
+      <text x="20" y="104" fill="#111827">1</text><text x="60" y="104" fill="#111827">-1</text><text x="100" y="104" fill="#111827">0</text>
+    </g>
+  </g>
+</svg>
+<figcaption>示意圖：2D 卷積。3×3 卷積核（黃色）在 5×5 輸入上以 stride=1 滑動，每個位置計算 Σ(w·x) 得到輸出特徵圖的一個像素。左側輸入中橘色虛線框代表下一步位置；右側特徵圖左上角的藍色格子對應當前覆蓋區與 kernel 的卷積結果。</figcaption>
+</figure>
+```
+
 ### 2.2 數學定義 Mathematical Definition
 
 對於二維離散卷積 (2D Discrete Convolution)，假設：
@@ -214,14 +298,81 @@ $$
 
 取池化窗口中的最大值。這是最常用的池化方式。
 
-```
-輸入 (4×4):              Max Pool (2×2, stride=2):
-┌──────────────┐          ┌──────┐
-│ 1  3  2  1 │          │ 5  3 │
-│ 5  2  1  3 │   →      │ 8  6 │
-│ 4  8  6  2 │          └──────┘
-│ 3  1  4  5 │
-└──────────────┘
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 680 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Max Pooling vs Average Pooling 示意圖">
+  <rect x="0" y="0" width="680" height="280" fill="#ffffff"/>
+  <!-- INPUT 4x4 (shared reference) -->
+  <g transform="translate(20,40)">
+    <text x="80" y="-12" text-anchor="middle" font-size="13" fill="#111827" font-weight="600">輸入特徵圖 (4×4)</text>
+    <g stroke="#9ca3af" stroke-width="1" fill="#ffffff">
+      <rect x="0" y="0" width="40" height="40"/><rect x="40" y="0" width="40" height="40"/><rect x="80" y="0" width="40" height="40"/><rect x="120" y="0" width="40" height="40"/>
+      <rect x="0" y="40" width="40" height="40"/><rect x="40" y="40" width="40" height="40"/><rect x="80" y="40" width="40" height="40"/><rect x="120" y="40" width="40" height="40"/>
+      <rect x="0" y="80" width="40" height="40"/><rect x="40" y="80" width="40" height="40"/><rect x="80" y="80" width="40" height="40"/><rect x="120" y="80" width="40" height="40"/>
+      <rect x="0" y="120" width="40" height="40"/><rect x="40" y="120" width="40" height="40"/><rect x="80" y="120" width="40" height="40"/><rect x="120" y="120" width="40" height="40"/>
+    </g>
+    <!-- 2x2 window partitions (colored backgrounds) -->
+    <rect x="0" y="0" width="80" height="80" fill="#dbeafe" opacity="0.5"/>
+    <rect x="80" y="0" width="80" height="80" fill="#fef3c7" opacity="0.5"/>
+    <rect x="0" y="80" width="80" height="80" fill="#fce7f3" opacity="0.5"/>
+    <rect x="80" y="80" width="80" height="80" fill="#d1fae5" opacity="0.5"/>
+    <!-- Values -->
+    <g font-size="13" fill="#111827" text-anchor="middle">
+      <text x="20" y="25">1</text><text x="60" y="25">3</text><text x="100" y="25">2</text><text x="140" y="25">1</text>
+      <text x="20" y="65" font-weight="600" fill="#1e40af">5</text><text x="60" y="65">2</text><text x="100" y="65">1</text><text x="140" y="65" font-weight="600" fill="#b45309">3</text>
+      <text x="20" y="105">4</text><text x="60" y="105" font-weight="600" fill="#be185d">8</text><text x="100" y="105" font-weight="600" fill="#047857">6</text><text x="140" y="105">2</text>
+      <text x="20" y="145">3</text><text x="60" y="145">1</text><text x="100" y="145">4</text><text x="140" y="145">5</text>
+    </g>
+  </g>
+  <!-- Max Pool output (top-right) -->
+  <g transform="translate(280,40)">
+    <text x="40" y="-12" text-anchor="middle" font-size="13" fill="#111827" font-weight="600">Max Pool (2×2)</text>
+    <g stroke="#6b7280" stroke-width="1.5">
+      <rect x="0" y="0" width="40" height="40" fill="#dbeafe"/>
+      <rect x="40" y="0" width="40" height="40" fill="#fef3c7"/>
+      <rect x="0" y="40" width="40" height="40" fill="#fce7f3"/>
+      <rect x="40" y="40" width="40" height="40" fill="#d1fae5"/>
+    </g>
+    <g font-size="15" fill="#111827" text-anchor="middle" font-weight="700">
+      <text x="20" y="26" fill="#1e40af">5</text>
+      <text x="60" y="26" fill="#b45309">3</text>
+      <text x="20" y="66" fill="#be185d">8</text>
+      <text x="60" y="66" fill="#047857">6</text>
+    </g>
+    <text x="40" y="100" text-anchor="middle" font-size="10" fill="#6b7280">每格取窗口最大值</text>
+    <text x="40" y="116" text-anchor="middle" font-size="10" fill="#6b7280">保留最強激活</text>
+  </g>
+  <!-- Avg Pool output -->
+  <g transform="translate(420,40)">
+    <text x="40" y="-12" text-anchor="middle" font-size="13" fill="#111827" font-weight="600">Avg Pool (2×2)</text>
+    <g stroke="#6b7280" stroke-width="1.5">
+      <rect x="0" y="0" width="40" height="40" fill="#dbeafe"/>
+      <rect x="40" y="0" width="40" height="40" fill="#fef3c7"/>
+      <rect x="0" y="40" width="40" height="40" fill="#fce7f3"/>
+      <rect x="40" y="40" width="40" height="40" fill="#d1fae5"/>
+    </g>
+    <g font-size="12" fill="#111827" text-anchor="middle" font-weight="600">
+      <text x="20" y="26">2.75</text>
+      <text x="60" y="26">1.75</text>
+      <text x="20" y="66">4.00</text>
+      <text x="60" y="66">4.25</text>
+    </g>
+    <text x="40" y="100" text-anchor="middle" font-size="10" fill="#6b7280">每格取窗口平均值</text>
+    <text x="40" y="116" text-anchor="middle" font-size="10" fill="#6b7280">平滑化輸出</text>
+  </g>
+  <!-- Arrows -->
+  <g stroke="#374151" stroke-width="1.5" fill="none">
+    <path d="M 200 80 L 280 60" marker-end="url(#poolArr)"/>
+    <path d="M 200 100 L 420 60" marker-end="url(#poolArr)"/>
+  </g>
+  <defs>
+    <marker id="poolArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/></marker>
+  </defs>
+  <!-- Footer note -->
+  <text x="340" y="240" text-anchor="middle" font-size="11" fill="#6b7280">池化 (Pooling) 降低空間維度、擴大感受野、並對微小平移保持不變（translation invariance）</text>
+</svg>
+<figcaption>示意圖：Max vs Average Pooling。輸入 4×4 被分成四個 2×2 色塊；Max Pooling 取每塊最大值（5, 3, 8, 6）保留最強激活；Average Pooling 取每塊平均值得到較平滑但保留整體強度的表徵。兩者皆將空間維度降為原 1/4。</figcaption>
+</figure>
 ```
 
 **直覺**：Max Pooling 保留最強的特徵激活，相當於保留「最像某特徵」的回應。
