@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import quote
 import html
 import re
 
@@ -126,10 +127,15 @@ async def download_curriculum_file(week_id: int, file_type: str):
                 # Convert markdown to styled HTML for better printability
                 title = f"第 {week_id} 週 - {entry['label']}"
                 html_content = _md_to_html(file_path, title)
+                ascii_name = f"week-{week_id:02d}-{file_type}.html"
+                utf8_name = quote(f"week-{week_id:02d}-{entry['label']}.html")
                 return HTMLResponse(
                     content=html_content,
                     headers={
-                        "Content-Disposition": f'attachment; filename="week-{week_id:02d}-{entry["label"]}.html"'
+                        "Content-Disposition": (
+                            f'attachment; filename="{ascii_name}"; '
+                            f"filename*=UTF-8''{utf8_name}"
+                        )
                     },
                 )
             return FileResponse(
