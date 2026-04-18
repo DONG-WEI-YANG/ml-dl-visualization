@@ -33,6 +33,8 @@
 
 線性回歸的目標是找到一條「最佳擬合線」(Best Fit Line)，使得這條線與所有資料點之間的誤差最小。
 
+![線性迴歸對合成資料的擬合結果，紅線為最小平方解](figures/linreg-fit.png)
+
 **簡單線性回歸 (Simple Linear Regression)** 只有一個特徵 (Feature)：
 
 $$\hat{y} = wx + b$$
@@ -153,6 +155,8 @@ $$\mathcal{L}_{\text{Huber}}(\delta) = \begin{cases} \frac{1}{2}(y - \hat{y})^2 
 $$w^*, b^* = \arg\min_{w, b} \mathcal{L}(w, b) = \arg\min_{w, b} \frac{1}{n} \sum_{i=1}^{n} (y_i - wx_i - b)^2$$
 
 ### 4.2 梯度的直覺 Intuition of Gradient
+
+![梯度下降在 MSE 損失面上從起點到收斂點的軌跡](figures/gd-path.png)
 
 **梯度 (Gradient)** 是多變數函數在某一點上變化最快的方向。
 

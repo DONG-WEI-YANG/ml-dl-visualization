@@ -65,18 +65,65 @@ y_hat = step(z) = 1  if z >= 0
 
 為了解決非線性問題，我們將多個感知器堆疊成多層結構：
 
-```
-輸入層          隱藏層 1        隱藏層 2        輸出層
-(Input Layer)   (Hidden Layer 1) (Hidden Layer 2) (Output Layer)
-
-  x1 ──┐
-       ├──→ h1_1 ──┐
-  x2 ──┤           ├──→ h2_1 ──┐
-       ├──→ h1_2 ──┤           ├──→ y1
-  x3 ──┤           ├──→ h2_2 ──┤
-       ├──→ h1_3 ──┘           ├──→ y2
-  x4 ──┘                       │
-                                └──→ y3
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 640 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MLP 多層感知器架構圖">
+  <rect x="0" y="0" width="640" height="380" fill="#ffffff"/>
+  <!-- Layer labels -->
+  <text x="80" y="30" text-anchor="middle" font-size="12" fill="#111827" font-weight="600">輸入層</text>
+  <text x="80" y="46" text-anchor="middle" font-size="10" fill="#6b7280">Input</text>
+  <text x="240" y="30" text-anchor="middle" font-size="12" fill="#111827" font-weight="600">隱藏層 1</text>
+  <text x="240" y="46" text-anchor="middle" font-size="10" fill="#6b7280">Hidden 1</text>
+  <text x="400" y="30" text-anchor="middle" font-size="12" fill="#111827" font-weight="600">隱藏層 2</text>
+  <text x="400" y="46" text-anchor="middle" font-size="10" fill="#6b7280">Hidden 2</text>
+  <text x="560" y="30" text-anchor="middle" font-size="12" fill="#111827" font-weight="600">輸出層</text>
+  <text x="560" y="46" text-anchor="middle" font-size="10" fill="#6b7280">Output</text>
+  <!-- Edges (drawn first so nodes cover them) -->
+  <g stroke="#cbd5e1" stroke-width="0.8" fill="none">
+    <!-- Input→H1 (4×5) -->
+    <line x1="80" y1="100" x2="240" y2="90"/><line x1="80" y1="100" x2="240" y2="150"/><line x1="80" y1="100" x2="240" y2="210"/><line x1="80" y1="100" x2="240" y2="270"/><line x1="80" y1="100" x2="240" y2="330"/>
+    <line x1="80" y1="170" x2="240" y2="90"/><line x1="80" y1="170" x2="240" y2="150"/><line x1="80" y1="170" x2="240" y2="210"/><line x1="80" y1="170" x2="240" y2="270"/><line x1="80" y1="170" x2="240" y2="330"/>
+    <line x1="80" y1="240" x2="240" y2="90"/><line x1="80" y1="240" x2="240" y2="150"/><line x1="80" y1="240" x2="240" y2="210"/><line x1="80" y1="240" x2="240" y2="270"/><line x1="80" y1="240" x2="240" y2="330"/>
+    <line x1="80" y1="310" x2="240" y2="90"/><line x1="80" y1="310" x2="240" y2="150"/><line x1="80" y1="310" x2="240" y2="210"/><line x1="80" y1="310" x2="240" y2="270"/><line x1="80" y1="310" x2="240" y2="330"/>
+    <!-- H1→H2 (5×4) -->
+    <line x1="240" y1="90" x2="400" y2="120"/><line x1="240" y1="90" x2="400" y2="180"/><line x1="240" y1="90" x2="400" y2="240"/><line x1="240" y1="90" x2="400" y2="300"/>
+    <line x1="240" y1="150" x2="400" y2="120"/><line x1="240" y1="150" x2="400" y2="180"/><line x1="240" y1="150" x2="400" y2="240"/><line x1="240" y1="150" x2="400" y2="300"/>
+    <line x1="240" y1="210" x2="400" y2="120"/><line x1="240" y1="210" x2="400" y2="180"/><line x1="240" y1="210" x2="400" y2="240"/><line x1="240" y1="210" x2="400" y2="300"/>
+    <line x1="240" y1="270" x2="400" y2="120"/><line x1="240" y1="270" x2="400" y2="180"/><line x1="240" y1="270" x2="400" y2="240"/><line x1="240" y1="270" x2="400" y2="300"/>
+    <line x1="240" y1="330" x2="400" y2="120"/><line x1="240" y1="330" x2="400" y2="180"/><line x1="240" y1="330" x2="400" y2="240"/><line x1="240" y1="330" x2="400" y2="300"/>
+    <!-- H2→Output (4×3) -->
+    <line x1="400" y1="120" x2="560" y2="150"/><line x1="400" y1="120" x2="560" y2="210"/><line x1="400" y1="120" x2="560" y2="270"/>
+    <line x1="400" y1="180" x2="560" y2="150"/><line x1="400" y1="180" x2="560" y2="210"/><line x1="400" y1="180" x2="560" y2="270"/>
+    <line x1="400" y1="240" x2="560" y2="150"/><line x1="400" y1="240" x2="560" y2="210"/><line x1="400" y1="240" x2="560" y2="270"/>
+    <line x1="400" y1="300" x2="560" y2="150"/><line x1="400" y1="300" x2="560" y2="210"/><line x1="400" y1="300" x2="560" y2="270"/>
+  </g>
+  <!-- Input nodes -->
+  <g fill="#dbeafe" stroke="#2563eb" stroke-width="1.5">
+    <circle cx="80" cy="100" r="16"/><circle cx="80" cy="170" r="16"/><circle cx="80" cy="240" r="16"/><circle cx="80" cy="310" r="16"/>
+  </g>
+  <g font-size="12" fill="#1e3a5f" text-anchor="middle" font-family="serif">
+    <text x="80" y="104">x₁</text><text x="80" y="174">x₂</text><text x="80" y="244">x₃</text><text x="80" y="314">x₄</text>
+  </g>
+  <!-- Hidden 1 nodes -->
+  <g fill="#fef3c7" stroke="#d97706" stroke-width="1.5">
+    <circle cx="240" cy="90" r="16"/><circle cx="240" cy="150" r="16"/><circle cx="240" cy="210" r="16"/><circle cx="240" cy="270" r="16"/><circle cx="240" cy="330" r="16"/>
+  </g>
+  <!-- Hidden 2 nodes -->
+  <g fill="#fef3c7" stroke="#d97706" stroke-width="1.5">
+    <circle cx="400" cy="120" r="16"/><circle cx="400" cy="180" r="16"/><circle cx="400" cy="240" r="16"/><circle cx="400" cy="300" r="16"/>
+  </g>
+  <!-- Output nodes -->
+  <g fill="#fee2e2" stroke="#dc2626" stroke-width="1.5">
+    <circle cx="560" cy="150" r="16"/><circle cx="560" cy="210" r="16"/><circle cx="560" cy="270" r="16"/>
+  </g>
+  <g font-size="12" fill="#7f1d1d" text-anchor="middle" font-family="serif">
+    <text x="560" y="154">y₁</text><text x="560" y="214">y₂</text><text x="560" y="274">y₃</text>
+  </g>
+  <!-- Depth/Width annotations -->
+  <text x="320" y="368" text-anchor="middle" font-size="11" fill="#6b7280">深度 Depth = 隱藏層數 = 2　・　寬度 Width = 每層神經元數（此例各為 5, 4）</text>
+</svg>
+<figcaption>示意圖：四維輸入、兩層隱藏層（寬度 5 + 4）、三維輸出的多層感知器。每一層節點與下一層全連接，每條連線代表一個可學習的權重 w。</figcaption>
+</figure>
 ```
 
 **關鍵術語：**
@@ -258,6 +305,58 @@ Swish(z) = z / (1 + exp(-z))
 **缺點：**
 - 計算成本高於 ReLU
 
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 680 260" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="常見激活函數比較">
+  <rect x="0" y="0" width="680" height="260" fill="#ffffff"/>
+  <!-- 4 panels: Sigmoid, Tanh, ReLU, GELU — shared structure -->
+  <!-- Panel 1: Sigmoid -->
+  <g transform="translate(20,30)">
+    <rect x="0" y="0" width="150" height="180" fill="#fafafa" stroke="#e5e7eb"/>
+    <line x1="75" y1="0" x2="75" y2="180" stroke="#9ca3af" stroke-dasharray="3 3"/>
+    <line x1="0" y1="90" x2="150" y2="90" stroke="#374151"/>
+    <!-- σ(z) = 1/(1+e^-z), sampled -->
+    <path d="M 0 178 Q 45 170 60 140 T 75 90 T 90 40 Q 105 10 150 2" fill="none" stroke="#ef4444" stroke-width="2.5"/>
+    <text x="75" y="200" text-anchor="middle" font-size="12" fill="#111827" font-weight="600">Sigmoid</text>
+    <text x="75" y="216" text-anchor="middle" font-size="10" fill="#6b7280">(0, 1)</text>
+  </g>
+  <!-- Panel 2: Tanh -->
+  <g transform="translate(190,30)">
+    <rect x="0" y="0" width="150" height="180" fill="#fafafa" stroke="#e5e7eb"/>
+    <line x1="75" y1="0" x2="75" y2="180" stroke="#9ca3af" stroke-dasharray="3 3"/>
+    <line x1="0" y1="90" x2="150" y2="90" stroke="#374151"/>
+    <path d="M 0 176 Q 45 170 60 130 T 75 90 T 90 50 Q 105 10 150 4" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+    <text x="75" y="200" text-anchor="middle" font-size="12" fill="#111827" font-weight="600">Tanh</text>
+    <text x="75" y="216" text-anchor="middle" font-size="10" fill="#6b7280">(-1, 1)</text>
+  </g>
+  <!-- Panel 3: ReLU -->
+  <g transform="translate(360,30)">
+    <rect x="0" y="0" width="150" height="180" fill="#fafafa" stroke="#e5e7eb"/>
+    <line x1="75" y1="0" x2="75" y2="180" stroke="#9ca3af" stroke-dasharray="3 3"/>
+    <line x1="0" y1="90" x2="150" y2="90" stroke="#374151"/>
+    <polyline points="0,90 75,90 150,2" fill="none" stroke="#059669" stroke-width="2.5"/>
+    <text x="75" y="200" text-anchor="middle" font-size="12" fill="#111827" font-weight="600">ReLU</text>
+    <text x="75" y="216" text-anchor="middle" font-size="10" fill="#6b7280">max(0, z)</text>
+  </g>
+  <!-- Panel 4: GELU -->
+  <g transform="translate(530,30)">
+    <rect x="0" y="0" width="150" height="180" fill="#fafafa" stroke="#e5e7eb"/>
+    <line x1="75" y1="0" x2="75" y2="180" stroke="#9ca3af" stroke-dasharray="3 3"/>
+    <line x1="0" y1="90" x2="150" y2="90" stroke="#374151"/>
+    <!-- GELU: slight dip below 0 before rising -->
+    <path d="M 0 90 Q 30 92 50 98 Q 65 102 75 92 Q 85 78 100 50 Q 120 20 150 2" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
+    <text x="75" y="200" text-anchor="middle" font-size="12" fill="#111827" font-weight="600">GELU</text>
+    <text x="75" y="216" text-anchor="middle" font-size="10" fill="#6b7280">z·Φ(z)</text>
+  </g>
+  <!-- Title -->
+  <text x="340" y="18" text-anchor="middle" font-size="13" fill="#111827" font-weight="600">常見激活函數形狀比較（x 為輸入 z，y 為 σ(z)）</text>
+  <!-- Shared x-axis annotation -->
+  <text x="340" y="248" text-anchor="middle" font-size="10" fill="#6b7280">虛線 = z=0 軸；注意 Sigmoid/Tanh 兩端飽和、ReLU 負半軸為 0、GELU 於 z&lt;0 平滑</text>
+</svg>
+<figcaption>示意圖：四種常見激活函數。Sigmoid/Tanh 在兩端梯度趨近 0 易造成梯度消失；ReLU 解決飽和問題但負半軸梯度為 0 造成「死亡 ReLU」；GELU 在 z&lt;0 保有微小梯度且平滑，已成 Transformer 標配。</figcaption>
+</figure>
+```
+
 ### 3.7 激活函數選擇指南 Selection Guide
 
 | 場景 | 推薦 | 理由 |
@@ -396,12 +495,75 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-4)
 **原理：**
 在訓練時，每個神經元以機率 p（通常 p = 0.5 或 p = 0.2）被隨機「關閉」（輸出設為 0）。
 
-```
-訓練時 (Training)          測試時 (Inference)
-  O → O → O                O → O → O
-  O → X → O    →→→        O → O → O   (全部啟用，但權重乘以 1-p)
-  O → O → X                O → O → O
-  O → X → O                O → O → O
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 640 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dropout 訓練 vs 推論示意圖">
+  <rect x="0" y="0" width="640" height="340" fill="#ffffff"/>
+  <!-- Titles -->
+  <text x="160" y="26" text-anchor="middle" font-size="13" fill="#111827" font-weight="600">訓練時 Training（p=0.5）</text>
+  <text x="480" y="26" text-anchor="middle" font-size="13" fill="#111827" font-weight="600">推論時 Inference</text>
+  <!-- LEFT: training with some neurons dropped -->
+  <g transform="translate(20,40)">
+    <!-- Edges (dimmed for dropped ones) -->
+    <g stroke="#cbd5e1" stroke-width="0.8" fill="none">
+      <line x1="40" y1="60" x2="140" y2="40"/><line x1="40" y1="60" x2="140" y2="200"/>
+      <line x1="40" y1="220" x2="140" y2="40"/><line x1="40" y1="220" x2="140" y2="200"/>
+      <line x1="140" y1="40" x2="240" y2="60"/><line x1="140" y1="40" x2="240" y2="220"/>
+      <line x1="140" y1="200" x2="240" y2="60"/><line x1="140" y1="200" x2="240" y2="220"/>
+    </g>
+    <!-- Dropped edges (very faded) -->
+    <g stroke="#f3f4f6" stroke-width="0.8" fill="none">
+      <line x1="40" y1="60" x2="140" y2="120"/><line x1="40" y1="220" x2="140" y2="120"/>
+      <line x1="140" y1="120" x2="240" y2="60"/><line x1="140" y1="120" x2="240" y2="220"/>
+    </g>
+    <!-- Input layer -->
+    <g fill="#dbeafe" stroke="#2563eb" stroke-width="1.5">
+      <circle cx="40" cy="60" r="14"/><circle cx="40" cy="220" r="14"/>
+    </g>
+    <!-- Hidden layer — middle neuron dropped (X marker) -->
+    <g fill="#fef3c7" stroke="#d97706" stroke-width="1.5">
+      <circle cx="140" cy="40" r="14"/>
+      <circle cx="140" cy="200" r="14"/>
+    </g>
+    <!-- Dropped neuron (dashed outline, red X) -->
+    <circle cx="140" cy="120" r="14" fill="#f3f4f6" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3 2"/>
+    <line x1="132" y1="112" x2="148" y2="128" stroke="#ef4444" stroke-width="2"/>
+    <line x1="148" y1="112" x2="132" y2="128" stroke="#ef4444" stroke-width="2"/>
+    <!-- Output layer -->
+    <g fill="#fee2e2" stroke="#dc2626" stroke-width="1.5">
+      <circle cx="240" cy="60" r="14"/><circle cx="240" cy="220" r="14"/>
+    </g>
+    <!-- Ghost of boxed area -->
+    <rect x="0" y="0" width="280" height="260" fill="none" stroke="#e5e7eb" stroke-dasharray="4 4"/>
+    <text x="140" y="284" text-anchor="middle" font-size="11" fill="#ef4444" font-weight="600">中間神經元以機率 p=0.5 被關閉</text>
+  </g>
+  <!-- RIGHT: inference with all neurons active -->
+  <g transform="translate(340,40)">
+    <g stroke="#cbd5e1" stroke-width="0.8" fill="none">
+      <line x1="40" y1="60" x2="140" y2="40"/><line x1="40" y1="60" x2="140" y2="120"/><line x1="40" y1="60" x2="140" y2="200"/>
+      <line x1="40" y1="220" x2="140" y2="40"/><line x1="40" y1="220" x2="140" y2="120"/><line x1="40" y1="220" x2="140" y2="200"/>
+      <line x1="140" y1="40" x2="240" y2="60"/><line x1="140" y1="40" x2="240" y2="220"/>
+      <line x1="140" y1="120" x2="240" y2="60"/><line x1="140" y1="120" x2="240" y2="220"/>
+      <line x1="140" y1="200" x2="240" y2="60"/><line x1="140" y1="200" x2="240" y2="220"/>
+    </g>
+    <g fill="#dbeafe" stroke="#2563eb" stroke-width="1.5">
+      <circle cx="40" cy="60" r="14"/><circle cx="40" cy="220" r="14"/>
+    </g>
+    <g fill="#fef3c7" stroke="#d97706" stroke-width="1.5">
+      <circle cx="140" cy="40" r="14"/><circle cx="140" cy="120" r="14"/><circle cx="140" cy="200" r="14"/>
+    </g>
+    <g fill="#fee2e2" stroke="#dc2626" stroke-width="1.5">
+      <circle cx="240" cy="60" r="14"/><circle cx="240" cy="220" r="14"/>
+    </g>
+    <rect x="0" y="0" width="280" height="260" fill="none" stroke="#e5e7eb" stroke-dasharray="4 4"/>
+    <text x="140" y="284" text-anchor="middle" font-size="11" fill="#059669" font-weight="600">所有神經元啟用（輸出乘以 1-p 保持期望值）</text>
+  </g>
+  <!-- Arrow between halves -->
+  <path d="M 305 170 L 340 170" stroke="#9ca3af" stroke-width="2" marker-end="url(#arrowHead)"/>
+  <defs><marker id="arrowHead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#9ca3af"/></marker></defs>
+</svg>
+<figcaption>示意圖：Dropout。訓練階段每次 forward 隨機關閉一部分神經元（紅色 X），強迫剩餘神經元獨立學習有效特徵；推論時啟用全部神經元並將輸出縮放 (1-p)，以維持期望激活值與訓練時一致（PyTorch 的 Inverted Dropout 在訓練時先除 1-p，推論時不需調整）。</figcaption>
+</figure>
 ```
 
 **為什麼有效？**

@@ -262,6 +262,8 @@ Bayesian Optimization 通常在**評估次數較少**時就能找到好的解，
 
 ### 5.1 什麼是學習曲線？ What is a Learning Curve?
 
+![Random Forest 在 diabetes 資料集上的實際學習曲線（訓練/驗證分別含 ±1σ 範圍）](figures/learning-curve.png)
+
 學習曲線描繪了**隨著訓練資料量增加**，模型在訓練集和驗證集上的表現如何變化。它是診斷模型問題的強大工具。
 
 ```python
@@ -360,6 +362,8 @@ train_sizes, train_scores, val_scores = learning_curve(
 ## 6. 驗證曲線 Validation Curve
 
 ### 6.1 什麼是驗證曲線？ What is a Validation Curve?
+
+![Random Forest 在 diabetes 上掃描 max_depth 的驗證曲線](figures/validation-curve.png)
 
 驗證曲線描繪了**隨著某個超參數值的變化**，模型在訓練集和驗證集上的表現如何變化。與學習曲線不同，驗證曲線的 x 軸是超參數值，而非資料量。
 

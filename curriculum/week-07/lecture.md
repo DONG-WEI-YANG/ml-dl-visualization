@@ -25,17 +25,7 @@
 | 分支 | Branch | 根據特徵值的判斷結果走向不同路徑 |
 | 葉節點 | Leaf Node | 最終的預測結果（類別或數值） |
 
-```
-           [花瓣長度 <= 2.45?]         <-- 根節點 Root
-            /                \
-          是 Yes              否 No
-          /                    \
-     [Setosa]        [花瓣寬度 <= 1.75?]   <-- 內部節點
-                      /              \
-                    是 Yes           否 No
-                    /                  \
-           [Versicolor]           [Virginica]   <-- 葉節點 Leaves
-```
+![scikit-learn 在 Iris 上訓練的 max_depth=3 決策樹視覺化](figures/decision-tree.png)
 
 ### 1.2 分裂準則 Splitting Criteria
 
@@ -422,6 +412,8 @@ Level-wise（XGBoost 預設）：           Leaf-wise（LightGBM 預設）：
 4. **處理混合型特徵 (Mixed Features)：** 同時處理數值型與類別型特徵
 5. **特徵重要度 (Feature Importance)：** 內建特徵重要性排序
 6. **對缺失值有一定容忍力：** 特別是 XGBoost 和 LightGBM
+
+![Random Forest 在 Iris 上的特徵重要度長條圖](figures/feature-importance.png)
 7. **集成方法效能卓越：** 在結構化/表格資料上常是最佳選擇
 
 ### 6.2 缺點 Disadvantages

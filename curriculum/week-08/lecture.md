@@ -298,6 +298,40 @@ X 軸：SHAP 值（正值 → 推高預測，負值 → 壓低預測）
 
 力圖用於**局部解釋 (Local Explanation)**，展示單一樣本的預測如何由基準值推移到最終預測值。
 
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SHAP Force Plot 示意圖">
+  <rect x="0" y="0" width="640" height="200" fill="#ffffff"/>
+  <!-- Number line axis -->
+  <line x1="40" y1="120" x2="600" y2="120" stroke="#374151" stroke-width="1.5"/>
+  <!-- Base value marker -->
+  <line x1="260" y1="60" x2="260" y2="140" stroke="#6b7280" stroke-width="1" stroke-dasharray="3 3"/>
+  <text x="260" y="52" text-anchor="middle" font-size="11" fill="#6b7280">基準值 base value = 0.35</text>
+  <!-- Final prediction marker -->
+  <line x1="480" y1="60" x2="480" y2="140" stroke="#111827" stroke-width="2"/>
+  <text x="480" y="52" text-anchor="middle" font-size="11" fill="#111827" font-weight="600">最終預測 = 0.78</text>
+  <!-- Red pushing-up arrows (left to right from base) -->
+  <polygon points="260,100 340,100 340,92 360,108 340,124 340,116 260,116" fill="#ef4444" stroke="#b91c1c" stroke-width="1"/>
+  <text x="305" y="106" text-anchor="middle" font-size="11" fill="#ffffff" font-weight="600">信用=780</text>
+  <text x="305" y="140" text-anchor="middle" font-size="10" fill="#b91c1c">+0.18</text>
+  <polygon points="360,100 420,100 420,92 440,108 420,124 420,116 360,116" fill="#f87171" stroke="#b91c1c" stroke-width="1"/>
+  <text x="395" y="106" text-anchor="middle" font-size="11" fill="#ffffff" font-weight="600">收入高</text>
+  <text x="395" y="140" text-anchor="middle" font-size="10" fill="#b91c1c">+0.14</text>
+  <polygon points="440,100 470,100 470,92 480,108 470,124 470,116 440,116" fill="#fca5a5" stroke="#b91c1c" stroke-width="1"/>
+  <text x="457" y="140" text-anchor="middle" font-size="10" fill="#b91c1c">+0.06</text>
+  <!-- Blue pushing-down arrow (right to left past base) -->
+  <polygon points="260,100 220,100 220,92 200,108 220,124 220,116 260,116" fill="#60a5fa" stroke="#1e40af" stroke-width="1"/>
+  <text x="238" y="106" text-anchor="middle" font-size="11" fill="#ffffff" font-weight="600">負債比高</text>
+  <text x="238" y="140" text-anchor="middle" font-size="10" fill="#1e40af">-0.05</text>
+  <!-- Labels on axis -->
+  <text x="40" y="160" font-size="10" fill="#6b7280">0.0</text>
+  <text x="600" y="160" text-anchor="end" font-size="10" fill="#6b7280">1.0</text>
+  <text x="320" y="180" text-anchor="middle" font-size="11" fill="#6b7280">模型輸出概率 P(核准貸款)</text>
+</svg>
+<figcaption>示意圖：力圖。紅箭頭代表推高預測的特徵（箭頭長度 = SHAP 值大小），藍箭頭代表壓低預測的特徵，所有箭頭合併使預測從 base value 0.35 推移到 0.78。</figcaption>
+</figure>
+```
+
 **解讀方式：**
 ```
 基準值 (Base Value)：模型的平均預測
@@ -314,6 +348,65 @@ X 軸：SHAP 值（正值 → 推高預測，負值 → 壓低預測）
 ### 5.3 依賴圖 Dependence Plot
 
 依賴圖顯示**單一特徵的值**與**其 SHAP 值**之間的關係，並可疊加第二個特徵的交互作用。
+
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 640 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SHAP Dependence Plot 示意圖">
+  <defs>
+    <linearGradient id="depBar" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="640" height="320" fill="#ffffff"/>
+  <!-- Plot area -->
+  <rect x="80" y="40" width="460" height="220" fill="#fafafa" stroke="#e5e7eb"/>
+  <!-- Axes -->
+  <line x1="80" y1="260" x2="540" y2="260" stroke="#374151" stroke-width="1"/>
+  <line x1="80" y1="40" x2="80" y2="260" stroke="#374151" stroke-width="1"/>
+  <!-- Zero reference -->
+  <line x1="80" y1="160" x2="540" y2="160" stroke="#9ca3af" stroke-width="1" stroke-dasharray="3 3"/>
+  <text x="72" y="164" text-anchor="end" font-size="10" fill="#6b7280">0</text>
+  <!-- Axis labels -->
+  <text x="310" y="296" text-anchor="middle" font-size="12" fill="#111827">特徵值：年齡</text>
+  <text x="32" y="150" font-size="12" fill="#111827" transform="rotate(-90 32 150)">SHAP 值 (對預測的貢獻)</text>
+  <!-- X axis ticks -->
+  <text x="120" y="276" text-anchor="middle" font-size="10" fill="#6b7280">20</text>
+  <text x="210" y="276" text-anchor="middle" font-size="10" fill="#6b7280">30</text>
+  <text x="310" y="276" text-anchor="middle" font-size="10" fill="#6b7280">40</text>
+  <text x="410" y="276" text-anchor="middle" font-size="10" fill="#6b7280">50</text>
+  <text x="510" y="276" text-anchor="middle" font-size="10" fill="#6b7280">60</text>
+  <!-- Y axis ticks -->
+  <text x="72" y="64" text-anchor="end" font-size="10" fill="#6b7280">+0.3</text>
+  <text x="72" y="114" text-anchor="end" font-size="10" fill="#6b7280">+0.15</text>
+  <text x="72" y="214" text-anchor="end" font-size="10" fill="#6b7280">-0.15</text>
+  <text x="72" y="258" text-anchor="end" font-size="10" fill="#6b7280">-0.3</text>
+  <!-- Non-linear curve shown via dense scatter + spline -->
+  <path d="M 100 220 Q 180 210 230 180 T 340 130 T 450 80 T 530 70" fill="none" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4 2"/>
+  <!-- Scatter points — X = age, Y = SHAP, color = income (interaction feature) -->
+  <g>
+    <circle cx="105" cy="230" r="3.5" fill="#2563eb"/><circle cx="118" cy="215" r="3.5" fill="#3b82f6"/>
+    <circle cx="135" cy="225" r="3.5" fill="#60a5fa"/><circle cx="150" cy="205" r="3.5" fill="#2563eb"/>
+    <circle cx="170" cy="210" r="3.5" fill="#93c5fd"/><circle cx="185" cy="195" r="3.5" fill="#3b82f6"/>
+    <circle cx="200" cy="200" r="3.5" fill="#cbd5e1"/><circle cx="220" cy="180" r="3.5" fill="#60a5fa"/>
+    <circle cx="240" cy="175" r="3.5" fill="#93c5fd"/><circle cx="260" cy="165" r="3.5" fill="#cbd5e1"/>
+    <circle cx="280" cy="155" r="3.5" fill="#e5e7eb"/><circle cx="300" cy="148" r="3.5" fill="#fca5a5"/>
+    <circle cx="320" cy="140" r="3.5" fill="#e5e7eb"/><circle cx="340" cy="130" r="3.5" fill="#fca5a5"/>
+    <circle cx="360" cy="118" r="3.5" fill="#f87171"/><circle cx="380" cy="108" r="3.5" fill="#fca5a5"/>
+    <circle cx="400" cy="98" r="3.5" fill="#ef4444"/><circle cx="420" cy="88" r="3.5" fill="#f87171"/>
+    <circle cx="440" cy="92" r="3.5" fill="#dc2626"/><circle cx="460" cy="78" r="3.5" fill="#ef4444"/>
+    <circle cx="480" cy="75" r="3.5" fill="#b91c1c"/><circle cx="500" cy="70" r="3.5" fill="#dc2626"/>
+    <circle cx="520" cy="68" r="3.5" fill="#b91c1c"/>
+  </g>
+  <!-- Interaction color legend -->
+  <rect x="560" y="60" width="14" height="160" fill="url(#depBar)" stroke="#d1d5db"/>
+  <text x="582" y="66" font-size="10" fill="#111827">高</text>
+  <text x="582" y="144" font-size="10" fill="#6b7280">年收入</text>
+  <text x="582" y="228" font-size="10" fill="#111827">低</text>
+</svg>
+<figcaption>示意圖：依賴圖。X 軸為「年齡」的實際值，Y 軸為該樣本「年齡」特徵的 SHAP 值；顏色顯示「年收入」作為交互特徵 — 同年齡下收入高的點（紅）SHAP 較高，代表存在年齡 × 收入交互作用。</figcaption>
+</figure>
+```
 
 **解讀方式：**
 ```
@@ -335,6 +428,54 @@ Y 軸：該特徵的 SHAP 值
 | 長條圖 | Bar Plot | 全域特徵重要度（SHAP 值絕對值的平均） |
 | 熱力圖 | Heatmap | 多樣本的 SHAP 值矩陣 |
 | 群集力圖 | Clustered Force Plot | 多個力圖堆疊，觀察群體模式 |
+
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 640 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SHAP Waterfall Plot 示意圖">
+  <rect x="0" y="0" width="640" height="360" fill="#ffffff"/>
+  <!-- Base value line -->
+  <line x1="200" y1="300" x2="560" y2="300" stroke="#6b7280" stroke-width="1" stroke-dasharray="3 3"/>
+  <text x="190" y="304" text-anchor="end" font-size="11" fill="#6b7280">E[f(x)]=0.35</text>
+  <!-- Final prediction line -->
+  <line x1="200" y1="60" x2="560" y2="60" stroke="#111827" stroke-width="1.5"/>
+  <text x="190" y="64" text-anchor="end" font-size="11" fill="#111827" font-weight="600">f(x)=0.78</text>
+  <!-- Step rectangles — from bottom (base) to top (final), stacked cumulatively -->
+  <!-- Each row: feature name (left), bar, SHAP value (right) -->
+  <!-- Row 1: 信用評分 +0.18 -->
+  <text x="190" y="272" text-anchor="end" font-size="11" fill="#111827">信用評分=780</text>
+  <rect x="200" y="252" width="110" height="22" fill="#ef4444" stroke="#b91c1c"/>
+  <text x="318" y="268" font-size="11" fill="#b91c1c" font-weight="600">+0.18</text>
+  <line x1="310" y1="252" x2="310" y2="300" stroke="#d1d5db" stroke-width="1" stroke-dasharray="2 2"/>
+  <!-- Row 2: 年收入 +0.14 (continue from 310) -->
+  <text x="190" y="224" text-anchor="end" font-size="11" fill="#111827">年收入=高</text>
+  <rect x="310" y="204" width="86" height="22" fill="#f87171" stroke="#b91c1c"/>
+  <text x="404" y="220" font-size="11" fill="#b91c1c" font-weight="600">+0.14</text>
+  <line x1="396" y1="204" x2="396" y2="252" stroke="#d1d5db" stroke-width="1" stroke-dasharray="2 2"/>
+  <!-- Row 3: 工作年資 +0.08 -->
+  <text x="190" y="176" text-anchor="end" font-size="11" fill="#111827">工作年資=10</text>
+  <rect x="396" y="156" width="50" height="22" fill="#fca5a5" stroke="#b91c1c"/>
+  <text x="454" y="172" font-size="11" fill="#b91c1c" font-weight="600">+0.08</text>
+  <line x1="446" y1="156" x2="446" y2="204" stroke="#d1d5db" stroke-width="1" stroke-dasharray="2 2"/>
+  <!-- Row 4: 負債比 -0.05 (subtract, bar goes LEFT) -->
+  <text x="190" y="128" text-anchor="end" font-size="11" fill="#111827">負債比=0.4</text>
+  <rect x="416" y="108" width="30" height="22" fill="#60a5fa" stroke="#1e40af"/>
+  <text x="412" y="124" text-anchor="end" font-size="11" fill="#1e40af" font-weight="600">-0.05</text>
+  <line x1="416" y1="108" x2="416" y2="156" stroke="#d1d5db" stroke-width="1" stroke-dasharray="2 2"/>
+  <!-- Row 5: 年齡 +0.08 -->
+  <text x="190" y="80" text-anchor="end" font-size="11" fill="#111827">年齡=42</text>
+  <rect x="416" y="60" width="48" height="22" fill="#fca5a5" stroke="#b91c1c"/>
+  <text x="472" y="76" font-size="11" fill="#b91c1c" font-weight="600">+0.08</text>
+  <!-- X-axis -->
+  <line x1="200" y1="330" x2="560" y2="330" stroke="#374151" stroke-width="1"/>
+  <text x="200" y="348" font-size="10" fill="#6b7280">0.3</text>
+  <text x="310" y="348" text-anchor="middle" font-size="10" fill="#6b7280">0.5</text>
+  <text x="446" y="348" text-anchor="middle" font-size="10" fill="#6b7280">0.7</text>
+  <text x="560" y="348" text-anchor="end" font-size="10" fill="#6b7280">0.9</text>
+  <text x="380" y="20" text-anchor="middle" font-size="13" fill="#111827" font-weight="600">瀑布圖：從 E[f(x)] 逐步累積到 f(x)</text>
+</svg>
+<figcaption>示意圖：瀑布圖。從下往上依 SHAP 值絕對值排序堆疊：紅色條往右延伸（推高預測）、藍色條往左延伸（壓低預測），最終抵達該樣本的實際預測值 f(x)=0.78。</figcaption>
+</figure>
+```
 
 ---
 
