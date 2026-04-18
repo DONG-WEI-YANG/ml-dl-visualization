@@ -217,6 +217,70 @@ $$f(x) = \phi_0 + \sum_{i=1}^{M} \phi_i$$
 
 蜂群圖是 SHAP 最常用的全域解釋圖表，顯示所有特徵對所有樣本的 SHAP 值分布。
 
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 640 280" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SHAP Beeswarm Plot 示意圖">
+  <defs>
+    <linearGradient id="shapBar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="50%" stop-color="#e5e7eb"/>
+      <stop offset="100%" stop-color="#ef4444"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="640" height="280" fill="#ffffff"/>
+  <!-- Axes -->
+  <line x1="160" y1="40" x2="160" y2="240" stroke="#9ca3af" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="160" y="258" text-anchor="middle" font-size="11" fill="#6b7280">SHAP = 0 (基準)</text>
+  <line x1="60" y1="240" x2="600" y2="240" stroke="#374151" stroke-width="1"/>
+  <text x="80" y="272" font-size="11" fill="#6b7280">← 壓低預測 (負值)</text>
+  <text x="460" y="272" font-size="11" fill="#6b7280">推高預測 (正值) →</text>
+  <!-- Feature labels (Y axis) -->
+  <text x="150" y="72" text-anchor="end" font-size="12" fill="#111827" font-weight="600">信用評分</text>
+  <text x="150" y="114" text-anchor="end" font-size="12" fill="#111827" font-weight="600">年收入</text>
+  <text x="150" y="156" text-anchor="end" font-size="12" fill="#111827" font-weight="600">負債比</text>
+  <text x="150" y="198" text-anchor="end" font-size="12" fill="#111827" font-weight="600">年齡</text>
+  <!-- Row 1: 信用評分 — high values push prediction up (red clustered on right) -->
+  <g>
+    <circle cx="220" cy="72" r="4" fill="#60a5fa"/><circle cx="235" cy="68" r="4" fill="#93c5fd"/>
+    <circle cx="248" cy="74" r="4" fill="#93c5fd"/><circle cx="270" cy="70" r="4" fill="#cbd5e1"/>
+    <circle cx="320" cy="72" r="4" fill="#e5e7eb"/><circle cx="360" cy="68" r="4" fill="#fca5a5"/>
+    <circle cx="400" cy="74" r="4" fill="#f87171"/><circle cx="430" cy="70" r="4" fill="#ef4444"/>
+    <circle cx="470" cy="76" r="4" fill="#ef4444"/><circle cx="505" cy="72" r="4" fill="#dc2626"/>
+    <circle cx="540" cy="68" r="4" fill="#b91c1c"/>
+  </g>
+  <!-- Row 2: 年收入 — similar positive correlation, wider spread -->
+  <g>
+    <circle cx="200" cy="114" r="4" fill="#3b82f6"/><circle cx="225" cy="110" r="4" fill="#60a5fa"/>
+    <circle cx="255" cy="118" r="4" fill="#93c5fd"/><circle cx="290" cy="114" r="4" fill="#cbd5e1"/>
+    <circle cx="330" cy="110" r="4" fill="#e5e7eb"/><circle cx="370" cy="116" r="4" fill="#fca5a5"/>
+    <circle cx="410" cy="114" r="4" fill="#f87171"/><circle cx="445" cy="112" r="4" fill="#ef4444"/>
+    <circle cx="480" cy="118" r="4" fill="#dc2626"/><circle cx="515" cy="114" r="4" fill="#b91c1c"/>
+  </g>
+  <!-- Row 3: 負債比 — reverse: high values push prediction DOWN (red on left) -->
+  <g>
+    <circle cx="100" cy="156" r="4" fill="#b91c1c"/><circle cx="125" cy="152" r="4" fill="#dc2626"/>
+    <circle cx="145" cy="158" r="4" fill="#ef4444"/><circle cx="180" cy="154" r="4" fill="#f87171"/>
+    <circle cx="215" cy="156" r="4" fill="#fca5a5"/><circle cx="260" cy="152" r="4" fill="#e5e7eb"/>
+    <circle cx="310" cy="158" r="4" fill="#cbd5e1"/><circle cx="360" cy="154" r="4" fill="#93c5fd"/>
+    <circle cx="410" cy="156" r="4" fill="#60a5fa"/><circle cx="460" cy="152" r="4" fill="#3b82f6"/>
+  </g>
+  <!-- Row 4: 年齡 — tight cluster, weak effect -->
+  <g>
+    <circle cx="140" cy="198" r="4" fill="#60a5fa"/><circle cx="155" cy="194" r="4" fill="#93c5fd"/>
+    <circle cx="170" cy="200" r="4" fill="#cbd5e1"/><circle cx="185" cy="196" r="4" fill="#e5e7eb"/>
+    <circle cx="200" cy="198" r="4" fill="#fca5a5"/><circle cx="215" cy="194" r="4" fill="#f87171"/>
+    <circle cx="230" cy="200" r="4" fill="#ef4444"/>
+  </g>
+  <!-- Color legend (right) -->
+  <rect x="560" y="60" width="14" height="180" fill="url(#shapBar)" stroke="#d1d5db"/>
+  <text x="582" y="66" font-size="10" fill="#111827">高值</text>
+  <text x="582" y="154" font-size="10" fill="#6b7280">特徵值</text>
+  <text x="582" y="244" font-size="10" fill="#111827">低值</text>
+</svg>
+<figcaption>示意圖：蜂群圖。Y 軸依重要度排列特徵；X 軸為 SHAP 值；顏色代表該樣本在該特徵的實際值（紅高藍低）。</figcaption>
+</figure>
+```
+
 **解讀方式：**
 ```
 Y 軸：特徵名稱（依重要度排序）

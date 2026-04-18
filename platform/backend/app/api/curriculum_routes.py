@@ -51,8 +51,14 @@ FILE_MAP = {
 }
 
 
-def _inline(text: str) -> str:
-    """Apply inline markdown (bold, inline code) to a text fragment."""
+def _inline(text: str, week_id: int | None = None) -> str:
+    """Apply inline markdown (bold, inline code, images) to a text fragment."""
+    def _img(m: "re.Match[str]") -> str:
+        alt, src = m.group(1), m.group(2)
+        if week_id is not None and not re.match(r'^(https?:|/|data:)', src):
+            src = f"/api/curriculum/week/{week_id}/assets/{src}"
+        return f'<img src="{src}" alt="{alt}" class="md-img" />'
+    text = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', _img, text)
     text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
     text = re.sub(r'`(.+?)`', r'<code class="inline">\1</code>', text)
     return text
@@ -75,9 +81,23 @@ def _is_table_row(line: str) -> bool:
     return len(s) > 1 and s.startswith('|') and s.endswith('|')
 
 
-def _md_to_html(md_path: Path, title: str) -> str:
+_PASSTHROUGH_RE = re.compile(r'```(svg|html)\n(.*?)\n```', re.DOTALL)
+
+
+def _md_to_html(md_path: Path, title: str, week_id: int | None = None) -> str:
     """Convert markdown to a styled printable HTML page."""
     content = md_path.read_text(encoding="utf-8")
+
+    # Extract raw SVG/HTML passthrough blocks before escaping, stash them,
+    # and restore after rendering. Markers use NUL characters so they survive
+    # html.escape untouched and cannot collide with user content.
+    passthroughs: list[str] = []
+
+    def _stash(m: "re.Match[str]") -> str:
+        passthroughs.append(m.group(2))
+        return f"\x00PASS{len(passthroughs) - 1}\x00"
+
+    content = _PASSTHROUGH_RE.sub(_stash, content)
     escaped = html.escape(content)
     lines = escaped.split("\n")
     html_lines: list[str] = []
@@ -117,7 +137,7 @@ def _md_to_html(md_path: Path, title: str) -> str:
         if pending_header is not None:
             if _is_separator_row(line):
                 html_lines.append('<table class="md-table">')
-                header_cells = "".join(f"<th>{_inline(c)}</th>" for c in pending_header)
+                header_cells = "".join(f"<th>{_inline(c, week_id)}</th>" for c in pending_header)
                 html_lines.append(f"<thead><tr>{header_cells}</tr></thead><tbody>")
                 in_table = True
                 pending_header = None
@@ -129,7 +149,7 @@ def _md_to_html(md_path: Path, title: str) -> str:
         if in_table:
             if _is_table_row(line):
                 cells = _parse_row(line)
-                row = "".join(f"<td>{_inline(c)}</td>" for c in cells)
+                row = "".join(f"<td>{_inline(c, week_id)}</td>" for c in cells)
                 html_lines.append(f"<tr>{row}</tr>")
                 continue
             if line.strip() == "":
@@ -147,11 +167,11 @@ def _md_to_html(md_path: Path, title: str) -> str:
         elif line.startswith("# "):
             html_lines.append(f"<h1>{line[2:]}</h1>")
         elif line.startswith("- "):
-            html_lines.append(f"<li>{_inline(line[2:])}</li>")
+            html_lines.append(f"<li>{_inline(line[2:], week_id)}</li>")
         elif line.strip() == "":
             html_lines.append("<br/>")
         else:
-            html_lines.append(f"<p>{_inline(line)}</p>")
+            html_lines.append(f"<p>{_inline(line, week_id)}</p>")
 
     close_table()
     flush_pending_header()
@@ -159,6 +179,10 @@ def _md_to_html(md_path: Path, title: str) -> str:
         html_lines.append("</code></pre>")
 
     body = "\n".join(html_lines)
+
+    # Restore SVG/HTML passthroughs (markers survive escape as literal NULs)
+    for i, raw in enumerate(passthroughs):
+        body = body.replace(f"\x00PASS{i}\x00", raw)
     return f"""<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -173,6 +197,9 @@ def _md_to_html(md_path: Path, title: str) -> str:
   code {{ font-family: "Consolas", monospace; font-size: 14px; }}
   code.inline {{ background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-size: 13px; }}
   li {{ margin-left: 20px; }}
+  img.md-img, figure.md-figure svg {{ max-width: 100%; height: auto; display: block; margin: 16px auto; }}
+  figure.md-figure {{ margin: 20px 0; text-align: center; }}
+  figure.md-figure figcaption {{ font-size: 13px; color: #6b7280; margin-top: 6px; }}
   table.md-table {{ border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }}
   table.md-table th, table.md-table td {{ border: 1px solid #d1d5db; padding: 8px 12px; text-align: left; vertical-align: top; }}
   table.md-table thead {{ background: #eff6ff; }}
@@ -197,6 +224,23 @@ def _md_to_html(md_path: Path, title: str) -> str:
 </html>"""
 
 
+@router.get("/week/{week_id}/assets/{subpath:path}")
+async def get_curriculum_asset(week_id: int, subpath: str):
+    """Serve per-week static assets (figures, images) with path-traversal protection."""
+    if week_id < 1 or week_id > 18:
+        raise HTTPException(404, "Invalid week")
+    try:
+        week_dir = (CURRICULUM_DIR / f"week-{week_id:02d}").resolve()
+        asset_path = (week_dir / subpath).resolve()
+    except (OSError, ValueError):
+        raise HTTPException(400, "Invalid asset path")
+    if not asset_path.is_relative_to(week_dir):
+        raise HTTPException(400, "Invalid asset path")
+    if not asset_path.is_file():
+        raise HTTPException(404, "Asset not found")
+    return FileResponse(asset_path)
+
+
 @router.get("/week/{week_id}/{file_type}")
 async def download_curriculum_file(week_id: int, file_type: str):
     if week_id < 1 or week_id > 18:
@@ -214,7 +258,7 @@ async def download_curriculum_file(week_id: int, file_type: str):
             if media_type == "text/markdown" and file_type in ("lecture", "slides", "assignment"):
                 # Convert markdown to styled HTML for better printability
                 title = f"第 {week_id} 週 - {entry['label']}"
-                html_content = _md_to_html(file_path, title)
+                html_content = _md_to_html(file_path, title, week_id=week_id)
                 ascii_name = f"week-{week_id:02d}-{file_type}.html"
                 utf8_name = quote(f"week-{week_id:02d}-{entry['label']}.html")
                 return HTMLResponse(
