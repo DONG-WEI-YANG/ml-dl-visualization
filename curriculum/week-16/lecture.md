@@ -35,19 +35,73 @@ MLOps（Machine Learning Operations）是一套結合機器學習 (ML)、軟體�
 
 ### 1.3 ML 生命週期 ML Lifecycle
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    ML 生命週期 ML Lifecycle                       │
-│                                                                 │
-│  1. 問題定義          2. 資料收集          3. 資料準備             │
-│  Problem Definition → Data Collection → Data Preparation        │
-│                                             │                   │
-│                                             ▼                   │
-│  6. 模型監測          5. 模型部署          4. 模型訓練/評估        │
-│  Model Monitoring ← Model Deployment ← Training/Evaluation     │
-│         │                                                       │
-│         └──────────── 持續改善 Continuous Improvement ──────────→│
-└─────────────────────────────────────────────────────────────────┘
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 720 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="MLOps 生命週期循環圖">
+  <rect x="0" y="0" width="720" height="360" fill="#ffffff"/>
+  <defs>
+    <marker id="mlopsArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/></marker>
+  </defs>
+  <text x="360" y="26" text-anchor="middle" font-size="14" fill="#111827" font-weight="600">MLOps 生命週期：六階段閉環</text>
+  <!-- 6 stages arranged in a cycle -->
+  <!-- Top row -->
+  <!-- Stage 1: Problem Definition -->
+  <rect x="40" y="60" width="180" height="70" rx="10" fill="#e0e7ff" stroke="#4338ca" stroke-width="1.5"/>
+  <text x="130" y="85" text-anchor="middle" font-size="13" fill="#312e81" font-weight="700">1. 問題定義</text>
+  <text x="130" y="103" text-anchor="middle" font-size="11" fill="#4338ca">Problem Definition</text>
+  <text x="130" y="120" text-anchor="middle" font-size="9" fill="#6b7280">業務目標・成功指標・上線條件</text>
+  <!-- Stage 2: Data Collection -->
+  <rect x="270" y="60" width="180" height="70" rx="10" fill="#dbeafe" stroke="#1e40af" stroke-width="1.5"/>
+  <text x="360" y="85" text-anchor="middle" font-size="13" fill="#1e3a8a" font-weight="700">2. 資料收集</text>
+  <text x="360" y="103" text-anchor="middle" font-size="11" fill="#1e40af">Data Collection</text>
+  <text x="360" y="120" text-anchor="middle" font-size="9" fill="#6b7280">資料來源・版本化・品質檢查</text>
+  <!-- Stage 3: Data Preparation -->
+  <rect x="500" y="60" width="180" height="70" rx="10" fill="#fef3c7" stroke="#b45309" stroke-width="1.5"/>
+  <text x="590" y="85" text-anchor="middle" font-size="13" fill="#92400e" font-weight="700">3. 資料準備</text>
+  <text x="590" y="103" text-anchor="middle" font-size="11" fill="#b45309">Data Preparation</text>
+  <text x="590" y="120" text-anchor="middle" font-size="9" fill="#6b7280">清洗・特徵工程・Pipeline</text>
+  <!-- Bottom row (reverse order) -->
+  <!-- Stage 6: Monitoring -->
+  <rect x="40" y="210" width="180" height="70" rx="10" fill="#fecaca" stroke="#991b1b" stroke-width="1.5"/>
+  <text x="130" y="235" text-anchor="middle" font-size="13" fill="#7f1d1d" font-weight="700">6. 模型監測</text>
+  <text x="130" y="253" text-anchor="middle" font-size="11" fill="#991b1b">Monitoring</text>
+  <text x="130" y="270" text-anchor="middle" font-size="9" fill="#6b7280">效能追蹤・drift 偵測・告警</text>
+  <!-- Stage 5: Deployment -->
+  <rect x="270" y="210" width="180" height="70" rx="10" fill="#fed7aa" stroke="#c2410c" stroke-width="1.5"/>
+  <text x="360" y="235" text-anchor="middle" font-size="13" fill="#7c2d12" font-weight="700">5. 模型部署</text>
+  <text x="360" y="253" text-anchor="middle" font-size="11" fill="#c2410c">Deployment</text>
+  <text x="360" y="270" text-anchor="middle" font-size="9" fill="#6b7280">API / 批次・CI/CD・A/B 測試</text>
+  <!-- Stage 4: Training/Evaluation -->
+  <rect x="500" y="210" width="180" height="70" rx="10" fill="#d1fae5" stroke="#059669" stroke-width="1.5"/>
+  <text x="590" y="235" text-anchor="middle" font-size="13" fill="#065f46" font-weight="700">4. 訓練 / 評估</text>
+  <text x="590" y="253" text-anchor="middle" font-size="11" fill="#059669">Training / Eval</text>
+  <text x="590" y="270" text-anchor="middle" font-size="9" fill="#6b7280">實驗追蹤・Model Registry</text>
+  <!-- Arrows between stages -->
+  <g stroke="#374151" stroke-width="1.8" fill="none">
+    <!-- 1 → 2 -->
+    <line x1="220" y1="95" x2="265" y2="95" marker-end="url(#mlopsArr)"/>
+    <!-- 2 → 3 -->
+    <line x1="450" y1="95" x2="495" y2="95" marker-end="url(#mlopsArr)"/>
+    <!-- 3 → 4 (down right) -->
+    <path d="M 590 130 L 590 205" marker-end="url(#mlopsArr)"/>
+    <!-- 4 → 5 -->
+    <line x1="500" y1="245" x2="455" y2="245" marker-end="url(#mlopsArr)"/>
+    <!-- 5 → 6 -->
+    <line x1="270" y1="245" x2="225" y2="245" marker-end="url(#mlopsArr)"/>
+    <!-- 6 → back to 1 (big return arrow) -->
+    <path d="M 130 210 L 130 160 Q 130 140 150 140 L 130 140" stroke-dasharray="0"/>
+    <path d="M 130 210 L 130 145" marker-end="url(#mlopsArr)"/>
+  </g>
+  <!-- Central "Continuous" label -->
+  <rect x="240" y="150" width="240" height="50" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="360" y="170" text-anchor="middle" font-size="12" fill="#7c2d12" font-weight="700">持續改善 Continuous Loop</text>
+  <text x="360" y="188" text-anchor="middle" font-size="10" fill="#9a3412">CI / CD / CT / CM (持續整合・交付・訓練・監測)</text>
+  <!-- Maturity level indicators -->
+  <text x="360" y="316" text-anchor="middle" font-size="11" fill="#6b7280">Level 0 手動 → Level 1 Pipeline 自動化 → Level 2 CI/CD 全自動</text>
+  <text x="360" y="338" text-anchor="middle" font-size="10" fill="#6b7280">成熟的 MLOps 系統讓「訓練新模型」從數週縮短至小時/分鐘，且每次變更皆可追溯</text>
+</svg>
+<figcaption>示意圖：MLOps 生命週期閉環。六個階段依序連結，監測階段（6）發現效能衰退時回饋到問題定義（1）觸發新一輪迭代。中央橘色虛框代表 CI/CD/CT/CM 四個持續性流程，Level 2 成熟度下所有階段都自動化。</figcaption>
+</figure>
 ```
 
 ### 1.4 MLOps 成熟度等級 Maturity Levels

@@ -29,6 +29,45 @@ $$\theta_{t+1} = \theta_t - \eta \cdot \nabla_\theta L$$
 
 > **核心思想：** 在訓練過程中動態調整學習率，讓模型在不同階段使用不同的學習速度，以達到更好的收斂效果。
 
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 680 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="四種學習率排程曲線比較">
+  <rect x="0" y="0" width="680" height="320" fill="#ffffff"/>
+  <text x="340" y="24" text-anchor="middle" font-size="14" fill="#111827" font-weight="600">四種常見學習率排程 (LR Schedule)</text>
+  <!-- Plot area -->
+  <rect x="80" y="50" width="520" height="220" fill="#fafafa" stroke="#e5e7eb"/>
+  <line x1="80" y1="270" x2="600" y2="270" stroke="#374151" stroke-width="1.2"/>
+  <line x1="80" y1="50" x2="80" y2="270" stroke="#374151" stroke-width="1.2"/>
+  <!-- Axis labels -->
+  <text x="340" y="300" text-anchor="middle" font-size="12" fill="#111827">Epoch →</text>
+  <text x="50" y="160" text-anchor="middle" font-size="12" fill="#111827" transform="rotate(-90 50 160)">LR η</text>
+  <text x="72" y="68" text-anchor="end" font-size="10" fill="#6b7280">η₀</text>
+  <text x="72" y="270" text-anchor="end" font-size="10" fill="#6b7280">0</text>
+  <text x="80" y="286" font-size="10" fill="#6b7280">0</text>
+  <text x="600" y="286" text-anchor="end" font-size="10" fill="#6b7280">100</text>
+  <!-- Horizontal reference (baseline) -->
+  <line x1="80" y1="65" x2="600" y2="65" stroke="#e5e7eb" stroke-dasharray="3 3"/>
+  <!-- 1. Step Decay (blue, staircase) -->
+  <polyline points="80,80 210,80 210,140 340,140 340,200 470,200 470,245 600,245" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+  <text x="90" y="96" font-size="11" fill="#1e3a8a" font-weight="600">Step Decay</text>
+  <!-- 2. Exponential Decay (amber, smooth curve) -->
+  <path d="M 80 75 Q 180 110 280 155 T 480 230 Q 550 250 600 255" fill="none" stroke="#d97706" stroke-width="2.5"/>
+  <text x="260" y="174" font-size="11" fill="#b45309" font-weight="600">Exponential</text>
+  <!-- 3. Cosine Annealing (green, half-cosine) -->
+  <path d="M 80 70 Q 180 90 340 160 T 600 260" fill="none" stroke="#059669" stroke-width="2.5"/>
+  <text x="360" y="135" font-size="11" fill="#065f46" font-weight="600">Cosine Annealing</text>
+  <!-- 4. Warmup + Cosine (red) — linear ramp then cosine decay -->
+  <path d="M 80 260 L 140 70 Q 260 90 420 170 T 600 260" fill="none" stroke="#dc2626" stroke-width="2.5"/>
+  <text x="100" y="258" font-size="11" fill="#7f1d1d" font-weight="600">Warmup</text>
+  <text x="160" y="82" font-size="11" fill="#7f1d1d" font-weight="600">+ Cosine</text>
+  <!-- Warmup mark -->
+  <line x1="140" y1="65" x2="140" y2="270" stroke="#9ca3af" stroke-width="0.8" stroke-dasharray="2 2"/>
+  <text x="140" y="62" text-anchor="middle" font-size="9" fill="#6b7280">warmup end</text>
+</svg>
+<figcaption>示意圖：四種學習率排程曲線。Step Decay 每隔固定 epoch 乘以衰減因子形成階梯；Exponential 平滑指數下降；Cosine Annealing 按半周期餘弦從 η₀ 降至 0；Warmup + Cosine 先線性上升（避免 AdamW 初期梯度噪聲）再餘弦退火，是 Transformer 訓練標配。</figcaption>
+</figure>
+```
+
 ### 1.2 Step Decay（階梯衰減）
 
 最簡單的學習率排程策略。每隔固定的 Epoch 數，將學習率乘以一個衰減因子 (Decay Factor)。
@@ -284,22 +323,43 @@ for epoch in range(100):
 
 > **當驗證集 (Validation Set) 上的效能不再改善時，停止訓練。**
 
-```
-損失 Loss
-  │
-  │ ╲                    ╱╱╱╱
-  │   ╲               ╱╱╱
-  │     ╲           ╱╱
-  │       ╲       ╱╱   ← 驗證損失 Validation Loss
-  │         ╲   ╱╱
-  │          ╲╱╱  ← 最佳點 Best Point
-  │           ╲
-  │            ╲╲
-  │              ╲╲╲
-  │                 ╲╲╲╲╲╲╲╲  ← 訓練損失 Training Loss
-  └──────────────────────────────▶ Epoch
-               ↑
-          早停點 Early Stop
+```svg
+<figure class="md-figure">
+<svg viewBox="0 0 680 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Early Stopping 訓練/驗證損失曲線">
+  <rect x="0" y="0" width="680" height="340" fill="#ffffff"/>
+  <text x="340" y="24" text-anchor="middle" font-size="14" fill="#111827" font-weight="600">Early Stopping：訓練 / 驗證損失動態</text>
+  <!-- Plot area -->
+  <rect x="80" y="50" width="540" height="220" fill="#fafafa" stroke="#e5e7eb"/>
+  <line x1="80" y1="270" x2="620" y2="270" stroke="#374151" stroke-width="1.2"/>
+  <line x1="80" y1="50" x2="80" y2="270" stroke="#374151" stroke-width="1.2"/>
+  <text x="350" y="300" text-anchor="middle" font-size="12" fill="#111827">Epoch →</text>
+  <text x="50" y="160" text-anchor="middle" font-size="12" fill="#111827" transform="rotate(-90 50 160)">Loss</text>
+  <!-- Training loss — monotonically decreasing -->
+  <path d="M 80 75 Q 140 130 200 175 T 360 225 Q 440 240 520 250 T 620 255" fill="none" stroke="#2563eb" stroke-width="2.5"/>
+  <text x="570" y="247" text-anchor="end" font-size="11" fill="#1e3a8a" font-weight="600">訓練損失 Training</text>
+  <!-- Validation loss — U-shape with minimum around epoch 35 -->
+  <path d="M 80 90 Q 160 150 280 175 Q 330 180 380 170 Q 440 160 520 125 Q 580 95 620 75" fill="none" stroke="#dc2626" stroke-width="2.5"/>
+  <text x="520" y="110" font-size="11" fill="#7f1d1d" font-weight="600">驗證損失 Validation</text>
+  <!-- Minimum point on val loss (Best Point) -->
+  <circle cx="360" cy="175" r="6" fill="#059669" stroke="#065f46" stroke-width="2"/>
+  <line x1="360" y1="175" x2="360" y2="50" stroke="#059669" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <text x="360" y="44" text-anchor="middle" font-size="11" fill="#065f46" font-weight="700">最佳點 Best (epoch 35)</text>
+  <!-- Patience region — continue beyond best to confirm no improvement -->
+  <line x1="450" y1="270" x2="450" y2="50" stroke="#d97706" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <text x="450" y="44" text-anchor="middle" font-size="11" fill="#b45309" font-weight="700">早停 Stop (epoch 45)</text>
+  <rect x="360" y="50" width="90" height="220" fill="#fef3c7" opacity="0.35"/>
+  <text x="405" y="232" text-anchor="middle" font-size="10" fill="#92400e">patience=10</text>
+  <!-- Generalization gap highlight -->
+  <line x1="590" y1="75" x2="590" y2="255" stroke="#9ca3af" stroke-width="1" stroke-dasharray="2 2"/>
+  <text x="598" y="170" font-size="10" fill="#6b7280">泛化差距</text>
+  <text x="598" y="184" font-size="10" fill="#6b7280">Gen Gap</text>
+  <!-- Phase annotations -->
+  <text x="160" y="316" text-anchor="middle" font-size="10" fill="#6b7280">階段 1：同步下降</text>
+  <text x="360" y="316" text-anchor="middle" font-size="10" fill="#059669" font-weight="600">階段 2：停止改善（最佳點）</text>
+  <text x="530" y="316" text-anchor="middle" font-size="10" fill="#991b1b">階段 3：過擬合 → 回復最佳權重</text>
+</svg>
+<figcaption>示意圖：Early Stopping 原理。訓練損失（藍）單調下降，驗證損失（紅）先降後升呈 U 型。綠色最佳點為驗證損失谷底；patience=10 表示連續 10 個 epoch 無改善後觸發早停，並回復到最佳點的權重而非最後一個 epoch 的權重。兩條曲線的垂直距離即為泛化差距。</figcaption>
+</figure>
 ```
 
 **過擬合的視覺信號：** 驗證損失開始上升（或驗證準確率開始下降），而訓練損失持續下降。兩者之間的差距就是**泛化差距 (Generalization Gap)**。
