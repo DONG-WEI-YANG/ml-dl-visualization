@@ -1,4 +1,6 @@
 import logging
+import asyncio
+import time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from pydantic import BaseModel
 from app.llm.factory import create_llm_provider
@@ -7,6 +9,7 @@ from app.llm.base import LLMMessage
 from app.config import settings
 from app.db import get_setting
 from app.auth.utils import decode_token
+from app.llm.quick_answer import build_quick_answer
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +37,40 @@ def _get_provider():
 
 def _rag_enabled() -> bool:
     return get_setting("rag_enabled", "true").lower() == "true"
+
+
+def _make_tutor() -> AITutor:
+    return AITutor(_get_provider(), use_rag=_rag_enabled())
+
+
+async def _stream_chat_events(messages, week: int, topic: str, mode: str):
+    """Orchestrate a bounded draft followed by the fully verified answer."""
+    started = time.monotonic()
+    draft_ms = None
+    yield {"type": "status", "stage": "analyzing"}
+    question = next((m.content for m in reversed(messages) if m.role == "user"), "")
+    try:
+        draft = await asyncio.wait_for(
+            asyncio.to_thread(build_quick_answer, question, week, topic),
+            timeout=0.8,
+        )
+        draft_ms = round((time.monotonic() - started) * 1000)
+        if draft:
+            yield {"type": "draft", "content": _safe_text(draft), "elapsed_ms": draft_ms}
+    except Exception as exc:
+        logger.warning("AI draft skipped week=%d reason=%s", week, type(exc).__name__)
+
+    yield {"type": "status", "stage": "verifying"}
+    tutor = _make_tutor()
+    try:
+        async for chunk in tutor.ask_stream(messages, week=week, topic=topic, mode=mode):
+            yield {"type": "refinement", "content": _safe_text(chunk)}
+        total_ms = round((time.monotonic() - started) * 1000)
+        logger.info("AI stream week=%d draft_ms=%s total_ms=%d", week, draft_ms, total_ms)
+        yield {"type": "done", "elapsed_ms": total_ms, "draft_ms": draft_ms}
+    except Exception as exc:
+        logger.error("AI refinement failed week=%d error=%s", week, type(exc).__name__)
+        yield {"type": "error", "stage": "refinement", "content": "完整回答暫時無法完成，請稍後重試。"}
 
 
 class ChatRequest(BaseModel):
@@ -85,11 +122,8 @@ async def chat_ws(websocket: WebSocket, token: str = Query(default="")):
             week = data.get("week", 1)
             topic = data.get("topic", "")
             mode = data.get("mode", "tutor")
-            provider = _get_provider()
-            tutor = AITutor(provider, use_rag=_rag_enabled())
-            async for chunk in tutor.ask_stream(messages, week=week, topic=topic, mode=mode):
-                await websocket.send_json({"type": "chunk", "content": _safe_text(chunk)})
-            await websocket.send_json({"type": "done"})
+            async for event in _stream_chat_events(messages, week, topic, mode):
+                await websocket.send_json(event)
     except WebSocketDisconnect:
         pass
     except Exception as e:
