@@ -125,7 +125,7 @@ const SUGGESTED_QUESTIONS: Record<number, string[]> = {
 };
 
 export default function ChatPanel({ week, topic, pinned, onClose, onTogglePin }: Props) {
-  const { messages, isLoading, send, clear } = useChat(week, topic);
+  const { messages, isLoading, stage, send, clear } = useChat(week, topic);
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<"tutor" | "homework">("tutor");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -228,6 +228,17 @@ export default function ChatPanel({ week, topic, pinned, onClose, onTogglePin }:
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2.5" role="log" aria-label="Chat messages" aria-live="polite">
+        {stage !== "idle" && (
+          <div className="flex justify-start">
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${stage === "unverified" ? "bg-amber-50 text-amber-700" : stage === "verified" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"}`}>
+              {stage === "analyzing" && "正在理解問題"}
+              {stage === "draft" && "快速回答"}
+              {stage === "verifying" && "正在核對教材"}
+              {stage === "verified" && "已完成教材驗證"}
+              {stage === "unverified" && "尚未完成教材驗證"}
+            </span>
+          </div>
+        )}
         {messages.length === 0 && (
           <div className="text-center text-gray-400 text-xs py-4">
             <p className="mb-1">歡迎使用 AI 助教！</p>
@@ -267,7 +278,7 @@ export default function ChatPanel({ week, topic, pinned, onClose, onTogglePin }:
             </div>
           </div>
         ))}
-        {isLoading && (
+        {isLoading && (stage === "idle" || stage === "analyzing") && (
           <div className="flex justify-start">
             <div className="bg-gray-100 px-3 py-2 rounded-2xl rounded-bl-md">
               <span className="text-gray-400 text-sm animate-pulse">AI 助教思考中...</span>

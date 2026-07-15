@@ -9,6 +9,7 @@ const mockOnTogglePin = vi.fn();
 const mockOnAutoOpen = vi.fn();
 let mockMessages: { role: string; content: string }[] = [];
 let mockIsLoading = false;
+let mockStage = "idle";
 
 const defaultProps = {
   week: 1,
@@ -23,6 +24,7 @@ vi.mock("../hooks/useChat", () => ({
   useChat: () => ({
     messages: mockMessages,
     isLoading: mockIsLoading,
+    stage: mockStage,
     send: mockSend,
     clear: mockClear,
   }),
@@ -32,6 +34,7 @@ describe("ChatPanel", () => {
   beforeEach(() => {
     mockMessages = [];
     mockIsLoading = false;
+    mockStage = "idle";
     mockSend.mockClear();
     mockClear.mockClear();
   });
@@ -85,6 +88,19 @@ describe("ChatPanel", () => {
     render(<ChatPanel {...defaultProps} />);
     expect(screen.getByText("Hello")).toBeInTheDocument();
     expect(screen.getByText("Hi there")).toBeInTheDocument();
+  });
+
+  it("shows progressive answer stages", () => {
+    mockMessages = [{ role: "assistant", content: "快速內容" }];
+    mockStage = "draft";
+    const { rerender } = render(<ChatPanel {...defaultProps} />);
+    expect(screen.getByText("快速回答")).toBeInTheDocument();
+    mockStage = "verifying";
+    rerender(<ChatPanel {...defaultProps} />);
+    expect(screen.getByText("正在核對教材")).toBeInTheDocument();
+    mockStage = "verified";
+    rerender(<ChatPanel {...defaultProps} />);
+    expect(screen.getByText("已完成教材驗證")).toBeInTheDocument();
   });
 
   it("shows loading indicator", () => {
