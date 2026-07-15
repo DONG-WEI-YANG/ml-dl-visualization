@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useState } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import Layout from "./components/Layout";
@@ -10,17 +11,23 @@ import UserManagement from "./pages/UserManagement";
 import QuizManagement from "./pages/QuizManagement";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import CloudLoadingState from "./components/CloudLoadingState";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-gray-400">Loading...</p>
-      </div>
-    );
+  const { user, loading, verification, cloudStatus, retryVerification, logout } = useAuth();
+  const [offlineEntry, setOfflineEntry] = useState(false);
+  if (loading && !offlineEntry) {
+    return <CloudLoadingState phase={cloudStatus === "waking" ? "waking" : "connecting"} onEnterOffline={() => setOfflineEntry(true)} onRetry={() => void retryVerification()} onLogout={logout} />;
   }
+  if (verification === "unverified" && !offlineEntry) return <CloudLoadingState phase="unavailable" onEnterOffline={() => setOfflineEntry(true)} onRetry={() => void retryVerification()} onLogout={logout} />;
+  if (offlineEntry || verification === "unverified") return <>{children}</>;
   if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function RequireVerified({ children }: { children: React.ReactNode }) {
+  const { user, verification } = useAuth();
+  if (!user || verification !== "authenticated") return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -41,10 +48,10 @@ export default function App() {
             >
               <Route index element={<Home />} />
               <Route path="week/:weekId" element={<WeekPage />} />
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="admin" element={<AdminSettings />} />
-              <Route path="admin/users" element={<UserManagement />} />
-              <Route path="admin/quiz" element={<QuizManagement />} />
+              <Route path="dashboard" element={<RequireVerified><Dashboard /></RequireVerified>} />
+              <Route path="admin" element={<RequireVerified><AdminSettings /></RequireVerified>} />
+              <Route path="admin/users" element={<RequireVerified><UserManagement /></RequireVerified>} />
+              <Route path="admin/quiz" element={<RequireVerified><QuizManagement /></RequireVerified>} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>

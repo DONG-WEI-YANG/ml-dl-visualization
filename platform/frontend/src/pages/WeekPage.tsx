@@ -5,6 +5,8 @@ import { API_BASE } from "../lib/api";
 import ChatPanel from "../components/llm/ChatPanel";
 import QuizPanel from "../components/quiz/QuizPanel";
 import ConceptCards from "../components/concepts/ConceptCards";
+import CloudFeatureGate from "../components/CloudFeatureGate";
+import { useAuth } from "../hooks/useAuth";
 
 const weekComponents: Record<number, React.LazyExoticComponent<React.ComponentType>> = {
   1: lazy(() => import("../components/viz/EnvironmentSetupViz")),
@@ -33,6 +35,8 @@ export default function WeekPage() {
   const weekInfo = WEEKS.find((w) => w.id === week);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatPinned, setChatPinned] = useState(false);
+  const { cloudStatus, retryVerification } = useAuth();
+  const cloudAvailable = cloudStatus === "ready";
 
   const openChat = useCallback(() => setChatOpen(true), []);
   const closeChat = useCallback(() => { setChatOpen(false); setChatPinned(false); }, []);
@@ -92,8 +96,11 @@ export default function WeekPage() {
 
           <ConceptCards week={week} />
 
-          <QuizPanel week={week} />
+          <CloudFeatureGate available={cloudAvailable} title="測驗" onRetry={() => void retryVerification()}>
+            <QuizPanel week={week} />
+          </CloudFeatureGate>
 
+          <CloudFeatureGate available={cloudAvailable} title="教材下載" onRetry={() => void retryVerification()}>
           <div className="border border-gray-200 rounded-xl p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-3">
               本週教材
@@ -120,6 +127,7 @@ export default function WeekPage() {
               ))}
             </div>
           </div>
+          </CloudFeatureGate>
         </div>
 
         {/* Pinned: in-grid chat panel */}
@@ -138,7 +146,7 @@ export default function WeekPage() {
       </div>
 
       {/* Floating toggle button (when chat is closed) */}
-      {!chatOpen && (
+      {!chatOpen && cloudAvailable && (
         <button
           onClick={openChat}
           className="fixed right-5 bottom-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition-all hover:shadow-xl cursor-pointer"
@@ -146,6 +154,14 @@ export default function WeekPage() {
           <span className="text-sm font-bold">AI</span>
           <span className="text-sm">助教</span>
         </button>
+      )}
+
+      {!cloudAvailable && (
+        <div className="fixed bottom-5 right-5 z-30 w-72 shadow-lg">
+          <CloudFeatureGate available={false} title="AI 助教" onRetry={() => void retryVerification()}>
+            <span />
+          </CloudFeatureGate>
+        </div>
       )}
 
       {/* Slide-over panel (when open but not pinned) */}
