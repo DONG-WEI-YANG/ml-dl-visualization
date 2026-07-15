@@ -1,5 +1,6 @@
 import logging
 import time
+import asyncio
 from collections import defaultdict
 
 from fastapi import FastAPI, Request
@@ -16,6 +17,7 @@ from app.api.curriculum_routes import router as curriculum_router
 from app.config import settings
 from app.db import init_db, get_db
 from app.rag.store import init_rag_tables
+from app.readiness import readiness
 
 # ── Logging ──
 logging.basicConfig(
@@ -88,17 +90,44 @@ def _auto_ingest_curriculum():
         logger.warning("Auto-ingest failed (non-fatal): %s", e)
 
 
+async def _initialize_rag_background():
+    """Initialize optional curriculum retrieval without blocking HTTP readiness."""
+    readiness.rag = "indexing"
+    started = time.monotonic()
+    try:
+        await asyncio.to_thread(_auto_ingest_curriculum)
+        readiness.rag = "ready"
+        logger.info("RAG background initialization completed in %.0fms", (time.monotonic() - started) * 1000)
+    except Exception:
+        readiness.rag = "error"
+        readiness.status = "degraded"
+        logger.exception("RAG background initialization failed")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
-    init_rag_tables()
-    # Auto-ingest curriculum if RAG is empty
-    _auto_ingest_curriculum()
+    core_started = time.monotonic()
+    try:
+        init_db()
+        init_rag_tables()
+        readiness.database = "connected"
+        readiness.status = "ready"
+    except Exception:
+        readiness.database = "error"
+        readiness.status = "degraded"
+        logger.exception("Core database initialization failed")
+    rag_task = asyncio.create_task(_initialize_rag_background())
     # Start daily web enrichment background task
     from app.rag.web_enricher import start_daily_enrichment
     start_daily_enrichment()
     logger.info("ML/DL Visualization Platform started (CORS origins: %s)", cors_origins)
+    logger.info("Core startup completed in %.0fms", (time.monotonic() - core_started) * 1000)
     yield
+    rag_task.cancel()
+    try:
+        await rag_task
+    except asyncio.CancelledError:
+        pass
 
 
 app.router.lifespan_context = lifespan
@@ -120,9 +149,12 @@ async def health():
         conn = get_db()
         conn.execute("SELECT 1")
         conn.close()
-        return {"status": "ok", "database": "connected"}
+        readiness.database = "connected"
+        return readiness.snapshot()
     except Exception as e:
+        readiness.database = "error"
+        readiness.status = "degraded"
         return JSONResponse(
-            {"status": "error", "database": "disconnected", "detail": str(e)},
+            readiness.snapshot(),
             status_code=503,
         )
