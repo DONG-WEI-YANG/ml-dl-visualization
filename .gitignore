@@ -26,6 +26,7 @@ platform/backend/data/nlp_models/*.pkl
 # IDE
 .vscode/
 .idea/
+.worktrees/
 *.swp
 *.swo
 *~
