@@ -35,8 +35,8 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   logout: () => {},
   loading: true,
-  verification: "checking",
-  cloudStatus: "connecting",
+  verification: "anonymous",
+  cloudStatus: "ready",
   retryVerification: async () => {},
 });
 
