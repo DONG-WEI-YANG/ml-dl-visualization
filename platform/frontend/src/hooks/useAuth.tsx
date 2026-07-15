@@ -5,7 +5,10 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import { fetchAPI } from "../lib/api";
+import { APIError, fetchAPI } from "../lib/api";
+
+export type VerificationState = "checking" | "authenticated" | "anonymous" | "unverified";
+export type CloudStatus = "connecting" | "waking" | "ready" | "unavailable";
 
 interface User {
   id: number;
@@ -21,6 +24,9 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
+  verification: VerificationState;
+  cloudStatus: CloudStatus;
+  retryVerification: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -29,6 +35,9 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   logout: () => {},
   loading: true,
+  verification: "checking",
+  cloudStatus: "connecting",
+  retryVerification: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -37,19 +46,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => localStorage.getItem("auth_token")
   );
   const [loading, setLoading] = useState(true);
+  const [verification, setVerification] = useState<VerificationState>(token ? "checking" : "anonymous");
+  const [cloudStatus, setCloudStatus] = useState<CloudStatus>(token ? "connecting" : "ready");
 
-  useEffect(() => {
+  const verifyToken = async () => {
     if (!token) {
+      setVerification("anonymous");
+      setCloudStatus("ready");
       setLoading(false);
       return;
     }
-    fetchAPI<User>("/api/auth/me", undefined, token)
-      .then(setUser)
-      .catch(() => {
+    setVerification("checking");
+    setCloudStatus("connecting");
+    setLoading(true);
+    const wakingTimer = window.setTimeout(() => setCloudStatus("waking"), 3000);
+    try {
+      const verifiedUser = await fetchAPI<User>("/api/auth/me", undefined, token, { timeoutMs: 8000 });
+      setUser(verifiedUser);
+      setVerification("authenticated");
+      setCloudStatus("ready");
+    } catch (error) {
+      if (error instanceof APIError && error.kind === "unauthorized") {
         localStorage.removeItem("auth_token");
         setToken(null);
-      })
-      .finally(() => setLoading(false));
+        setVerification("anonymous");
+        setCloudStatus("ready");
+      } else {
+        setVerification("unverified");
+        setCloudStatus("unavailable");
+      }
+    } finally {
+      window.clearTimeout(wakingTimer);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void verifyToken();
+    // verifyToken intentionally follows the current token lifecycle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const login = async (username: string, password: string) => {
@@ -60,16 +95,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("auth_token", data.access_token);
     setToken(data.access_token);
     setUser(data.user);
+    setVerification("authenticated");
+    setCloudStatus("ready");
   };
 
   const logout = () => {
     localStorage.removeItem("auth_token");
     setToken(null);
     setUser(null);
+    setVerification("anonymous");
+    setCloudStatus("ready");
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading, verification, cloudStatus, retryVerification: verifyToken }}>
       {children}
     </AuthContext.Provider>
   );

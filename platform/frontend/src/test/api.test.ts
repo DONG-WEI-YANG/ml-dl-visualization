@@ -29,7 +29,8 @@ describe("fetchAPI", () => {
       init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
     })));
     const request = fetchAPI("/health", undefined, undefined, { timeoutMs: 10 });
+    const rejection = expect(request).rejects.toMatchObject<Partial<APIError>>({ kind: "timeout" });
     await vi.advanceTimersByTimeAsync(10);
-    await expect(request).rejects.toMatchObject<Partial<APIError>>({ kind: "timeout" });
+    await rejection;
   });
 });
