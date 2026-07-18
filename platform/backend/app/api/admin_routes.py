@@ -155,6 +155,22 @@ async def import_users(req: ImportRequest, request: Request, admin: dict = Depen
     return {"created": created, "skipped": skipped}
 
 
+@router.post("/semesters/{semester}/archive")
+async def archive_semester(semester: str, request: Request, admin: dict = Depends(require_admin)):
+    conn = get_db()
+    cursor = conn.execute(
+        "UPDATE users SET is_active = 0, updated_at = datetime('now') "
+        "WHERE semester = ? AND role = 'student' AND is_active = 1 AND deleted_at IS NULL",
+        (semester,),
+    )
+    conn.commit()
+    conn.close()
+    ip = request.client.host if request.client else ""
+    log_audit("semester.archive", actor=admin, target_type="semester", target_id=semester,
+              detail={"archived": cursor.rowcount}, ip=ip)
+    return {"archived": cursor.rowcount}
+
+
 # ── Teacher-Student assignment (admin only) ──
 
 
