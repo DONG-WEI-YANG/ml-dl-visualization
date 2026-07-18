@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import AuditLog from "../AuditLog";
 
 const { items } = vi.hoisted(() => ({
@@ -41,5 +41,29 @@ describe("AuditLog", () => {
   it("shows total count", async () => {
     render(<AuditLog />);
     await waitFor(() => expect(screen.getByText(/共 2 筆/)).toBeDefined());
+  });
+
+  it("exports CSV with an authenticated fetch", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      blob: () => Promise.resolve(new Blob(["x"])),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("URL", {
+      ...URL,
+      createObjectURL: vi.fn().mockReturnValue("blob:mock"),
+      revokeObjectURL: vi.fn(),
+    });
+
+    render(<AuditLog />);
+    await waitFor(() => expect(screen.getByText("user.create")).toBeDefined());
+    fireEvent.click(screen.getByRole("button", { name: "匯出 CSV" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain("/api/admin/audit-logs/export");
+    expect(options.headers.Authorization).toBe("Bearer t");
+
+    vi.unstubAllGlobals();
   });
 });

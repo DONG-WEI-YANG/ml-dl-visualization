@@ -58,6 +58,23 @@ export default function AuditLog() {
 
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
 
+  const exportCsv = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/audit-logs/export?${buildQuery(true)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "audit-logs.csv";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch {
+      setError("匯出失敗，請稍後再試");
+    }
+  };
+
   const tabButton = (key: Tab, label: string) => (
     <button
       onClick={() => { setTab(key); setPage(1); }}
@@ -100,13 +117,12 @@ export default function AuditLog() {
               </select>
             )}
             <span className="text-sm text-gray-500">{data ? `共 ${data.total} 筆` : ""}</span>
-            <a
-              href={`${API_BASE}/api/admin/audit-logs/export?${buildQuery(true)}`}
+            <button
+              onClick={exportCsv}
               className="ml-auto px-3 py-1.5 text-sm border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
-              download
             >
               匯出 CSV
-            </a>
+            </button>
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}

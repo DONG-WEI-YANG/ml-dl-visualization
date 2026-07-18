@@ -55,7 +55,7 @@ export default function ChangePasswordDialog({ forced = false, onClose }: Change
               className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
           </label>
           <label className="block text-sm text-gray-600">
-            新密碼
+            新密碼（8 碼以上）
             <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)}
               className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
           </label>

@@ -140,7 +140,7 @@ export default function UserManagement() {
 
   const handleDelete = async (u: User) => {
     if (u.id === me?.id) { flash("無法刪除自己的帳號", "err"); return; }
-    if (!confirm(`確定要停用封存此帳號？學習紀錄會保留，帳號將無法再登入。`)) return;
+    if (!confirm(`確定要停用封存 ${u.display_name || u.username}？學習紀錄會保留，帳號將無法再登入。`)) return;
     try {
       await authFetch(`/api/admin/users/${u.id}`, "DELETE");
       flash(`已封存 ${u.display_name || u.username}`);

@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import { WEEKS } from "../types";
 import { useAuth } from "../hooks/useAuth";
+import ChangePasswordDialog from "./auth/ChangePasswordDialog";
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
+  const [showChangePassword, setShowChangePassword] = useState(false);
   return (
     <nav className="w-64 bg-gray-50 border-r border-gray-200 h-screen overflow-y-auto flex flex-col" aria-label="Course navigation">
       <div className="p-4 border-b border-gray-200">
@@ -112,13 +115,24 @@ export default function Sidebar() {
             </span>
           )}
         </div>
-        <button
-          onClick={logout}
-          className="text-xs text-gray-400 hover:text-gray-600"
-        >
-          登出
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowChangePassword(true)}
+            className="text-xs text-gray-400 hover:text-gray-600"
+          >
+            變更密碼
+          </button>
+          <button
+            onClick={logout}
+            className="text-xs text-gray-400 hover:text-gray-600"
+          >
+            登出
+          </button>
+        </div>
       </div>
+      {showChangePassword && (
+        <ChangePasswordDialog onClose={() => setShowChangePassword(false)} />
+      )}
     </nav>
   );
 }
