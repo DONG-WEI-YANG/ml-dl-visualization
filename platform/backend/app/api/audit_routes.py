@@ -57,6 +57,15 @@ async def list_audit_logs(
     return {"items": [dict(r) for r in rows], "total": total, "page": page, "page_size": page_size}
 
 
+def _safe_cell(v):
+    """Prefix values that Excel/Sheets would interpret as a formula so a
+    malicious value (e.g. attacker-controlled username) can't execute as one."""
+    s = "" if v is None else str(v)
+    if s and s[0] in ("=", "+", "-", "@", "\t", "\r"):
+        s = "'" + s
+    return s
+
+
 @router.get("/audit-logs/export")
 async def export_audit_logs(
     actor_id: int | None = Query(None),
@@ -77,7 +86,7 @@ async def export_audit_logs(
     writer = csv.writer(buf)
     writer.writerow(_COLUMNS)
     for r in rows:
-        writer.writerow([r[c] for c in _COLUMNS])
+        writer.writerow([_safe_cell(r[c]) for c in _COLUMNS])
     # UTF-8 BOM so Excel opens Chinese content correctly.
     data = "﻿" + buf.getvalue()
     return StreamingResponse(

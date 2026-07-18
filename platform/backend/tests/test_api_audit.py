@@ -1,4 +1,7 @@
 """Integration tests for audit log query/export endpoints."""
+import csv
+import io
+
 from fastapi.testclient import TestClient
 from app.main import app
 from app.audit import log_audit
@@ -70,3 +73,26 @@ def test_export_csv():
     assert "text/csv" in resp.headers["content-type"]
     body = resp.content.decode("utf-8-sig")
     assert body.splitlines()[0].startswith("id,timestamp,actor_id")
+
+
+def test_export_csv_sanitizes_formula_injection():
+    """A malicious username reaching the CSV (e.g. via login.failed detail, or
+    any other raw column such as ip) must not let Excel execute it as a
+    formula: cells starting with =, +, -, @, tab, or CR must be quote-prefixed.
+    """
+    # A raw column (ip) that carries attacker-controlled content unmodified —
+    # the direct exploit path: a formula-triggering value written verbatim.
+    log_audit("login.failed", detail={"username": "=cmd|calc"}, ip="=cmd|calc")
+    token = _admin_token()
+    resp = client.get("/api/admin/audit-logs/export?action_prefix=login", headers=_auth(token))
+    assert resp.status_code == 200
+    body = resp.content.decode("utf-8-sig")
+    reader = csv.reader(io.StringIO(body))
+    header = next(reader)
+    ip_idx = header.index("ip")
+    detail_idx = header.index("detail")
+    row = next(r for r in reader if r[ip_idx].lstrip("'") == "=cmd|calc")
+    assert row[ip_idx] == "'=cmd|calc", f"ip cell not sanitized: {row[ip_idx]!r}"
+    # detail is JSON-encoded, so it already starts with "{" — but confirm the
+    # sanitizer never breaks that (still no leading formula-trigger char).
+    assert row[detail_idx][0] not in ("=", "+", "-", "@", "\t", "\r")
