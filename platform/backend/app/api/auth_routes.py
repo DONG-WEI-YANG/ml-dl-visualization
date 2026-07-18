@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Request
-from app.auth.models import LoginRequest, TokenResponse, UserOut, UserCreate
+from app.auth.models import LoginRequest, TokenResponse, UserOut, UserCreate, ChangePasswordRequest
 from app.auth.utils import verify_password, hash_password, create_token
 from app.auth.dependencies import get_current_user, require_admin
 from app.db import get_db, get_setting
@@ -52,6 +52,27 @@ async def logout(request: Request, user: dict = Depends(get_current_user)):
 @router.get("/me", response_model=UserOut)
 async def me(user: dict = Depends(get_current_user)):
     return _user_out(user)
+
+
+@router.post("/change-password")
+async def change_password(
+    req: ChangePasswordRequest, request: Request, user: dict = Depends(get_current_user)
+):
+    ip = request.client.host if request.client else ""
+    if len(req.new_password) < 8:
+        raise HTTPException(status_code=400, detail="新密碼長度至少 8 碼")
+    if not verify_password(req.old_password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="舊密碼錯誤")
+    conn = get_db()
+    conn.execute(
+        "UPDATE users SET password_hash = ?, must_change_password = 0, "
+        "updated_at = datetime('now') WHERE id = ?",
+        (hash_password(req.new_password), user["id"]),
+    )
+    conn.commit()
+    conn.close()
+    log_audit("user.password_change", actor=user, target_type="user", target_id=user["id"], ip=ip)
+    return {"status": "ok"}
 
 
 @router.post("/register", response_model=UserOut)
