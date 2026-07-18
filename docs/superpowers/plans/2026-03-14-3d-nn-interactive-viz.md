@@ -1,5 +1,7 @@
 # 3D Visualizations & NN Interactive Diagram Implementation Plan
 
+> **STATUS: ✅ FULLY IMPLEMENTED (2026-03-14, merged to master).** All 6 chunks exist in the codebase (viz3d/, nn/, backend surface_type + 3D decision-boundary APIs, 2D/3D toggles, Week11Compound). Checkboxes below were never ticked — do NOT re-execute this plan; verify against the code instead. (Confirmed 2026-07-18.)
+
 > **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add 3 × 3D scene visualizations (Weeks 4, 5/6, 17) and 1 × NN interactive diagram (Week 11) to the ML/DL teaching platform.
