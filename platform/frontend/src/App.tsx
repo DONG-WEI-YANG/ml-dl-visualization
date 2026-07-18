@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminSettings from "./pages/AdminSettings";
 import UserManagement from "./pages/UserManagement";
 import QuizManagement from "./pages/QuizManagement";
+import AuditLog from "./pages/AuditLog";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import CloudLoadingState from "./components/CloudLoadingState";
@@ -61,6 +62,7 @@ export default function App() {
               <Route path="admin" element={<RequireVerified><AdminSettings /></RequireVerified>} />
               <Route path="admin/users" element={<RequireVerified><UserManagement /></RequireVerified>} />
               <Route path="admin/quiz" element={<RequireVerified><QuizManagement /></RequireVerified>} />
+              <Route path="admin/audit" element={<RequireVerified><AuditLog /></RequireVerified>} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>

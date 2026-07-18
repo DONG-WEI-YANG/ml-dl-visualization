@@ -64,6 +64,17 @@ export default function Sidebar() {
               帳號管理
             </NavLink>
             <NavLink
+              to="/admin/audit"
+              className={({ isActive }) =>
+                `flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+                  isActive ? "bg-indigo-50 text-indigo-700 font-medium" : "text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                }`
+              }
+            >
+              <span className="text-base">&#128220;</span>
+              稽核紀錄
+            </NavLink>
+            <NavLink
               to="/admin/quiz"
               className={({ isActive }) =>
                 `flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
