@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import time
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Depends
 from pydantic import BaseModel
 from app.llm.factory import create_llm_provider
 from app.llm.tutor import AITutor
@@ -9,6 +9,7 @@ from app.llm.base import LLMMessage
 from app.config import settings
 from app.db import get_setting
 from app.auth.utils import decode_token
+from app.auth.dependencies import get_current_user
 from app.llm.quick_answer import build_quick_answer
 
 logger = logging.getLogger(__name__)
@@ -95,7 +96,7 @@ def _safe_text(text: str) -> str:
 
 
 @router.post("/chat")
-async def chat(req: ChatRequest):
+async def chat(req: ChatRequest, user: dict = Depends(get_current_user)):
     try:
         provider = _get_provider()
         tutor = AITutor(provider, use_rag=_rag_enabled())
@@ -108,12 +109,10 @@ async def chat(req: ChatRequest):
 
 @router.websocket("/ws/chat")
 async def chat_ws(websocket: WebSocket, token: str = Query(default="")):
-    # Validate token before accepting connection
-    if token:
-        payload = decode_token(token)
-        if not payload:
-            await websocket.close(code=4001, reason="Invalid or expired token")
-            return
+    payload = decode_token(token) if token else None
+    if not payload:
+        await websocket.close(code=4401, reason="需要登入")
+        return
     await websocket.accept()
     try:
         while True:

@@ -101,7 +101,8 @@ def init_db():
         from app.auth.utils import hash_password
         from app.config import settings
         conn.execute(
-            "INSERT INTO users (username, password_hash, display_name, role) VALUES (?, ?, ?, ?)",
+            "INSERT INTO users (username, password_hash, display_name, role, must_change_password) "
+            "VALUES (?, ?, ?, ?, 1)",
             ("admin", hash_password(settings.default_admin_password), "系統管理員", "admin"),
         )
     # Seed default LLM settings
