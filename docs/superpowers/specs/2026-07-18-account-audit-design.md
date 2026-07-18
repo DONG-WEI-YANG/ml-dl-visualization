@@ -84,7 +84,7 @@ def log_audit(action: str, *, actor: dict | None = None, target_type: str = "",
 - 使用者查詢（list/get/login/get_current_user）一律排除 `deleted_at IS NOT NULL`
 - `POST /api/auth/login` → 成功記 `login.success`；失敗記 `login.failed`（含 IP）；回應 `TokenResponse` 加 `must_change_password: bool`
 - `POST /api/auth/register`、`PUT /users/{id}`、settings、quiz CRUD、師生指派、train-nlp、enrichment → 各補 `log_audit()`；admin 建帳號與代改密碼時設 `must_change_password=1`
-- `UserOut` 加 `must_change_password`、`deleted_at`
+- `UserOut` 加 `must_change_password`（`deleted_at` 不對外暴露——被刪除者已從所有查詢排除）
 
 ### 順帶安全修復
 
