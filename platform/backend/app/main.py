@@ -14,6 +14,7 @@ from app.api.admin_routes import router as admin_router
 from app.api.rag_routes import router as rag_router
 from app.api.quiz_routes import router as quiz_router
 from app.api.curriculum_routes import router as curriculum_router
+from app.api.audit_routes import router as audit_router
 from app.config import settings
 from app.db import init_db, get_db
 from app.rag.store import init_rag_tables
@@ -140,6 +141,7 @@ app.include_router(analytics_router)
 app.include_router(rag_router)
 app.include_router(quiz_router)
 app.include_router(curriculum_router)
+app.include_router(audit_router)
 
 
 @app.get("/health")
