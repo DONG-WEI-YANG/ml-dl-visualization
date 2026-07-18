@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { API_BASE } from "../lib/api";
+import UserImportDialog from "../components/admin/UserImportDialog";
 
 interface User {
   id: number;
@@ -45,6 +46,9 @@ export default function UserManagement() {
   const [filterSemester, setFilterSemester] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; type: "ok" | "err" }>({ text: "", type: "ok" });
+
+  // Batch import
+  const [showImport, setShowImport] = useState(false);
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
@@ -136,13 +140,25 @@ export default function UserManagement() {
 
   const handleDelete = async (u: User) => {
     if (u.id === me?.id) { flash("無法刪除自己的帳號", "err"); return; }
-    if (!confirm(`確定要刪除 ${u.display_name || u.username}？此操作無法復原。`)) return;
+    if (!confirm(`確定要停用封存此帳號？學習紀錄會保留，帳號將無法再登入。`)) return;
     try {
       await authFetch(`/api/admin/users/${u.id}`, "DELETE");
-      flash(`已刪除 ${u.display_name || u.username}`);
+      flash(`已封存 ${u.display_name || u.username}`);
       fetchUsers();
     } catch (err: unknown) {
       flash((err as Error).message || "刪除失敗", "err");
+    }
+  };
+
+  const handleArchiveSemester = async () => {
+    const semester = window.prompt("輸入要封存的學期（例如 114-2）");
+    if (!semester) return;
+    try {
+      const data = await authFetch(`/api/admin/semesters/${semester}/archive`, "POST");
+      flash(`已封存學期 ${semester}，共停用 ${data.archived} 位學生`);
+      fetchUsers();
+    } catch (err: unknown) {
+      flash((err as Error).message || "封存失敗", "err");
     }
   };
 
@@ -192,12 +208,24 @@ export default function UserManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">帳號管理</h1>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
-        >
-          + 新增帳號
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleArchiveSemester}
+            className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+          >
+            學期封存
+          </button>
+          <button onClick={() => setShowImport(true)}
+            className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+            批次匯入
+          </button>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
+          >
+            + 新增帳號
+          </button>
+        </div>
       </div>
 
       {/* Message */}
@@ -311,7 +339,7 @@ export default function UserManagement() {
                         onClick={() => handleDelete(u)}
                         className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded"
                       >
-                        刪除
+                        停用封存
                       </button>
                     )}
                   </td>
@@ -511,6 +539,10 @@ export default function UserManagement() {
             </div>
           </div>
         </div>
+      )}
+
+      {showImport && (
+        <UserImportDialog onDone={fetchUsers} onClose={() => setShowImport(false)} />
       )}
     </div>
   );
