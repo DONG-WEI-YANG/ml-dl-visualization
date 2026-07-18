@@ -62,6 +62,22 @@ def init_db():
             category TEXT NOT NULL DEFAULT 'concept',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+            actor_id INTEGER,
+            actor_username TEXT NOT NULL DEFAULT '',
+            actor_role TEXT NOT NULL DEFAULT '',
+            action TEXT NOT NULL,
+            target_type TEXT NOT NULL DEFAULT '',
+            target_id TEXT NOT NULL DEFAULT '',
+            detail TEXT NOT NULL DEFAULT '{}',
+            ip TEXT NOT NULL DEFAULT ''
+        );
+        CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp);
+        CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_logs(actor_id);
+        CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action);
     """)
     # Migration: add semester column if not exists
     try:
@@ -69,6 +85,16 @@ def init_db():
         conn.commit()
     except sqlite3.OperationalError:
         pass  # Column already exists
+    # Migration: soft-delete + forced password change columns
+    for ddl in (
+        "ALTER TABLE users ADD COLUMN deleted_at TEXT",
+        "ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0",
+    ):
+        try:
+            conn.execute(ddl)
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass  # Column already exists
     # Seed default admin if none exists
     existing = conn.execute("SELECT id FROM users WHERE role = 'admin' LIMIT 1").fetchone()
     if not existing:
