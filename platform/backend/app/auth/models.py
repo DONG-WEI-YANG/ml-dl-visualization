@@ -29,6 +29,7 @@ class UserOut(BaseModel):
     is_active: bool
     created_at: str
     updated_at: str
+    must_change_password: bool = False
 
 
 class LoginRequest(BaseModel):
