@@ -23,6 +23,7 @@ def _user_out(row) -> UserOut:
         is_active=bool(row["is_active"]),
         created_at=row["created_at"],
         updated_at=row["updated_at"],
+        must_change_password=bool(row["must_change_password"]),
     )
 
 
@@ -65,7 +66,9 @@ async def get_user(user_id: int, admin: dict = Depends(require_admin)):
 @router.put("/users/{user_id}", response_model=UserOut)
 async def update_user(user_id: int, data: UserUpdate, request: Request, admin: dict = Depends(require_admin)):
     conn = get_db()
-    row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    row = conn.execute(
+        "SELECT * FROM users WHERE id = ? AND deleted_at IS NULL", (user_id,)
+    ).fetchone()
     if not row:
         conn.close()
         raise HTTPException(status_code=404, detail="使用者不存在")
@@ -188,8 +191,12 @@ async def archive_semester(semester: str, request: Request, admin: dict = Depend
 @router.post("/teachers/{teacher_id}/students/{student_id}")
 async def assign_student_to_teacher(teacher_id: int, student_id: int, request: Request, admin: dict = Depends(require_admin)):
     conn = get_db()
-    teacher = conn.execute("SELECT * FROM users WHERE id = ? AND role = 'teacher'", (teacher_id,)).fetchone()
-    student = conn.execute("SELECT * FROM users WHERE id = ? AND role = 'student'", (student_id,)).fetchone()
+    teacher = conn.execute(
+        "SELECT * FROM users WHERE id = ? AND role = 'teacher' AND deleted_at IS NULL", (teacher_id,)
+    ).fetchone()
+    student = conn.execute(
+        "SELECT * FROM users WHERE id = ? AND role = 'student' AND deleted_at IS NULL", (student_id,)
+    ).fetchone()
     if not teacher:
         conn.close()
         raise HTTPException(status_code=404, detail="教師不存在")
@@ -231,7 +238,7 @@ async def get_teacher_students(teacher_id: int, user: dict = Depends(require_tea
     rows = conn.execute(
         """SELECT u.* FROM users u
            JOIN teacher_students ts ON u.id = ts.student_id
-           WHERE ts.teacher_id = ? ORDER BY u.id""",
+           WHERE ts.teacher_id = ? AND u.deleted_at IS NULL ORDER BY u.id""",
         (teacher_id,),
     ).fetchall()
     conn.close()
