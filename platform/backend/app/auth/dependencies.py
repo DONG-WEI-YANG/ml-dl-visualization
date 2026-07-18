@@ -11,7 +11,10 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     if not payload:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="無效或過期的令牌")
     conn = get_db()
-    user = conn.execute("SELECT * FROM users WHERE id = ? AND is_active = 1", (payload["sub"],)).fetchone()
+    user = conn.execute(
+        "SELECT * FROM users WHERE id = ? AND is_active = 1 AND deleted_at IS NULL",
+        (payload["sub"],),
+    ).fetchone()
     conn.close()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="使用者不存在或已停用")

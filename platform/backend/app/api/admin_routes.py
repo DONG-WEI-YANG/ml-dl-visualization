@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from app.auth.models import UserOut, UserUpdate, UserCreate
 from app.auth.utils import hash_password
 from app.auth.dependencies import require_admin, require_teacher_or_admin
 from app.db import get_db, get_all_settings, set_setting
 from app.llm.factory import list_available_providers
 from app.nlp.trainer import train_models
+from app.audit import log_audit
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -33,7 +34,7 @@ async def list_users(
     admin: dict = Depends(require_admin),
 ):
     conn = get_db()
-    conditions = []
+    conditions = ["deleted_at IS NULL"]
     params = []
     if role:
         conditions.append("role = ?")
@@ -41,7 +42,7 @@ async def list_users(
     if semester:
         conditions.append("semester = ?")
         params.append(semester)
-    where = f" WHERE {' AND '.join(conditions)}" if conditions else ""
+    where = f" WHERE {' AND '.join(conditions)}"
     rows = conn.execute(f"SELECT * FROM users{where} ORDER BY id", params).fetchall()
     conn.close()
     return [_user_out(r) for r in rows]
@@ -50,7 +51,9 @@ async def list_users(
 @router.get("/users/{user_id}", response_model=UserOut)
 async def get_user(user_id: int, admin: dict = Depends(require_admin)):
     conn = get_db()
-    row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    row = conn.execute(
+        "SELECT * FROM users WHERE id = ? AND deleted_at IS NULL", (user_id,)
+    ).fetchone()
     conn.close()
     if not row:
         raise HTTPException(status_code=404, detail="使用者不存在")
@@ -101,16 +104,21 @@ async def update_user(user_id: int, data: UserUpdate, admin: dict = Depends(requ
 
 
 @router.delete("/users/{user_id}")
-async def delete_user(user_id: int, user=Depends(require_admin)):
+async def delete_user(user_id: int, request: Request, user=Depends(require_admin)):
     if user["id"] == user_id:
-        raise HTTPException(status_code=400, detail="Cannot delete yourself")
+        raise HTTPException(status_code=400, detail="不能刪除自己的帳號")
     db = get_db()
-    db.execute("DELETE FROM teacher_students WHERE teacher_id = ? OR student_id = ?", (user_id, user_id))
-    db.execute("DELETE FROM learning_events WHERE student_id = ?", (user_id,))
-    cursor = db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    cursor = db.execute(
+        "UPDATE users SET is_active = 0, deleted_at = datetime('now'), "
+        "updated_at = datetime('now') WHERE id = ? AND deleted_at IS NULL",
+        (user_id,),
+    )
     db.commit()
+    db.close()
     if cursor.rowcount == 0:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=404, detail="使用者不存在")
+    ip = request.client.host if request.client else ""
+    log_audit("user.delete", actor=user, target_type="user", target_id=user_id, ip=ip)
     return {"deleted": True}
 
 
