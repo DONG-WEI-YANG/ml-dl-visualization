@@ -76,7 +76,7 @@ async def change_password(
 
 
 @router.post("/register", response_model=UserOut)
-async def register(req: UserCreate, admin: dict = Depends(require_admin)):
+async def register(req: UserCreate, request: Request, admin: dict = Depends(require_admin)):
     """Admin creates new user accounts."""
     if req.role not in ("admin", "teacher", "student"):
         raise HTTPException(status_code=400, detail="角色必須為 admin、teacher 或 student")
@@ -92,4 +92,6 @@ async def register(req: UserCreate, admin: dict = Depends(require_admin)):
     conn.commit()
     user = conn.execute("SELECT * FROM users WHERE id = ?", (cursor.lastrowid,)).fetchone()
     conn.close()
+    log_audit("user.create", actor=admin, target_type="user", target_id=cursor.lastrowid,
+              detail={"username": req.username, "role": req.role}, ip=request.client.host if request.client else "")
     return _user_out(dict(user))

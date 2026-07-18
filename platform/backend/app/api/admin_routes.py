@@ -63,7 +63,7 @@ async def get_user(user_id: int, admin: dict = Depends(require_admin)):
 
 
 @router.put("/users/{user_id}", response_model=UserOut)
-async def update_user(user_id: int, data: UserUpdate, admin: dict = Depends(require_admin)):
+async def update_user(user_id: int, data: UserUpdate, request: Request, admin: dict = Depends(require_admin)):
     conn = get_db()
     row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     if not row:
@@ -93,6 +93,7 @@ async def update_user(user_id: int, data: UserUpdate, admin: dict = Depends(requ
     if data.password is not None:
         updates.append("password_hash = ?")
         params.append(hash_password(data.password))
+        updates.append("must_change_password = 1")
 
     if updates:
         updates.append("updated_at = datetime('now')")
@@ -102,6 +103,16 @@ async def update_user(user_id: int, data: UserUpdate, admin: dict = Depends(requ
 
     updated = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     conn.close()
+
+    changed = [f for f in ("display_name", "email", "role", "is_active", "semester")
+               if getattr(data, f) is not None]
+    ip = request.client.host if request.client else ""
+    if changed:
+        log_audit("user.update", actor=admin, target_type="user", target_id=user_id,
+                  detail={"fields": changed}, ip=ip)
+    if data.password is not None:
+        log_audit("user.password_reset", actor=admin, target_type="user", target_id=user_id, ip=ip)
+
     return _user_out(updated)
 
 
@@ -175,7 +186,7 @@ async def archive_semester(semester: str, request: Request, admin: dict = Depend
 
 
 @router.post("/teachers/{teacher_id}/students/{student_id}")
-async def assign_student_to_teacher(teacher_id: int, student_id: int, admin: dict = Depends(require_admin)):
+async def assign_student_to_teacher(teacher_id: int, student_id: int, request: Request, admin: dict = Depends(require_admin)):
     conn = get_db()
     teacher = conn.execute("SELECT * FROM users WHERE id = ? AND role = 'teacher'", (teacher_id,)).fetchone()
     student = conn.execute("SELECT * FROM users WHERE id = ? AND role = 'student'", (student_id,)).fetchone()
@@ -191,15 +202,21 @@ async def assign_student_to_teacher(teacher_id: int, student_id: int, admin: dic
     )
     conn.commit()
     conn.close()
+    ip = request.client.host if request.client else ""
+    log_audit("teacher_student.assign", actor=admin, target_type="teacher_student",
+              target_id=f"{teacher_id}:{student_id}", ip=ip)
     return {"status": "assigned"}
 
 
 @router.delete("/teachers/{teacher_id}/students/{student_id}")
-async def remove_student_from_teacher(teacher_id: int, student_id: int, admin: dict = Depends(require_admin)):
+async def remove_student_from_teacher(teacher_id: int, student_id: int, request: Request, admin: dict = Depends(require_admin)):
     conn = get_db()
     conn.execute("DELETE FROM teacher_students WHERE teacher_id = ? AND student_id = ?", (teacher_id, student_id))
     conn.commit()
     conn.close()
+    ip = request.client.host if request.client else ""
+    log_audit("teacher_student.remove", actor=admin, target_type="teacher_student",
+              target_id=f"{teacher_id}:{student_id}", ip=ip)
     return {"status": "removed"}
 
 
@@ -241,13 +258,16 @@ async def get_settings(admin: dict = Depends(require_admin)):
 
 
 @router.put("/settings")
-async def update_settings(data: dict, admin: dict = Depends(require_admin)):
+async def update_settings(data: dict, request: Request, admin: dict = Depends(require_admin)):
     """Update system settings. Accepts key-value pairs."""
     allowed_keys = {"llm_provider", "llm_model", "rag_enabled", "rag_top_k", "current_semester"}
     for key, value in data.items():
         if key not in allowed_keys:
             raise HTTPException(status_code=400, detail=f"不允許的設定項: {key}")
         set_setting(key, str(value))
+    ip = request.client.host if request.client else ""
+    log_audit("settings.update", actor=admin, target_type="setting",
+              detail={"keys": sorted(data.keys())}, ip=ip)
     return {"status": "updated", "settings": get_all_settings()}
 
 
@@ -255,7 +275,7 @@ async def update_settings(data: dict, admin: dict = Depends(require_admin)):
 
 
 @router.post("/train-nlp")
-async def train_nlp_models(admin: dict = Depends(require_admin)):
+async def train_nlp_models(request: Request, admin: dict = Depends(require_admin)):
     """Train all NLP models (intent, emotion, corpus TF-IDF)."""
     try:
         results = train_models()
@@ -271,6 +291,8 @@ async def train_nlp_models(admin: dict = Depends(require_admin)):
         reload_topic()
         reload_reranker()
 
+        ip = request.client.host if request.client else ""
+        log_audit("nlp.train", actor=admin, target_type="nlp", ip=ip)
         return {"status": "trained", "results": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"訓練失敗: {str(e)}")
@@ -280,10 +302,12 @@ async def train_nlp_models(admin: dict = Depends(require_admin)):
 
 
 @router.post("/enrichment/trigger")
-async def trigger_enrichment(admin: dict = Depends(require_admin)):
+async def trigger_enrichment(request: Request, admin: dict = Depends(require_admin)):
     """Manually trigger web enrichment. Admin only."""
     from app.rag.web_enricher import enrich_from_web
     result = await enrich_from_web()
+    ip = request.client.host if request.client else ""
+    log_audit("enrichment.trigger", actor=admin, target_type="nlp", ip=ip)
     return {"status": "ok", **result}
 
 
@@ -304,7 +328,7 @@ async def admin_list_questions(week: int | None = None, _user=Depends(require_ad
 
 
 @router.post("/quiz/questions")
-async def admin_create_question(body: dict, _user=Depends(require_admin)):
+async def admin_create_question(body: dict, request: Request, _user=Depends(require_admin)):
     from app.quiz.questions import create_question
     required = {"id", "week", "question", "options", "answer"}
     if not required.issubset(body.keys()):
@@ -317,21 +341,27 @@ async def admin_create_question(body: dict, _user=Depends(require_admin)):
         q = create_question(body)
     except Exception as e:
         raise HTTPException(400, str(e))
+    ip = request.client.host if request.client else ""
+    log_audit("quiz.create", actor=_user, target_type="quiz_question", target_id=body["id"], ip=ip)
     return {"question": q}
 
 
 @router.put("/quiz/questions/{question_id}")
-async def admin_update_question(question_id: str, body: dict, _user=Depends(require_admin)):
+async def admin_update_question(question_id: str, body: dict, request: Request, _user=Depends(require_admin)):
     from app.quiz.questions import update_question
     q = update_question(question_id, body)
     if not q:
         raise HTTPException(404, "Question not found")
+    ip = request.client.host if request.client else ""
+    log_audit("quiz.update", actor=_user, target_type="quiz_question", target_id=question_id, ip=ip)
     return {"question": q}
 
 
 @router.delete("/quiz/questions/{question_id}")
-async def admin_delete_question(question_id: str, _user=Depends(require_admin)):
+async def admin_delete_question(question_id: str, request: Request, _user=Depends(require_admin)):
     from app.quiz.questions import delete_question
     if not delete_question(question_id):
         raise HTTPException(404, "Question not found")
+    ip = request.client.host if request.client else ""
+    log_audit("quiz.delete", actor=_user, target_type="quiz_question", target_id=question_id, ip=ip)
     return {"deleted": True}
