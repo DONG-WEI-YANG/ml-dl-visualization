@@ -1,5 +1,7 @@
+import secrets
+
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
-from app.auth.models import UserOut, UserUpdate, UserCreate
+from app.auth.models import UserOut, UserUpdate, UserCreate, ImportRow, ImportRequest
 from app.auth.utils import hash_password
 from app.auth.dependencies import require_admin, require_teacher_or_admin
 from app.db import get_db, get_all_settings, set_setting
@@ -120,6 +122,37 @@ async def delete_user(user_id: int, request: Request, user=Depends(require_admin
     ip = request.client.host if request.client else ""
     log_audit("user.delete", actor=user, target_type="user", target_id=user_id, ip=ip)
     return {"deleted": True}
+
+
+@router.post("/users/import")
+async def import_users(req: ImportRequest, request: Request, admin: dict = Depends(require_admin)):
+    from app.db import get_setting
+    semester = req.semester or get_setting("current_semester", "")
+    conn = get_db()
+    created, skipped = [], []
+    for row in req.rows:
+        username = row.username.strip()
+        if not username:
+            skipped.append({"username": row.username, "reason": "帳號為空"})
+            continue
+        existing = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+        if existing:
+            skipped.append({"username": username, "reason": "帳號已存在"})
+            continue
+        initial_password = secrets.token_urlsafe(9)  # 12 chars
+        conn.execute(
+            "INSERT INTO users (username, password_hash, display_name, email, role, "
+            "semester, must_change_password) VALUES (?, ?, ?, ?, 'student', ?, 1)",
+            (username, hash_password(initial_password),
+             row.display_name.strip() or username, row.email.strip(), semester),
+        )
+        created.append({"username": username, "initial_password": initial_password})
+    conn.commit()
+    conn.close()
+    ip = request.client.host if request.client else ""
+    log_audit("user.import", actor=admin, target_type="user",
+              detail={"created": len(created), "skipped": len(skipped), "semester": semester}, ip=ip)
+    return {"created": created, "skipped": skipped}
 
 
 # ── Teacher-Student assignment (admin only) ──

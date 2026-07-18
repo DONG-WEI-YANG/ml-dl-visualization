@@ -42,6 +42,17 @@ class ChangePasswordRequest(BaseModel):
     new_password: str
 
 
+class ImportRow(BaseModel):
+    username: str
+    display_name: str = ""
+    email: str = ""
+
+
+class ImportRequest(BaseModel):
+    semester: str = ""
+    rows: list[ImportRow]
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
