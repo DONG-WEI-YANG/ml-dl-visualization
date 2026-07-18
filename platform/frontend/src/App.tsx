@@ -12,6 +12,14 @@ import QuizManagement from "./pages/QuizManagement";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import CloudLoadingState from "./components/CloudLoadingState";
+import ChangePasswordDialog from "./components/auth/ChangePasswordDialog";
+
+function ForcedPasswordGate() {
+  const { user } = useAuth();
+  const [dismissed, setDismissed] = useState(false);
+  if (!user?.must_change_password || dismissed) return null;
+  return <ChangePasswordDialog forced onClose={() => setDismissed(true)} />;
+}
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { user, loading, verification, cloudStatus, retryVerification, logout } = useAuth();
@@ -43,6 +51,7 @@ export default function App() {
               element={
                 <RequireAuth>
                   <Layout />
+                  <ForcedPasswordGate />
                 </RequireAuth>
               }
             >

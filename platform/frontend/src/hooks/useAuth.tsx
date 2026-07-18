@@ -16,6 +16,7 @@ interface User {
   display_name: string;
   role: "admin" | "teacher" | "student";
   semester: string;
+  must_change_password?: boolean;
 }
 
 interface AuthContextType {
