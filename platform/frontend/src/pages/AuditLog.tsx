@@ -21,6 +21,12 @@ interface AuditResponse {
   page_size: number;
 }
 
+interface UserOption {
+  id: number;
+  username: string;
+  display_name: string;
+}
+
 type Tab = "admin" | "login" | "learning";
 const PAGE_SIZE = 50;
 
@@ -29,21 +35,34 @@ export default function AuditLog() {
   const [tab, setTab] = useState<Tab>("admin");
   const [page, setPage] = useState(1);
   const [actionFilter, setActionFilter] = useState("");
+  const [actorFilter, setActorFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [users, setUsers] = useState<UserOption[]>([]);
   const [data, setData] = useState<AuditResponse | null>(null);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetchAPI<UserOption[]>("/api/admin/users", undefined, token ?? undefined)
+      .then((res) => setUsers(res))
+      .catch(() => {});
+  }, [token]);
 
   const buildQuery = useCallback(
     (forExport = false) => {
       const params = new URLSearchParams();
       if (tab === "login") params.set("action_prefix", "login");
       else if (tab === "admin" && actionFilter) params.set("action_prefix", actionFilter);
+      if (actorFilter) params.set("actor_id", actorFilter);
+      if (fromDate) params.set("from", `${fromDate} 00:00:00`);
+      if (toDate) params.set("to", `${toDate} 23:59:59`);
       if (!forExport) {
         params.set("page", String(page));
         params.set("page_size", String(PAGE_SIZE));
       }
       return params.toString();
     },
-    [tab, actionFilter, page],
+    [tab, actionFilter, actorFilter, fromDate, toDate, page],
   );
 
   useEffect(() => {
@@ -99,7 +118,7 @@ export default function AuditLog() {
         </p>
       ) : (
         <>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             {tab === "admin" && (
               <select
                 value={actionFilter}
@@ -116,6 +135,36 @@ export default function AuditLog() {
                 <option value="nlp">NLP 訓練</option>
               </select>
             )}
+            <select
+              value={actorFilter}
+              onChange={(e) => { setActorFilter(e.target.value); setPage(1); }}
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+              aria-label="使用者篩選"
+            >
+              <option value="">全部使用者</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{`${u.display_name} (${u.username})`}</option>
+              ))}
+            </select>
+            <div className="flex items-center gap-1.5 text-sm text-gray-500">
+              <label htmlFor="audit-from-date">起</label>
+              <input
+                id="audit-from-date"
+                type="date"
+                value={fromDate}
+                onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+                className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
+              />
+              <label htmlFor="audit-to-date">訖</label>
+              <input
+                id="audit-to-date"
+                type="date"
+                value={toDate}
+                onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+                className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
+              />
+              <span className="text-xs text-gray-400">(UTC)</span>
+            </div>
             <span className="text-sm text-gray-500">{data ? `共 ${data.total} 筆` : ""}</span>
             <button
               onClick={exportCsv}

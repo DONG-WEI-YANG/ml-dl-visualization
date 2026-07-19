@@ -154,7 +154,7 @@ export default function UserManagement() {
     const semester = window.prompt("輸入要封存的學期（例如 114-2）");
     if (!semester) return;
     try {
-      const data = await authFetch(`/api/admin/semesters/${semester}/archive`, "POST");
+      const data = await authFetch(`/api/admin/semesters/${encodeURIComponent(semester)}/archive`, "POST");
       flash(`已封存學期 ${semester}，共停用 ${data.archived} 位學生`);
       fetchUsers();
     } catch (err: unknown) {
