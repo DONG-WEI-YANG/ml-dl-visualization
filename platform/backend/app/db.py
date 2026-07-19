@@ -95,6 +95,16 @@ def init_db():
             conn.commit()
         except sqlite3.OperationalError:
             pass  # Column already exists
+        else:
+            if "must_change_password" in ddl:
+                # One-shot upgrade: this branch only runs the moment the
+                # column is first added, so an existing deployment's admin
+                # row (old password, no forced-change flag) is forced to
+                # change its password on next login.
+                conn.execute(
+                    "UPDATE users SET must_change_password = 1 WHERE username = 'admin'"
+                )
+                conn.commit()
     # Seed default admin if none exists
     existing = conn.execute("SELECT id FROM users WHERE role = 'admin' LIMIT 1").fetchone()
     if not existing:

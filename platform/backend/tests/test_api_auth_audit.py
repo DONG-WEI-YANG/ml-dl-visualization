@@ -48,3 +48,18 @@ def test_logout_audited():
     assert resp.status_code == 200
     row = _last_audit("logout")
     assert row is not None and row["actor_username"] == "admin"
+
+
+def test_admin_registered_user_must_change_password():
+    admin_token = _admin_token()
+    resp = client.post(
+        "/api/auth/register",
+        json={"username": "forced_pw_user1", "password": "somepass1", "role": "student"},
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
+    assert resp.status_code == 200
+    login = client.post(
+        "/api/auth/login", json={"username": "forced_pw_user1", "password": "somepass1"}
+    )
+    assert login.status_code == 200
+    assert login.json()["user"]["must_change_password"] is True

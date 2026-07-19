@@ -86,7 +86,8 @@ async def register(req: UserCreate, request: Request, admin: dict = Depends(requ
         raise HTTPException(status_code=409, detail="使用者名稱已存在")
     semester = req.semester or get_setting("current_semester", "")
     cursor = conn.execute(
-        "INSERT INTO users (username, password_hash, display_name, email, role, semester) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO users (username, password_hash, display_name, email, role, semester, must_change_password) "
+        "VALUES (?, ?, ?, ?, ?, ?, 1)",
         (req.username, hash_password(req.password), req.display_name or req.username, req.email, req.role, semester),
     )
     conn.commit()

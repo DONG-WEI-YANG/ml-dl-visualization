@@ -34,7 +34,13 @@ sqlite3 platform/backend/data/app.db < backup/app_YYYYMMDD.sql
 
 **建議保留最近 30 天的備份。**
 
-### 1.3 日誌監控
+### 1.3 既有部署升級到帳號稽核版本
+
+若既有 Render 部署尚未設定過 `DEFAULT_ADMIN_PASSWORD`，升級到含帳號稽核（audit log、強制改密）功能的版本前，請先在 Render 後台為該服務手動設定 `DEFAULT_ADMIN_PASSWORD` 環境變數（`render.yaml` 已將此變數標記為 `sync: false`，需手動輸入，不會被覆寫）。
+
+升級部署後，資料庫遷移會自動將既有 `admin` 帳號標記為「需強制改密」（`must_change_password = 1`），admin 下次登入時會被要求變更密碼，不需要額外手動操作。
+
+### 1.4 日誌監控
 
 ```bash
 # 查看即時日誌
