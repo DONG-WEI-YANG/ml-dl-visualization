@@ -5,6 +5,7 @@ import { useAuth } from "../../hooks/useAuth";
 interface ImportResult {
   created: { username: string; initial_password: string }[];
   skipped: { username: string; reason: string }[];
+  restored?: { username: string; initial_password: string }[];
 }
 
 interface UserImportDialogProps {
@@ -53,8 +54,9 @@ export default function UserImportDialog({ onDone, onClose }: UserImportDialogPr
 
   const downloadPasswords = () => {
     if (!result) return;
+    const restored = result.restored ?? [];
     const csv = "﻿帳號,初始密碼\n" +
-      result.created.map((c) => `${c.username},${c.initial_password}`).join("\n");
+      [...result.created, ...restored].map((c) => `${c.username},${c.initial_password}`).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -116,41 +118,69 @@ export default function UserImportDialog({ onDone, onClose }: UserImportDialogPr
           </>
         ) : (
           <>
-            <p className="text-sm text-gray-600">
-              成功建立 {result.created.length} 筆，略過 {result.skipped.length} 筆。
-              <span className="text-amber-600">初始密碼僅顯示這一次，請立即下載保存。</span>
-            </p>
-            {result.created.length > 0 && (
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-gray-50 text-left text-gray-600">
-                    <tr><th className="px-3 py-1.5">帳號</th><th className="px-3 py-1.5">初始密碼</th></tr>
-                  </thead>
-                  <tbody>
-                    {result.created.map((c) => (
-                      <tr key={c.username} className="border-t border-gray-100">
-                        <td className="px-3 py-1.5 font-mono">{c.username}</td>
-                        <td className="px-3 py-1.5 font-mono">{c.initial_password}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            {result.skipped.length > 0 && (
-              <ul className="text-sm text-gray-500 list-disc pl-5">
-                {result.skipped.map((s, i) => (
-                  <li key={i}>{s.username || "（空）"}：{s.reason}</li>
-                ))}
-              </ul>
-            )}
-            <div className="flex justify-end gap-2">
-              <button onClick={downloadPasswords} disabled={result.created.length === 0}
-                className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40">
-                下載初始密碼 CSV
-              </button>
-              <button onClick={onClose} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">完成</button>
-            </div>
+            {(() => {
+              const restored = result.restored ?? [];
+              return (
+                <>
+                  <p className="text-sm text-gray-600">
+                    成功建立 {result.created.length} 筆，還原 {restored.length} 筆，略過 {result.skipped.length} 筆。
+                    <span className="text-amber-600">初始密碼僅顯示這一次，請立即下載保存。</span>
+                  </p>
+                  {result.created.length > 0 && (
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <table className="min-w-full text-sm">
+                        <thead className="bg-gray-50 text-left text-gray-600">
+                          <tr><th className="px-3 py-1.5">帳號</th><th className="px-3 py-1.5">初始密碼</th></tr>
+                        </thead>
+                        <tbody>
+                          {result.created.map((c) => (
+                            <tr key={c.username} className="border-t border-gray-100">
+                              <td className="px-3 py-1.5 font-mono">{c.username}</td>
+                              <td className="px-3 py-1.5 font-mono">{c.initial_password}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {restored.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-teal-700">已還原帳號</h3>
+                      <p className="text-xs text-gray-500 mb-1">原有學習歷程已保留，僅重設密碼並要求重新設定。</p>
+                      <div className="border border-teal-200 rounded-lg overflow-hidden">
+                        <table className="min-w-full text-sm">
+                          <thead className="bg-teal-50 text-left text-teal-800">
+                            <tr><th className="px-3 py-1.5">帳號</th><th className="px-3 py-1.5">初始密碼</th></tr>
+                          </thead>
+                          <tbody>
+                            {restored.map((r) => (
+                              <tr key={r.username} className="border-t border-teal-100">
+                                <td className="px-3 py-1.5 font-mono">{r.username}</td>
+                                <td className="px-3 py-1.5 font-mono">{r.initial_password}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {result.skipped.length > 0 && (
+                    <ul className="text-sm text-gray-500 list-disc pl-5">
+                      {result.skipped.map((s, i) => (
+                        <li key={i}>{s.username || "（空）"}：{s.reason}</li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="flex justify-end gap-2">
+                    <button onClick={downloadPasswords} disabled={result.created.length === 0 && restored.length === 0}
+                      className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-40">
+                      下載初始密碼 CSV
+                    </button>
+                    <button onClick={onClose} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">完成</button>
+                  </div>
+                </>
+              );
+            })()}
           </>
         )}
       </div>

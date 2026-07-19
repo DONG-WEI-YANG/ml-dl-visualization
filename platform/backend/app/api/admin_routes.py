@@ -144,7 +144,9 @@ async def import_users(req: ImportRequest, request: Request, admin: dict = Depen
     from app.db import get_setting
     semester = req.semester or get_setting("current_semester", "")
     conn = get_db()
-    created, skipped = [], []
+    ip = request.client.host if request.client else ""
+    created, skipped, restored = [], [], []
+    restored_ids = []  # audited after commit — log_audit opens its own connection
     for row in req.rows:
         username = row.username.strip()
         if not username:
@@ -154,8 +156,20 @@ async def import_users(req: ImportRequest, request: Request, admin: dict = Depen
             "SELECT id, deleted_at FROM users WHERE username = ?", (username,)
         ).fetchone()
         if existing:
-            reason = "帳號已存在（已封存）" if existing["deleted_at"] is not None else "帳號已存在"
-            skipped.append({"username": username, "reason": reason})
+            if existing["deleted_at"] is not None:
+                # Re-enrolling student: restore the archived account so their
+                # learning history (keyed by user id) stays linked.
+                initial_password = secrets.token_urlsafe(9)  # 12 chars
+                conn.execute(
+                    "UPDATE users SET deleted_at = NULL, is_active = 1, password_hash = ?, "
+                    "must_change_password = 1, semester = ?, updated_at = datetime('now') "
+                    "WHERE id = ?",
+                    (hash_password(initial_password), semester, existing["id"]),
+                )
+                restored.append({"username": username, "initial_password": initial_password})
+                restored_ids.append(existing["id"])
+            else:
+                skipped.append({"username": username, "reason": "帳號已存在"})
             continue
         initial_password = secrets.token_urlsafe(9)  # 12 chars
         conn.execute(
@@ -167,10 +181,13 @@ async def import_users(req: ImportRequest, request: Request, admin: dict = Depen
         created.append({"username": username, "initial_password": initial_password})
     conn.commit()
     conn.close()
-    ip = request.client.host if request.client else ""
+    for user_id in restored_ids:
+        log_audit("user.restore", actor=admin, target_type="user",
+                  target_id=user_id, detail={"via": "import"}, ip=ip)
     log_audit("user.import", actor=admin, target_type="user",
-              detail={"created": len(created), "skipped": len(skipped), "semester": semester}, ip=ip)
-    return {"created": created, "skipped": skipped}
+              detail={"created": len(created), "skipped": len(skipped),
+                       "restored": len(restored), "semester": semester}, ip=ip)
+    return {"created": created, "skipped": skipped, "restored": restored}
 
 
 @router.post("/semesters/{semester}/archive")

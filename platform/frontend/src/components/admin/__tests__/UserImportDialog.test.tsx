@@ -51,4 +51,23 @@ describe("UserImportDialog", () => {
       "t"
     );
   });
+
+  it("shows restored accounts with their initial passwords and a note", async () => {
+    (fetchAPI as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      created: [],
+      skipped: [],
+      restored: [{ username: "old_user1", initial_password: "restoredPW1234" }],
+    });
+    render(<UserImportDialog onDone={() => {}} onClose={() => {}} />);
+    fireEvent.change(screen.getByLabelText(/名單內容/), {
+      target: { value: "old_user1,舊生" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /開始匯入/ }));
+    await waitFor(() => {
+      expect(screen.getByText("已還原帳號")).toBeDefined();
+      expect(screen.getByText("old_user1")).toBeDefined();
+      expect(screen.getByText("restoredPW1234")).toBeDefined();
+      expect(screen.getByText(/原有學習歷程已保留/)).toBeDefined();
+    });
+  });
 });
