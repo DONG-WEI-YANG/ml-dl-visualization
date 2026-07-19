@@ -27,6 +27,7 @@ platform/backend/data/nlp_models/*.pkl
 .vscode/
 .idea/
 .worktrees/
+.superpowers/
 *.swp
 *.swo
 *~
