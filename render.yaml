@@ -14,6 +14,6 @@ services:
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: DEFAULT_ADMIN_PASSWORD
-        sync: false
+        generateValue: true
       - key: PYTHON_VERSION
         value: "3.11"

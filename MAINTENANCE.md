@@ -36,7 +36,7 @@ sqlite3 platform/backend/data/app.db < backup/app_YYYYMMDD.sql
 
 ### 1.3 既有部署升級到帳號稽核版本
 
-若既有 Render 部署尚未設定過 `DEFAULT_ADMIN_PASSWORD`，升級到含帳號稽核（audit log、強制改密）功能的版本前，請先在 Render 後台為該服務手動設定 `DEFAULT_ADMIN_PASSWORD` 環境變數（`render.yaml` 已將此變數標記為 `sync: false`，需手動輸入，不會被覆寫）。
+`render.yaml` 已將 `DEFAULT_ADMIN_PASSWORD` 標記為 `generateValue: true`：Render 會在 blueprint 同步時自動產生隨機值，不需手動設定。若是全新資料庫，admin 初始密碼即為此產生值，可在 Render 後台該服務的 Environment 頁面查看。
 
 升級部署後，資料庫遷移會自動將既有 `admin` 帳號標記為「需強制改密」（`must_change_password = 1`），admin 下次登入時會被要求變更密碼，不需要額外手動操作。
 
