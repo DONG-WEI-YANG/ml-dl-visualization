@@ -51,4 +51,18 @@ describe("useAuth logout", () => {
     expect(result.current.user).toBeNull();
     expect(localStorage.getItem("auth_token")).toBeNull();
   });
+
+  it("does not call the logout endpoint when there is no token, but still clears state", async () => {
+    const { result } = renderHook(() => useAuth(), { wrapper: AuthProvider });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    act(() => {
+      result.current.logout();
+    });
+
+    expect(fetchAPI).not.toHaveBeenCalled();
+    expect(result.current.token).toBeNull();
+    expect(result.current.user).toBeNull();
+    expect(localStorage.getItem("auth_token")).toBeNull();
+  });
 });

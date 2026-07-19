@@ -81,7 +81,9 @@ def _admin_headers():
 def test_admin_create_question_missing_fields_is_chinese():
     resp = client.post("/api/admin/quiz/questions", json={"id": "err-q1"}, headers=_admin_headers())
     assert resp.status_code == 400
-    assert "缺少必要欄位" in resp.json()["detail"]
+    detail = resp.json()["detail"]
+    assert "缺少必要欄位" in detail
+    assert "options" in detail and "{" not in detail
 
 
 def test_admin_create_question_too_few_options_is_chinese():

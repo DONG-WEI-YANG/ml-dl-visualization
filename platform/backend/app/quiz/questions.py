@@ -89,7 +89,7 @@ def grade_quiz(week: int, answers: dict[str, int]) -> dict:
 
 # --- Admin CRUD ---
 
-def create_question(data: dict) -> dict:
+def create_question(data: dict) -> dict | None:
     """Create a new quiz question."""
     db = get_db()
     try:

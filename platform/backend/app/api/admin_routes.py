@@ -360,7 +360,7 @@ async def admin_create_question(body: dict, request: Request, _user=Depends(requ
     from app.quiz.questions import create_question
     required = {"id", "week", "question", "options", "answer"}
     if not required.issubset(body.keys()):
-        raise HTTPException(400, f"缺少必要欄位：{required - body.keys()}")
+        raise HTTPException(400, "缺少必要欄位：" + "、".join(sorted(required - body.keys())))
     if not isinstance(body["options"], list) or len(body["options"]) < 2:
         raise HTTPException(400, "選項至少需要 2 個")
     if not isinstance(body["answer"], int) or body["answer"] >= len(body["options"]):
