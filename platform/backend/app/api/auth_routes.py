@@ -93,6 +93,6 @@ async def register(req: UserCreate, request: Request, admin: dict = Depends(requ
     conn.commit()
     user = conn.execute("SELECT * FROM users WHERE id = ?", (cursor.lastrowid,)).fetchone()
     conn.close()
-    log_audit("user.create", actor=admin, target_type="user", target_id=cursor.lastrowid,
+    log_audit("user.create", actor=admin, target_type="user", target_id=cursor.lastrowid or 0,
               detail={"username": req.username, "role": req.role}, ip=request.client.host if request.client else "")
     return _user_out(dict(user))

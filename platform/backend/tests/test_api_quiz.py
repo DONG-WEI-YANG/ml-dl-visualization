@@ -71,3 +71,65 @@ def test_submit_quiz_empty_answers():
     resp = client.post("/api/quiz/submit", json={"week": 1, "answers": {}})
     assert resp.status_code == 200
     assert resp.json()["score"] == 0
+
+
+def _admin_headers():
+    resp = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    return {"Authorization": f"Bearer {resp.json()['access_token']}"}
+
+
+def test_admin_create_question_missing_fields_is_chinese():
+    resp = client.post("/api/admin/quiz/questions", json={"id": "err-q1"}, headers=_admin_headers())
+    assert resp.status_code == 400
+    assert "缺少必要欄位" in resp.json()["detail"]
+
+
+def test_admin_create_question_too_few_options_is_chinese():
+    resp = client.post(
+        "/api/admin/quiz/questions",
+        json={"id": "err-q2", "week": 1, "question": "Q?", "options": ["a"], "answer": 0},
+        headers=_admin_headers(),
+    )
+    assert resp.status_code == 400
+    assert "選項" in resp.json()["detail"]
+
+
+def test_admin_create_question_bad_answer_index_is_chinese():
+    resp = client.post(
+        "/api/admin/quiz/questions",
+        json={"id": "err-q3", "week": 1, "question": "Q?", "options": ["a", "b"], "answer": 5},
+        headers=_admin_headers(),
+    )
+    assert resp.status_code == 400
+    assert "答案" in resp.json()["detail"]
+
+
+def test_admin_create_question_duplicate_id_is_chinese():
+    headers = _admin_headers()
+    resp = client.post(
+        "/api/admin/quiz/questions",
+        json={"id": "err-q4", "week": 1, "question": "Q?", "options": ["a", "b"], "answer": 0},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    resp = client.post(
+        "/api/admin/quiz/questions",
+        json={"id": "err-q4", "week": 1, "question": "Q?", "options": ["a", "b"], "answer": 0},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert "已存在" in resp.json()["detail"]
+
+
+def test_admin_update_question_not_found_is_chinese():
+    resp = client.put(
+        "/api/admin/quiz/questions/does-not-exist", json={"question": "x"}, headers=_admin_headers()
+    )
+    assert resp.status_code == 404
+    assert "不存在" in resp.json()["detail"]
+
+
+def test_admin_delete_question_not_found_is_chinese():
+    resp = client.delete("/api/admin/quiz/questions/does-not-exist", headers=_admin_headers())
+    assert resp.status_code == 404
+    assert "不存在" in resp.json()["detail"]

@@ -1,4 +1,5 @@
 import secrets
+import sqlite3
 
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from app.auth.models import UserOut, UserUpdate, UserCreate, ImportRow, ImportRequest
@@ -149,9 +150,12 @@ async def import_users(req: ImportRequest, request: Request, admin: dict = Depen
         if not username:
             skipped.append({"username": row.username, "reason": "帳號為空"})
             continue
-        existing = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
+        existing = conn.execute(
+            "SELECT id, deleted_at FROM users WHERE username = ?", (username,)
+        ).fetchone()
         if existing:
-            skipped.append({"username": username, "reason": "帳號已存在"})
+            reason = "帳號已存在（已封存）" if existing["deleted_at"] is not None else "帳號已存在"
+            skipped.append({"username": username, "reason": reason})
             continue
         initial_password = secrets.token_urlsafe(9)  # 12 chars
         conn.execute(
@@ -339,15 +343,17 @@ async def admin_create_question(body: dict, request: Request, _user=Depends(requ
     from app.quiz.questions import create_question
     required = {"id", "week", "question", "options", "answer"}
     if not required.issubset(body.keys()):
-        raise HTTPException(400, f"Missing required fields: {required - body.keys()}")
+        raise HTTPException(400, f"缺少必要欄位：{required - body.keys()}")
     if not isinstance(body["options"], list) or len(body["options"]) < 2:
-        raise HTTPException(400, "options must be a list with at least 2 items")
+        raise HTTPException(400, "選項至少需要 2 個")
     if not isinstance(body["answer"], int) or body["answer"] >= len(body["options"]):
-        raise HTTPException(400, "answer must be a valid index into options")
+        raise HTTPException(400, "答案索引超出選項範圍")
     try:
         q = create_question(body)
+    except sqlite3.IntegrityError:
+        raise HTTPException(400, "題目 ID 已存在")
     except Exception as e:
-        raise HTTPException(400, str(e))
+        raise HTTPException(400, f"建立題目失敗：{e}")
     ip = request.client.host if request.client else ""
     log_audit("quiz.create", actor=_user, target_type="quiz_question", target_id=body["id"], ip=ip)
     return {"question": q}
@@ -358,7 +364,7 @@ async def admin_update_question(question_id: str, body: dict, request: Request, 
     from app.quiz.questions import update_question
     q = update_question(question_id, body)
     if not q:
-        raise HTTPException(404, "Question not found")
+        raise HTTPException(404, "題目不存在")
     ip = request.client.host if request.client else ""
     log_audit("quiz.update", actor=_user, target_type="quiz_question", target_id=question_id, ip=ip)
     return {"question": q}
@@ -368,7 +374,7 @@ async def admin_update_question(question_id: str, body: dict, request: Request, 
 async def admin_delete_question(question_id: str, request: Request, _user=Depends(require_admin)):
     from app.quiz.questions import delete_question
     if not delete_question(question_id):
-        raise HTTPException(404, "Question not found")
+        raise HTTPException(404, "題目不存在")
     ip = request.client.host if request.client else ""
     log_audit("quiz.delete", actor=_user, target_type="quiz_question", target_id=question_id, ip=ip)
     return {"deleted": True}

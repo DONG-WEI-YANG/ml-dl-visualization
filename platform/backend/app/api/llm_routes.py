@@ -7,7 +7,7 @@ from app.llm.factory import create_llm_provider
 from app.llm.tutor import AITutor
 from app.llm.base import LLMMessage
 from app.config import settings
-from app.db import get_setting
+from app.db import get_db, get_setting
 from app.auth.utils import decode_token
 from app.auth.dependencies import get_current_user
 from app.llm.quick_answer import build_quick_answer
@@ -111,6 +111,15 @@ async def chat(req: ChatRequest, user: dict = Depends(get_current_user)):
 async def chat_ws(websocket: WebSocket, token: str = Query(default="")):
     payload = decode_token(token) if token else None
     if not payload:
+        await websocket.close(code=4401, reason="需要登入")
+        return
+    conn = get_db()
+    user = conn.execute(
+        "SELECT id FROM users WHERE id = ? AND is_active = 1 AND deleted_at IS NULL",
+        (payload["sub"],),
+    ).fetchone()
+    conn.close()
+    if not user:
         await websocket.close(code=4401, reason="需要登入")
         return
     await websocket.accept()

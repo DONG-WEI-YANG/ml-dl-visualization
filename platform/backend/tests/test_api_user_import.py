@@ -51,6 +51,29 @@ def test_import_skips_duplicates_and_bad_rows():
     assert "dupuser" in reasons and "" in reasons
 
 
+def test_import_skips_archived_username_with_clear_reason():
+    client.post(
+        "/api/admin/users/import",
+        json={"rows": [{"username": "archived_user1"}]},
+        headers=_admin(),
+    )
+    conn = get_db()
+    uid = conn.execute(
+        "SELECT id FROM users WHERE username = ?", ("archived_user1",)
+    ).fetchone()["id"]
+    conn.close()
+    client.delete(f"/api/admin/users/{uid}", headers=_admin())
+
+    resp = client.post(
+        "/api/admin/users/import",
+        json={"rows": [{"username": "archived_user1"}]},
+        headers=_admin(),
+    )
+    data = resp.json()
+    reasons = {s["username"]: s["reason"] for s in data["skipped"]}
+    assert reasons["archived_user1"] == "帳號已存在（已封存）"
+
+
 def test_import_audited_with_count():
     client.post(
         "/api/admin/users/import",

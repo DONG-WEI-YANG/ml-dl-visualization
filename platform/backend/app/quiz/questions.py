@@ -5,10 +5,13 @@ from app.db import get_db
 def get_questions_for_week(week: int) -> list[dict]:
     """Fetch quiz questions for a given week from DB (without answers)."""
     db = get_db()
-    rows = db.execute(
-        "SELECT id, week, question, options, category FROM quiz_questions WHERE week = ? ORDER BY id",
-        (week,),
-    ).fetchall()
+    try:
+        rows = db.execute(
+            "SELECT id, week, question, options, category FROM quiz_questions WHERE week = ? ORDER BY id",
+            (week,),
+        ).fetchall()
+    finally:
+        db.close()
     return [
         {
             "id": row["id"],
@@ -24,7 +27,10 @@ def get_questions_for_week(week: int) -> list[dict]:
 def get_question_by_id(question_id: str) -> dict | None:
     """Fetch a single question by ID (with answer)."""
     db = get_db()
-    row = db.execute("SELECT * FROM quiz_questions WHERE id = ?", (question_id,)).fetchone()
+    try:
+        row = db.execute("SELECT * FROM quiz_questions WHERE id = ?", (question_id,)).fetchone()
+    finally:
+        db.close()
     if not row:
         return None
     return {
@@ -41,10 +47,13 @@ def get_question_by_id(question_id: str) -> dict | None:
 def grade_quiz(week: int, answers: dict[str, int]) -> dict:
     """Grade quiz answers against DB questions."""
     db = get_db()
-    rows = db.execute(
-        "SELECT id, question, options, answer, explanation FROM quiz_questions WHERE week = ?",
-        (week,),
-    ).fetchall()
+    try:
+        rows = db.execute(
+            "SELECT id, question, options, answer, explanation FROM quiz_questions WHERE week = ?",
+            (week,),
+        ).fetchall()
+    finally:
+        db.close()
 
     questions = {row["id"]: dict(row) for row in rows}
     results = []
@@ -83,18 +92,20 @@ def grade_quiz(week: int, answers: dict[str, int]) -> dict:
 def create_question(data: dict) -> dict:
     """Create a new quiz question."""
     db = get_db()
-    db.execute(
-        "INSERT INTO quiz_questions (id, week, question, options, answer, explanation, category) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (data["id"], data["week"], data["question"], json.dumps(data["options"], ensure_ascii=False),
-         data["answer"], data.get("explanation", ""), data.get("category", "concept")),
-    )
-    db.commit()
+    try:
+        db.execute(
+            "INSERT INTO quiz_questions (id, week, question, options, answer, explanation, category) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (data["id"], data["week"], data["question"], json.dumps(data["options"], ensure_ascii=False),
+             data["answer"], data.get("explanation", ""), data.get("category", "concept")),
+        )
+        db.commit()
+    finally:
+        db.close()
     return get_question_by_id(data["id"])
 
 
 def update_question(question_id: str, data: dict) -> dict | None:
     """Update an existing quiz question."""
-    db = get_db()
     fields = []
     values = []
     for key in ("week", "question", "answer", "explanation", "category"):
@@ -107,28 +118,38 @@ def update_question(question_id: str, data: dict) -> dict | None:
     if not fields:
         return get_question_by_id(question_id)
     values.append(question_id)
-    db.execute(f"UPDATE quiz_questions SET {', '.join(fields)} WHERE id = ?", values)
-    db.commit()
+    db = get_db()
+    try:
+        db.execute(f"UPDATE quiz_questions SET {', '.join(fields)} WHERE id = ?", values)
+        db.commit()
+    finally:
+        db.close()
     return get_question_by_id(question_id)
 
 
 def delete_question(question_id: str) -> bool:
     """Hard delete a quiz question."""
     db = get_db()
-    cursor = db.execute("DELETE FROM quiz_questions WHERE id = ?", (question_id,))
-    db.commit()
+    try:
+        cursor = db.execute("DELETE FROM quiz_questions WHERE id = ?", (question_id,))
+        db.commit()
+    finally:
+        db.close()
     return cursor.rowcount > 0
 
 
 def list_all_questions(week: int | None = None) -> list[dict]:
     """List all questions (with answers) for admin. Optionally filter by week."""
     db = get_db()
-    if week is not None:
-        rows = db.execute(
-            "SELECT * FROM quiz_questions WHERE week = ? ORDER BY id", (week,)
-        ).fetchall()
-    else:
-        rows = db.execute("SELECT * FROM quiz_questions ORDER BY week, id").fetchall()
+    try:
+        if week is not None:
+            rows = db.execute(
+                "SELECT * FROM quiz_questions WHERE week = ? ORDER BY id", (week,)
+            ).fetchall()
+        else:
+            rows = db.execute("SELECT * FROM quiz_questions ORDER BY week, id").fetchall()
+    finally:
+        db.close()
     return [
         {
             "id": row["id"],
