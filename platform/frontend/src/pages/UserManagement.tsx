@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { API_BASE } from "../lib/api";
 import UserImportDialog from "../components/admin/UserImportDialog";
@@ -62,7 +62,7 @@ export default function UserManagement() {
   const [assignMode, setAssignMode] = useState<{ teacherId: number; teacherName: string } | null>(null);
   const [teacherStudents, setTeacherStudents] = useState<User[]>([]);
 
-  const authFetch = async (path: string, method = "GET", body?: unknown) => {
+  const authFetch = useCallback(async (path: string, method = "GET", body?: unknown) => {
     const res = await fetch(`${API_BASE}${path}`, {
       method,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -74,14 +74,14 @@ export default function UserManagement() {
       throw new Error(err.detail || `Error ${res.status}`);
     }
     return res.json();
-  };
+  }, [logout, token]);
 
-  const flash = (text: string, type: "ok" | "err" = "ok") => {
+  const flash = useCallback((text: string, type: "ok" | "err" = "ok") => {
     setMessage({ text, type });
     setTimeout(() => setMessage({ text: "", type: "ok" }), 3000);
-  };
+  }, []);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (filterRole) params.set("role", filterRole);
@@ -92,9 +92,9 @@ export default function UserManagement() {
       setUsers(data);
     } catch { flash("無法載入使用者列表", "err"); }
     setLoading(false);
-  };
+  }, [authFetch, filterRole, filterSemester, flash]);
 
-  useEffect(() => { if (token) fetchUsers(); }, [token, filterRole, filterSemester]);
+  useEffect(() => { if (token) void fetchUsers(); }, [token, fetchUsers]);
 
   if (me?.role !== "admin") {
     return (

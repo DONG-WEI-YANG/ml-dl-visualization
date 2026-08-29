@@ -14,6 +14,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import cross_val_score
 import numpy as np
+import sklearn
 
 MODEL_DIR = Path(__file__).parent.parent.parent / "data" / "nlp_models"
 
@@ -996,7 +997,7 @@ def _generate_learning_style_data() -> tuple[list[str], list[str]]:
 def train_models() -> dict:
     """Train all NLP models and save to disk."""
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
-    results = {}
+    results = {"environment": {"scikit_learn": sklearn.__version__}}
 
     # 1. Intent classifier
     texts, labels = _generate_intent_data()

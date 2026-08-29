@@ -79,4 +79,27 @@ describe("QuizPanel", () => {
     const { container } = render(<QuizPanel week={99} />);
     await waitFor(() => { expect(container.innerHTML).toBe(""); });
   });
+
+  it("shows a recoverable message when questions cannot load", async () => {
+    mockFetchAPI.mockRejectedValueOnce(new Error("offline"));
+
+    render(<QuizPanel week={1} />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("無法載入測驗");
+    expect(screen.getByRole("button", { name: "重新載入測驗" })).toBeInTheDocument();
+  });
+
+  it("shows a submit error without discarding selected answers", async () => {
+    mockFetchAPI.mockResolvedValueOnce(MOCK_QUESTIONS);
+    render(<QuizPanel week={1} />);
+    await screen.findByText(/Python 中用來處理表格資料/);
+    fireEvent.click(screen.getByText("Pandas"));
+    fireEvent.click(screen.getByText(".py"));
+    mockFetchAPI.mockRejectedValueOnce(new Error("server"));
+
+    fireEvent.click(screen.getByText("提交答案"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("批改失敗");
+    expect(screen.getByText(/已作答 2\/2/)).toBeInTheDocument();
+  });
 });

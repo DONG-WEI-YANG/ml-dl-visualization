@@ -5,7 +5,7 @@ requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.34",
-    "scikit-learn>=1.6",
+    "scikit-learn>=1.8,<1.9",
     "numpy>=2.0",
     "pandas>=2.2",
     "matplotlib>=3.9",
@@ -21,3 +21,6 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "httpx>=0.28", "pytest-asyncio>=0.25", "pytest-cov>=6.0"]
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"

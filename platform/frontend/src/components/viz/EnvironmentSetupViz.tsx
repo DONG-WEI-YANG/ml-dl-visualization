@@ -674,12 +674,12 @@ function OverfittingView() {
 }
 
 /* ══════════════════ View 5: Glossary ══════════════════ */
+const BEGINNER_CATS = ["基礎概念", "資料處理"];
+
 function GlossaryView() {
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState<string>("基礎");
   const [showAdvanced, setShowAdvanced] = useState(false);
-
-  const BEGINNER_CATS = ["基礎概念", "資料處理"];
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();

@@ -1,5 +1,5 @@
 from openai import AsyncOpenAI
-from .base import LLMProvider, LLMMessage, LLMResponse
+from .base import LLMProvider, LLMMessage, LLMProviderError, LLMResponse
 
 
 class OpenAIProvider(LLMProvider):
@@ -12,12 +12,21 @@ class OpenAIProvider(LLMProvider):
         if system:
             msgs.append({"role": "system", "content": system})
         msgs.extend([{"role": m.role, "content": m.content} for m in messages])
-        resp = await self.client.chat.completions.create(model=self.model, messages=msgs)
-        choice = resp.choices[0]
+        try:
+            resp = await self.client.chat.completions.create(model=self.model, messages=msgs)
+            choice = resp.choices[0]
+            content = choice.message.content
+        except Exception as exc:
+            raise LLMProviderError("openai", "request_failed") from exc
+        if not content or not content.strip():
+            raise LLMProviderError("openai", "empty_response")
+        usage = None
+        if resp.usage is not None:
+            usage = {"input": resp.usage.prompt_tokens, "output": resp.usage.completion_tokens}
         return LLMResponse(
-            content=choice.message.content,
+            content=content,
             model=resp.model,
-            usage={"input": resp.usage.prompt_tokens, "output": resp.usage.completion_tokens},
+            usage=usage,
         )
 
     async def stream(self, messages: list[LLMMessage], system: str = ""):
@@ -25,9 +34,18 @@ class OpenAIProvider(LLMProvider):
         if system:
             msgs.append({"role": "system", "content": system})
         msgs.extend([{"role": m.role, "content": m.content} for m in messages])
-        stream = await self.client.chat.completions.create(
-            model=self.model, messages=msgs, stream=True
-        )
-        async for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+        emitted = False
+        try:
+            stream = await self.client.chat.completions.create(
+                model=self.model, messages=msgs, stream=True
+            )
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    emitted = True
+                    yield chunk.choices[0].delta.content
+        except LLMProviderError:
+            raise
+        except Exception as exc:
+            raise LLMProviderError("openai", "request_failed") from exc
+        if not emitted:
+            raise LLMProviderError("openai", "empty_response")

@@ -1,5 +1,3 @@
-import { useState, useCallback } from "react";
-
 // ─── Types & Constants ──────────────────────────────────────────────────────
 
 export type BackpropMode = "flow" | "step";
@@ -23,55 +21,6 @@ const STEP_FORMULAS = [
   "\\frac{\\partial L}{\\partial h_j} = \\sum_i \\frac{\\partial L}{\\partial o_i} \\cdot w_{ij} \\cdot \\sigma'(z_j)",
   "w_{ij} \\leftarrow w_{ij} - \\eta \\cdot \\frac{\\partial L}{\\partial w_{ij}}",
 ];
-
-// ─── Hook ───────────────────────────────────────────────────────────────────
-
-export function useBackpropAnimator() {
-  const [state, setState] = useState<BackpropState>({
-    mode: "flow",
-    step: 0,
-    isAnimating: false,
-  });
-
-  const setMode = useCallback((mode: BackpropMode) => {
-    setState((prev) => ({
-      ...prev,
-      mode,
-      step: 0,
-      isAnimating: mode === "flow",
-    }));
-  }, []);
-
-  const nextStep = useCallback(() => {
-    setState((prev) => {
-      if (prev.mode !== "step") return prev;
-      const next = Math.min(prev.step + 1, STEP_LABELS.length - 1);
-      return { ...prev, step: next };
-    });
-  }, []);
-
-  const prevStep = useCallback(() => {
-    setState((prev) => {
-      if (prev.mode !== "step") return prev;
-      const next = Math.max(prev.step - 1, 0);
-      return { ...prev, step: next };
-    });
-  }, []);
-
-  const reset = useCallback(() => {
-    setState({ mode: "flow", step: 0, isAnimating: false });
-  }, []);
-
-  return {
-    state,
-    setMode,
-    nextStep,
-    prevStep,
-    reset,
-    stepLabels: STEP_LABELS,
-    stepFormulas: STEP_FORMULAS,
-  };
-}
 
 // ─── BackpropOverlay Component ──────────────────────────────────────────────
 

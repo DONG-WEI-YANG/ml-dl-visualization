@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Request
 from app.auth.models import LoginRequest, TokenResponse, UserOut, UserCreate, ChangePasswordRequest
 from app.auth.utils import verify_password, hash_password, create_token
 from app.auth.dependencies import get_current_user, require_admin
-from app.db import get_db, get_setting
+from app.db import db_connection, get_setting
 from app.audit import log_audit
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
@@ -26,11 +26,10 @@ def _user_out(row: dict) -> UserOut:
 @router.post("/login", response_model=TokenResponse)
 async def login(req: LoginRequest, request: Request):
     ip = request.client.host if request.client else ""
-    conn = get_db()
-    user = conn.execute(
-        "SELECT * FROM users WHERE username = ? AND deleted_at IS NULL", (req.username,)
-    ).fetchone()
-    conn.close()
+    with db_connection() as conn:
+        user = conn.execute(
+            "SELECT * FROM users WHERE username = ? AND deleted_at IS NULL", (req.username,)
+        ).fetchone()
     if not user or not verify_password(req.password, user["password_hash"]):
         log_audit("login.failed", detail={"username": req.username}, ip=ip)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="帳號或密碼錯誤")
@@ -63,14 +62,12 @@ async def change_password(
         raise HTTPException(status_code=400, detail="新密碼長度至少 8 碼")
     if not verify_password(req.old_password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="舊密碼錯誤")
-    conn = get_db()
-    conn.execute(
-        "UPDATE users SET password_hash = ?, must_change_password = 0, "
-        "updated_at = datetime('now') WHERE id = ?",
-        (hash_password(req.new_password), user["id"]),
-    )
-    conn.commit()
-    conn.close()
+    with db_connection() as conn:
+        conn.execute(
+            "UPDATE users SET password_hash = ?, must_change_password = 0, "
+            "updated_at = datetime('now') WHERE id = ?",
+            (hash_password(req.new_password), user["id"]),
+        )
     log_audit("user.password_change", actor=user, target_type="user", target_id=user["id"], ip=ip)
     return {"status": "ok"}
 
@@ -80,19 +77,18 @@ async def register(req: UserCreate, request: Request, admin: dict = Depends(requ
     """Admin creates new user accounts."""
     if req.role not in ("admin", "teacher", "student"):
         raise HTTPException(status_code=400, detail="角色必須為 admin、teacher 或 student")
-    conn = get_db()
-    existing = conn.execute("SELECT id FROM users WHERE username = ?", (req.username,)).fetchone()
-    if existing:
-        raise HTTPException(status_code=409, detail="使用者名稱已存在")
     semester = req.semester or get_setting("current_semester", "")
-    cursor = conn.execute(
-        "INSERT INTO users (username, password_hash, display_name, email, role, semester, must_change_password) "
-        "VALUES (?, ?, ?, ?, ?, ?, 1)",
-        (req.username, hash_password(req.password), req.display_name or req.username, req.email, req.role, semester),
-    )
-    conn.commit()
-    user = conn.execute("SELECT * FROM users WHERE id = ?", (cursor.lastrowid,)).fetchone()
-    conn.close()
-    log_audit("user.create", actor=admin, target_type="user", target_id=cursor.lastrowid or 0,
+    with db_connection() as conn:
+        existing = conn.execute("SELECT id FROM users WHERE username = ?", (req.username,)).fetchone()
+        if existing:
+            raise HTTPException(status_code=409, detail="使用者名稱已存在")
+        cursor = conn.execute(
+            "INSERT INTO users (username, password_hash, display_name, email, role, semester, must_change_password) "
+            "VALUES (?, ?, ?, ?, ?, ?, 1)",
+            (req.username, hash_password(req.password), req.display_name or req.username, req.email, req.role, semester),
+        )
+        user_id = cursor.lastrowid or 0
+        user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    log_audit("user.create", actor=admin, target_type="user", target_id=user_id,
               detail={"username": req.username, "role": req.role}, ip=request.client.host if request.client else "")
     return _user_out(dict(user))

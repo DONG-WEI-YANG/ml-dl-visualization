@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import AuditLog from "../AuditLog";
 import { fetchAPI } from "../../lib/api";
@@ -31,6 +31,15 @@ vi.mock("../../hooks/useAuth", () => ({
 }));
 
 describe("AuditLog", () => {
+  beforeEach(() => {
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   it("renders audit rows from the API", async () => {
     render(<AuditLog />);
     await waitFor(() => {
@@ -41,6 +50,7 @@ describe("AuditLog", () => {
 
   it("shows tab buttons for the three views", async () => {
     render(<AuditLog />);
+    await screen.findByText("user.create");
     expect(screen.getByRole("button", { name: /管理動作/ })).toBeDefined();
     expect(screen.getByRole("button", { name: /登入歷程/ })).toBeDefined();
     expect(screen.getByRole("button", { name: /學習行為/ })).toBeDefined();
@@ -71,8 +81,6 @@ describe("AuditLog", () => {
     const [url, options] = fetchMock.mock.calls[0];
     expect(String(url)).toContain("/api/admin/audit-logs/export");
     expect(options.headers.Authorization).toBe("Bearer t");
-
-    vi.unstubAllGlobals();
   });
 
   it("renders user filter options fetched from the users API", async () => {
@@ -137,7 +145,5 @@ describe("AuditLog", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     const [url] = fetchMock.mock.calls[0];
     expect(String(url)).toContain("actor_id=2");
-
-    vi.unstubAllGlobals();
   });
 });

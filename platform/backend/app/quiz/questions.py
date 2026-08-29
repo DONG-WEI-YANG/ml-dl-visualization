@@ -49,32 +49,38 @@ def grade_quiz(week: int, answers: dict[str, int]) -> dict:
     db = get_db()
     try:
         rows = db.execute(
-            "SELECT id, question, options, answer, explanation FROM quiz_questions WHERE week = ?",
+            "SELECT id, question, options, answer, explanation FROM quiz_questions WHERE week = ? ORDER BY id",
             (week,),
         ).fetchall()
     finally:
         db.close()
 
     questions = {row["id"]: dict(row) for row in rows}
-    results = []
-    correct = 0
-    total = len(answers)
-
+    ignored_question_ids = sorted(set(answers) - set(questions))
     for qid, selected in answers.items():
         q = questions.get(qid)
         if not q:
-            results.append({"id": qid, "correct": False, "message": "題目不存在"})
             continue
+        options = json.loads(q["options"])
+        if selected < 0 or selected >= len(options):
+            raise ValueError(f"題目 {qid} 的選項索引超出範圍")
+
+    results = []
+    correct = 0
+    total = len(questions)
+
+    for qid, q in questions.items():
+        selected = answers.get(qid)
         opts = json.loads(q["options"])
-        is_correct = selected == q["answer"]
+        is_correct = selected is not None and selected == q["answer"]
         if is_correct:
             correct += 1
         results.append({
             "id": qid,
             "correct": is_correct,
-            "selected": selected,
-            "answer": q["answer"],
-            "answer_text": opts[q["answer"]] if q["answer"] < len(opts) else "",
+            "user_answer": selected,
+            "correct_answer": q["answer"],
+            "answer_text": opts[q["answer"]] if 0 <= q["answer"] < len(opts) else "",
             "explanation": q["explanation"],
         })
 
@@ -84,6 +90,7 @@ def grade_quiz(week: int, answers: dict[str, int]) -> dict:
         "total": total,
         "percentage": round(correct / total * 100, 1) if total > 0 else 0,
         "results": results,
+        "ignored_question_ids": ignored_question_ids,
     }
 
 

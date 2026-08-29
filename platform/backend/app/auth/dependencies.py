@@ -1,7 +1,7 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.auth.utils import decode_token
-from app.db import get_db
+from app.db import db_connection
 
 security = HTTPBearer()
 
@@ -10,12 +10,11 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     payload = decode_token(credentials.credentials)
     if not payload:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="無效或過期的令牌")
-    conn = get_db()
-    user = conn.execute(
-        "SELECT * FROM users WHERE id = ? AND is_active = 1 AND deleted_at IS NULL",
-        (payload["sub"],),
-    ).fetchone()
-    conn.close()
+    with db_connection() as conn:
+        user = conn.execute(
+            "SELECT * FROM users WHERE id = ? AND is_active = 1 AND deleted_at IS NULL",
+            (payload["sub"],),
+        ).fetchone()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="使用者不存在或已停用")
     return dict(user)

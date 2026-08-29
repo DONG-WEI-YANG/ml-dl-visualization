@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { API_BASE } from "../lib/api";
 
@@ -13,6 +13,22 @@ interface SettingsData {
   available_providers: ProviderInfo[];
 }
 
+interface LLMDiagnostics {
+  configured_provider: string;
+  configured_model: string;
+  effective_provider: string;
+  effective_model: string;
+  status: "ready" | "configured" | "degraded" | "error";
+  reason: string | null;
+  runtime_warnings?: string[];
+  probe: {
+    attempted: boolean;
+    ok?: boolean;
+    reason?: string;
+    latency_ms?: number;
+  };
+}
+
 export default function AdminSettings() {
   const { user, token, logout } = useAuth();
   const [data, setData] = useState<SettingsData | null>(null);
@@ -20,6 +36,9 @@ export default function AdminSettings() {
   const [message, setMessage] = useState("");
   const [ingestMsg, setIngestMsg] = useState("");
   const [trainMsg, setTrainMsg] = useState("");
+  const [diagnostics, setDiagnostics] = useState<LLMDiagnostics | null>(null);
+  const [diagnosticsError, setDiagnosticsError] = useState(false);
+  const [probing, setProbing] = useState(false);
   const [ragStats, setRagStats] = useState<{
     total_chunks: number;
     curriculum_chunks: number;
@@ -27,7 +46,7 @@ export default function AdminSettings() {
     by_week: { week: number; count: number }[];
   } | null>(null);
 
-  const authFetch = async <T,>(path: string, body?: unknown): Promise<T> => {
+  const authFetch = useCallback(async <T,>(path: string, body?: unknown): Promise<T> => {
     const res = await fetch(`${API_BASE}${path}`, {
       method: body ? "PUT" : "GET",
       headers: {
@@ -42,14 +61,28 @@ export default function AdminSettings() {
     }
     if (!res.ok) throw new Error(`Error ${res.status}`);
     return res.json();
-  };
+  }, [logout, token]);
 
-  const loadRagStats = () => {
+  const loadRagStats = useCallback(() => {
     fetch(`${API_BASE}/api/rag/stats`)
       .then((r) => r.json())
       .then(setRagStats)
       .catch(() => {});
-  };
+  }, []);
+
+  const loadDiagnostics = useCallback(async (probe = false) => {
+    setDiagnosticsError(false);
+    if (probe) setProbing(true);
+    try {
+      const suffix = probe ? "?probe=true" : "";
+      const result = await authFetch<LLMDiagnostics>(`/api/llm/diagnostics${suffix}`);
+      setDiagnostics(result);
+    } catch {
+      setDiagnosticsError(true);
+    } finally {
+      if (probe) setProbing(false);
+    }
+  }, [authFetch]);
 
   useEffect(() => {
     if (!token) return;
@@ -57,7 +90,8 @@ export default function AdminSettings() {
       .then(setData)
       .catch(() => setMessage("無法載入設定"));
     loadRagStats();
-  }, [token]);
+    void loadDiagnostics();
+  }, [authFetch, loadDiagnostics, loadRagStats, token]);
 
   if (user?.role !== "admin") {
     return (
@@ -75,6 +109,7 @@ export default function AdminSettings() {
       const res = await authFetch<{ settings: Record<string, string> }>("/api/admin/settings", updates);
       setData((prev) => prev ? { ...prev, settings: res.settings } : prev);
       setMessage("設定已儲存");
+      void loadDiagnostics();
     } catch {
       setMessage("儲存失敗");
     }
@@ -184,6 +219,91 @@ export default function AdminSettings() {
             {message}
           </p>
         )}
+      </div>
+
+      {/* Truthful configured → effective provider status */}
+      <div className="border border-slate-200 rounded-xl p-6 space-y-4" aria-labelledby="ai-runtime-status">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 id="ai-runtime-status" className="text-lg font-semibold text-gray-900">AI 運作狀態</h2>
+            <p className="mt-1 text-xs text-gray-500">設定模型與實際執行模型分開顯示，降級時不會假裝使用外部 AI。</p>
+          </div>
+          {diagnostics && (
+            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+              diagnostics.status === "ready" ? "bg-emerald-100 text-emerald-700" :
+              diagnostics.status === "degraded" ? "bg-amber-100 text-amber-800" :
+              diagnostics.status === "error" ? "bg-red-100 text-red-700" :
+              "bg-blue-100 text-blue-700"
+            }`} role="status">
+              {diagnostics.status === "ready" && "正常運作"}
+              {diagnostics.status === "degraded" && "已降級"}
+              {diagnostics.status === "error" && "探測失敗"}
+              {diagnostics.status === "configured" && "已設定，尚未探測"}
+            </span>
+          )}
+        </div>
+
+        {diagnostics ? (
+          <div className="grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-center" aria-label="AI provider resolution">
+            <div className="rounded-lg bg-slate-50 p-3">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">設定</p>
+              <p className="mt-1 break-all text-sm font-semibold text-slate-800">
+                {diagnostics.configured_provider} / {diagnostics.configured_model}
+              </p>
+            </div>
+            <span className="text-center text-slate-400" aria-hidden="true">→</span>
+            <div className="rounded-lg bg-blue-50 p-3">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-blue-600">實際執行</p>
+              <p className="mt-1 break-all text-sm font-semibold text-blue-900">
+                {diagnostics.effective_provider} / {diagnostics.effective_model}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">正在讀取 AI 狀態…</p>
+        )}
+
+        {diagnostics?.reason === "missing_api_key" && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            外部 AI 金鑰未設定，已改用本地 NLP。
+          </p>
+        )}
+        {diagnostics?.reason === "unknown_provider" && (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            設定的 AI provider 無法識別，已改用本地 NLP。
+          </p>
+        )}
+        {diagnostics?.runtime_warnings && diagnostics.runtime_warnings.length > 0 && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            <p className="font-medium">本地 AI 可回覆，但部分能力正在使用備援：</p>
+            <ul className="mt-1 list-disc space-y-1 pl-5">
+              {diagnostics.runtime_warnings.map((warning) => (
+                <li key={warning}>
+                  {warning === "sklearn_model_version_mismatch" && "分類模型與目前 scikit-learn 版本不一致。"}
+                  {warning === "semantic_model_uncached" && "語意向量模型尚未快取，改用關鍵字相似度。"}
+                  {warning === "semantic_model_unavailable" && "語意向量套件不可用，改用關鍵字相似度。"}
+                  {warning === "model_artifacts_missing" && "部分本地分類模型檔案缺失。"}
+                  {warning === "model_metadata_unavailable" && "無法驗證本地模型訓練版本。"}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {diagnosticsError && (
+          <p role="alert" className="text-sm text-red-700">無法讀取 AI 運作狀態，請稍後重試。</p>
+        )}
+        {diagnostics?.probe.attempted && diagnostics.probe.ok && (
+          <p className="text-xs text-emerald-700">探測成功 · {diagnostics.probe.latency_ms ?? 0} ms</p>
+        )}
+
+        <button
+          type="button"
+          onClick={() => void loadDiagnostics(true)}
+          disabled={probing}
+          className="rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {probing ? "探測中…" : "執行 AI 探測"}
+        </button>
       </div>
 
       {/* RAG Settings */}

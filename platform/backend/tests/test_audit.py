@@ -57,6 +57,6 @@ def test_log_audit_never_raises(monkeypatch):
     def boom():
         raise RuntimeError("db down")
 
-    monkeypatch.setattr(audit_mod, "get_db", boom)
+    monkeypatch.setattr(audit_mod, "db_connection", boom)
     # Must not raise
     log_audit("user.create", detail={})

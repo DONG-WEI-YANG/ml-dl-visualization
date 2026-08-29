@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { fetchAPI } from "../../lib/api";
 
 interface Question {
@@ -20,24 +20,34 @@ export default function QuizPanel({ week }: { week: number }) {
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<GradeResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<"load" | "submit" | null>(null);
 
-  useEffect(() => {
+  const loadQuestions = useCallback(() => {
+    setError(null);
     fetchAPI<{ questions: Question[] }>(`/api/quiz/week/${week}`)
       .then((data) => {
         setQuestions(data.questions);
         setAnswers({});
         setResult(null);
       })
-      .catch(() => setQuestions([]));
+      .catch(() => {
+        setQuestions([]);
+        setError("load");
+      });
   }, [week]);
+
+  useEffect(() => {
+    loadQuestions();
+  }, [loadQuestions]);
 
   const submit = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await fetchAPI<GradeResult>("/api/quiz/submit", { week, answers });
       setResult(data);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      setError("submit");
     }
     setLoading(false);
   };
@@ -63,7 +73,21 @@ export default function QuizPanel({ week }: { week: number }) {
   const categoryLabel = (cat: string) =>
     cat === "concept" ? "概念" : cat === "application" ? "應用" : "程式";
 
-  if (questions.length === 0) return null;
+  if (questions.length === 0) {
+    if (!error) return null;
+    return (
+      <div className="border border-amber-200 bg-amber-50 rounded-xl p-5" role="alert">
+        <p className="text-sm font-medium text-amber-800">無法載入測驗，請檢查連線後重試。</p>
+        <button
+          type="button"
+          onClick={loadQuestions}
+          className="mt-3 px-3 py-1.5 rounded-lg bg-amber-700 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+        >
+          重新載入測驗
+        </button>
+      </div>
+    );
+  }
 
   const categorySummary = getCategorySummary();
 
@@ -81,6 +105,12 @@ export default function QuizPanel({ week }: { week: number }) {
           </span>
         )}
       </div>
+
+      {error === "submit" && (
+        <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          批改失敗，答案已保留，請稍後再試。
+        </p>
+      )}
 
       <div className="space-y-4">
         {questions.map((q, qi) => {

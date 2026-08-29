@@ -1,19 +1,24 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider, useAuth } from "./hooks/useAuth";
 import Layout from "./components/Layout";
 import Home from "./pages/Home";
-import WeekPage from "./pages/WeekPage";
-import Dashboard from "./pages/Dashboard";
-import AdminSettings from "./pages/AdminSettings";
-import UserManagement from "./pages/UserManagement";
-import QuizManagement from "./pages/QuizManagement";
-import AuditLog from "./pages/AuditLog";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import CloudLoadingState from "./components/CloudLoadingState";
 import ChangePasswordDialog from "./components/auth/ChangePasswordDialog";
+
+const WeekPage = lazy(() => import("./pages/WeekPage"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const AdminSettings = lazy(() => import("./pages/AdminSettings"));
+const UserManagement = lazy(() => import("./pages/UserManagement"));
+const QuizManagement = lazy(() => import("./pages/QuizManagement"));
+const AuditLog = lazy(() => import("./pages/AuditLog"));
+
+function RouteFallback() {
+  return <div className="p-8 text-center text-sm text-gray-500" role="status">載入頁面中…</div>;
+}
 
 function ForcedPasswordGate() {
   const { user } = useAuth();
@@ -45,6 +50,7 @@ export default function App() {
     <ErrorBoundary>
       <AuthProvider>
         <BrowserRouter basename={import.meta.env.BASE_URL}>
+          <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route
@@ -66,6 +72,7 @@ export default function App() {
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
+          </Suspense>
         </BrowserRouter>
       </AuthProvider>
     </ErrorBoundary>

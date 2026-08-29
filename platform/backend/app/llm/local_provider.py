@@ -6,6 +6,7 @@ Works offline, zero cost, always available.
 
 import re
 import logging
+import asyncio
 from .base import LLMProvider, LLMMessage, LLMResponse
 from app.nlp.pipeline import NLPContext, run_pipeline
 
@@ -32,12 +33,12 @@ class LocalProvider(LLMProvider):
         self.model_name = "local-nlp-v3"
 
     async def chat(self, messages: list[LLMMessage], system: str = "") -> LLMResponse:
-        response_text = self._generate(messages, system)
+        response_text = await asyncio.to_thread(self._generate, messages, system)
         return LLMResponse(content=response_text, model=self.model_name)
 
     async def stream(self, messages: list[LLMMessage], system: str = ""):
         """Simulate streaming by yielding chunks of the full response."""
-        response_text = self._generate(messages, system)
+        response_text = await asyncio.to_thread(self._generate, messages, system)
         # Split at sentence boundaries for natural streaming
         chunks = re.split(r"(?<=[。！？\n])", response_text)
         for chunk in chunks:

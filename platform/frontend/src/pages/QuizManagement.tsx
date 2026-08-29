@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { API_BASE } from "../lib/api";
 
@@ -46,7 +46,7 @@ export default function QuizManagement() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
 
-  const authFetch = async (path: string, method = "GET", body?: unknown) => {
+  const authFetch = useCallback(async (path: string, method = "GET", body?: unknown) => {
     const res = await fetch(`${API_BASE}${path}`, {
       method,
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -58,14 +58,14 @@ export default function QuizManagement() {
       throw new Error(err.detail || `Error ${res.status}`);
     }
     return res.json();
-  };
+  }, [logout, token]);
 
-  const flash = (text: string, type: "ok" | "err" = "ok") => {
+  const flash = useCallback((text: string, type: "ok" | "err" = "ok") => {
     setMessage({ text, type });
     setTimeout(() => setMessage({ text: "", type: "ok" }), 3000);
-  };
+  }, []);
 
-  const fetchQuestions = async () => {
+  const fetchQuestions = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (filterWeek) params.set("week", filterWeek);
@@ -75,9 +75,9 @@ export default function QuizManagement() {
       setQuestions(data.questions ?? []);
     } catch { flash("無法載入題目列表", "err"); }
     setLoading(false);
-  };
+  }, [authFetch, filterWeek, flash]);
 
-  useEffect(() => { if (token) fetchQuestions(); }, [token, filterWeek]);
+  useEffect(() => { if (token) void fetchQuestions(); }, [token, fetchQuestions]);
 
   if (me?.role !== "admin") {
     return (

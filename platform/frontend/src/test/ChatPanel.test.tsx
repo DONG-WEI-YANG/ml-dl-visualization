@@ -4,12 +4,15 @@ import ChatPanel from "../components/llm/ChatPanel";
 
 const mockSend = vi.fn();
 const mockClear = vi.fn();
+const mockRetry = vi.fn();
+const mockStop = vi.fn();
 const mockOnClose = vi.fn();
 const mockOnTogglePin = vi.fn();
 const mockOnAutoOpen = vi.fn();
 let mockMessages: { role: string; content: string }[] = [];
 let mockIsLoading = false;
 let mockStage = "idle";
+let mockError: string | null = null;
 
 const defaultProps = {
   week: 1,
@@ -27,6 +30,9 @@ vi.mock("../hooks/useChat", () => ({
     stage: mockStage,
     send: mockSend,
     clear: mockClear,
+    retry: mockRetry,
+    stop: mockStop,
+    error: mockError,
   }),
 }));
 
@@ -35,8 +41,11 @@ describe("ChatPanel", () => {
     mockMessages = [];
     mockIsLoading = false;
     mockStage = "idle";
+    mockError = null;
     mockSend.mockClear();
     mockClear.mockClear();
+    mockRetry.mockClear();
+    mockStop.mockClear();
   });
 
   it("renders welcome message when no messages", () => {
@@ -107,5 +116,22 @@ describe("ChatPanel", () => {
     mockIsLoading = true;
     render(<ChatPanel {...defaultProps} />);
     expect(screen.getByText("AI 助教思考中...")).toBeInTheDocument();
+  });
+
+  it("shows a recoverable error and retries", () => {
+    mockError = "模型暫時忙碌";
+    render(<ChatPanel {...defaultProps} />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent("模型暫時忙碌");
+    fireEvent.click(screen.getByRole("button", { name: "重試上一題" }));
+    expect(mockRetry).toHaveBeenCalledOnce();
+  });
+
+  it("lets the learner stop an active response", () => {
+    mockIsLoading = true;
+    render(<ChatPanel {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "停止生成" }));
+    expect(mockStop).toHaveBeenCalledOnce();
   });
 });

@@ -125,7 +125,7 @@ const SUGGESTED_QUESTIONS: Record<number, string[]> = {
 };
 
 export default function ChatPanel({ week, topic, pinned, onClose, onTogglePin }: Props) {
-  const { messages, isLoading, stage, send, clear } = useChat(week, topic);
+  const { messages, isLoading, stage, error, send, retry, stop, clear } = useChat(week, topic);
   const [input, setInput] = useState("");
   const [mode, setMode] = useState<"tutor" | "homework">("tutor");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -228,6 +228,18 @@ export default function ChatPanel({ week, topic, pinned, onClose, onTogglePin }:
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2.5" role="log" aria-label="Chat messages" aria-live="polite">
+        {error && (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={retry}
+              className="rounded-md bg-amber-700 px-2 py-1 font-medium text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              重試上一題
+            </button>
+          </div>
+        )}
         {stage !== "idle" && (
           <div className="flex justify-start">
             <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${stage === "unverified" ? "bg-amber-50 text-amber-700" : stage === "verified" ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-blue-700"}`}>
@@ -298,13 +310,23 @@ export default function ChatPanel({ week, topic, pinned, onClose, onTogglePin }:
           disabled={isLoading}
           aria-label="Chat input"
         />
-        <button
-          type="submit"
-          disabled={isLoading || !input.trim()}
-          className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          送出
-        </button>
+        {isLoading ? (
+          <button
+            type="button"
+            onClick={stop}
+            className="px-3 py-1.5 border border-gray-300 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-400"
+          >
+            停止生成
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={!input.trim()}
+            className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            送出
+          </button>
+        )}
       </form>
     </div>
   );

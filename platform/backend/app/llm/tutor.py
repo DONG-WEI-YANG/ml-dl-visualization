@@ -61,14 +61,16 @@ class AITutor:
         return SYSTEM_TUTOR_NO_RAG.format(week=week, topic=topic) + student_ctx
 
     async def ask(
-        self, messages: list[LLMMessage], week: int, topic: str, mode: str = "tutor"
+        self, messages: list[LLMMessage], week: int, topic: str, mode: str = "tutor",
+        student_id: str | None = None,
     ):
-        system = self._build_system(messages, week, topic, mode)
+        system = self._build_system(messages, week, topic, mode, student_id=student_id)
         return await self.provider.chat(messages, system=system)
 
     async def ask_stream(
-        self, messages: list[LLMMessage], week: int, topic: str, mode: str = "tutor"
+        self, messages: list[LLMMessage], week: int, topic: str, mode: str = "tutor",
+        student_id: str | None = None,
     ):
-        system = self._build_system(messages, week, topic, mode)
+        system = self._build_system(messages, week, topic, mode, student_id=student_id)
         async for chunk in self.provider.stream(messages, system=system):
             yield chunk

@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 vi.mock("@react-three/fiber", () => ({
-  Canvas: ({ children }: { children: React.ReactNode }) => (
-    <div data-testid="r3f-canvas">{children}</div>
-  ),
+  // R3F owns its scene graph; rendering those nodes into jsdom creates
+  // misleading unknown-HTML-element warnings.
+  Canvas: () => <div data-testid="r3f-canvas" />,
 }));
 vi.mock("@react-three/drei", () => ({
   OrbitControls: () => null,

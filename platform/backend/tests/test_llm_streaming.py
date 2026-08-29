@@ -5,7 +5,7 @@ from app.llm.base import LLMMessage
 
 
 class FakeTutor:
-    async def ask_stream(self, messages, week, topic, mode):
+    async def ask_stream(self, messages, week, topic, mode, student_id=None):
         yield "完整"
         yield "答案"
 

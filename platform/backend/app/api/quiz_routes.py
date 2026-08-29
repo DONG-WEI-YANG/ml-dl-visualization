@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.quiz.questions import get_questions_for_week, grade_quiz
 
@@ -20,5 +20,8 @@ class QuizSubmission(BaseModel):
 @router.post("/submit")
 async def submit_quiz(submission: QuizSubmission):
     """Submit quiz answers and get graded results."""
-    result = grade_quiz(submission.week, submission.answers)
+    try:
+        result = grade_quiz(submission.week, submission.answers)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     return {"week": submission.week, **result}

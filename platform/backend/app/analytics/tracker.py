@@ -1,33 +1,30 @@
 import json
 from datetime import datetime
 from .models import LearningEvent, StudentAnalytics, WeekProgress
-from app.db import get_db
+from app.db import db_connection
 
 
 def record_event(event: LearningEvent) -> int:
-    conn = get_db()
     ts = event.timestamp or datetime.now()
-    cursor = conn.execute(
-        """INSERT INTO learning_events
-           (student_id, week, event_type, topic, score, duration_seconds, metadata, timestamp)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-        (event.student_id, event.week, event.event_type, event.topic,
-         event.score, event.duration_seconds, json.dumps(event.metadata),
-         ts.isoformat()),
-    )
-    conn.commit()
-    event_id = cursor.lastrowid
-    conn.close()
+    with db_connection() as conn:
+        cursor = conn.execute(
+            """INSERT INTO learning_events
+               (student_id, week, event_type, topic, score, duration_seconds, metadata, timestamp)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (event.student_id, event.week, event.event_type, event.topic,
+             event.score, event.duration_seconds, json.dumps(event.metadata),
+             ts.isoformat()),
+        )
+        event_id = cursor.lastrowid
     return event_id
 
 
 def get_student_analytics(student_id: str) -> StudentAnalytics:
-    conn = get_db()
-    rows = conn.execute(
-        "SELECT * FROM learning_events WHERE student_id = ? ORDER BY week, timestamp",
-        (student_id,),
-    ).fetchall()
-    conn.close()
+    with db_connection() as conn:
+        rows = conn.execute(
+            "SELECT * FROM learning_events WHERE student_id = ? ORDER BY week, timestamp",
+            (student_id,),
+        ).fetchall()
 
     weekly: dict[int, WeekProgress] = {}
     llm_topics: dict[str, int] = {}
@@ -75,33 +72,42 @@ def get_student_analytics(student_id: str) -> StudentAnalytics:
     )
 
 
-def get_class_summary(semester: str | None = None) -> dict:
-    conn = get_db()
+def get_class_summary(semester: str | None = None, teacher_id: int | None = None) -> dict:
+    joins = []
+    conditions = []
+    params: list[object] = []
     if semester:
+        joins.append("JOIN users u ON le.student_id = CAST(u.id AS TEXT)")
+        conditions.append("u.semester = ?")
+        params.append(semester)
+    if teacher_id is not None:
+        joins.append("JOIN teacher_students ts ON le.student_id = CAST(ts.student_id AS TEXT)")
+        conditions.append("ts.teacher_id = ?")
+        params.append(teacher_id)
+    join_sql = " ".join(joins)
+    where_sql = f" WHERE {' AND '.join(conditions)}" if conditions else ""
+    with db_connection() as conn:
         students = conn.execute(
-            "SELECT DISTINCT le.student_id FROM learning_events le JOIN users u ON le.student_id = CAST(u.id AS TEXT) WHERE u.semester = ?",
-            (semester,),
+            f"SELECT DISTINCT le.student_id FROM learning_events le {join_sql}{where_sql}",
+            params,
         ).fetchall()
         total_events = conn.execute(
-            "SELECT COUNT(*) as c FROM learning_events le JOIN users u ON le.student_id = CAST(u.id AS TEXT) WHERE u.semester = ?",
-            (semester,),
+            f"SELECT COUNT(*) as c FROM learning_events le {join_sql}{where_sql}",
+            params,
         ).fetchone()["c"]
+        score_conditions = [*conditions, "le.score IS NOT NULL"]
+        score_where = f" WHERE {' AND '.join(score_conditions)}"
         avg_score = conn.execute(
-            "SELECT AVG(le.score) as avg FROM learning_events le JOIN users u ON le.student_id = CAST(u.id AS TEXT) WHERE le.score IS NOT NULL AND u.semester = ?",
-            (semester,),
+            f"SELECT AVG(le.score) as avg FROM learning_events le {join_sql}{score_where}",
+            params,
         ).fetchone()["avg"]
+        topic_conditions = [*conditions, "le.event_type = 'llm_chat'", "le.topic != ''"]
+        topic_where = f" WHERE {' AND '.join(topic_conditions)}"
         popular_topics = conn.execute(
-            "SELECT le.topic, COUNT(*) as cnt FROM learning_events le JOIN users u ON le.student_id = CAST(u.id AS TEXT) WHERE le.event_type='llm_chat' AND le.topic != '' AND u.semester = ? GROUP BY le.topic ORDER BY cnt DESC LIMIT 10",
-            (semester,),
+            f"SELECT le.topic, COUNT(*) as cnt FROM learning_events le {join_sql}{topic_where} "
+            "GROUP BY le.topic ORDER BY cnt DESC LIMIT 10",
+            params,
         ).fetchall()
-    else:
-        students = conn.execute("SELECT DISTINCT student_id FROM learning_events").fetchall()
-        total_events = conn.execute("SELECT COUNT(*) as c FROM learning_events").fetchone()["c"]
-        avg_score = conn.execute("SELECT AVG(score) as avg FROM learning_events WHERE score IS NOT NULL").fetchone()["avg"]
-        popular_topics = conn.execute(
-            "SELECT topic, COUNT(*) as cnt FROM learning_events WHERE event_type='llm_chat' AND topic != '' GROUP BY topic ORDER BY cnt DESC LIMIT 10"
-        ).fetchall()
-    conn.close()
 
     return {
         "total_students": len(students),

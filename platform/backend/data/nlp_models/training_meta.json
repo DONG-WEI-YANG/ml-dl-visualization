@@ -1,4 +1,7 @@
 {
+  "environment": {
+    "scikit_learn": "1.8.0"
+  },
   "intent": {
     "samples": 3005,
     "classes": 19,

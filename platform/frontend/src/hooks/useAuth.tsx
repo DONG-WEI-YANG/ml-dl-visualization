@@ -3,6 +3,8 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
+  useMemo,
   ReactNode,
 } from "react";
 import { APIError, fetchAPI } from "../lib/api";
@@ -50,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [verification, setVerification] = useState<VerificationState>(token ? "checking" : "anonymous");
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>(token ? "connecting" : "ready");
 
-  const verifyToken = async () => {
+  const verifyToken = useCallback(async () => {
     if (!token) {
       setVerification("anonymous");
       setCloudStatus("ready");
@@ -80,15 +82,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(wakingTimer);
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
     void verifyToken();
-    // verifyToken intentionally follows the current token lifecycle.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [verifyToken]);
 
-  const login = async (username: string, password: string) => {
+  const login = useCallback(async (username: string, password: string) => {
     const data = await fetchAPI<{ access_token: string; user: User }>(
       "/api/auth/login",
       { username, password }
@@ -98,9 +98,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user);
     setVerification("authenticated");
     setCloudStatus("ready");
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     if (token) {
       fetchAPI("/api/auth/logout", {}, token).catch(() => {});
     }
@@ -109,15 +109,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setVerification("anonymous");
     setCloudStatus("ready");
-  };
+  }, [token]);
+
+  const contextValue = useMemo(
+    () => ({ user, token, login, logout, loading, verification, cloudStatus, retryVerification: verifyToken }),
+    [user, token, login, logout, loading, verification, cloudStatus, verifyToken]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading, verification, cloudStatus, retryVerification: verifyToken }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
 }
 
+// This module intentionally exposes the provider and its paired consumer hook.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   return useContext(AuthContext);
 }

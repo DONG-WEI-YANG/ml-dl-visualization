@@ -1,4 +1,6 @@
 import sqlite3
+from contextlib import contextmanager
+from collections.abc import Iterator
 from pathlib import Path
 
 DB_PATH = Path(__file__).parent.parent / "data" / "app.db"
@@ -10,6 +12,20 @@ def get_db() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+@contextmanager
+def db_connection() -> Iterator[sqlite3.Connection]:
+    """Open one transaction and always release its SQLite connection."""
+    conn = get_db()
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def init_db():
@@ -132,25 +148,21 @@ def init_db():
 
 
 def get_setting(key: str, default: str = "") -> str:
-    conn = get_db()
-    row = conn.execute("SELECT value FROM system_settings WHERE key = ?", (key,)).fetchone()
-    conn.close()
+    with db_connection() as conn:
+        row = conn.execute("SELECT value FROM system_settings WHERE key = ?", (key,)).fetchone()
     return row["value"] if row else default
 
 
 def set_setting(key: str, value: str):
-    conn = get_db()
-    conn.execute(
-        "INSERT INTO system_settings (key, value, updated_at) VALUES (?, ?, datetime('now')) "
-        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
-        (key, value),
-    )
-    conn.commit()
-    conn.close()
+    with db_connection() as conn:
+        conn.execute(
+            "INSERT INTO system_settings (key, value, updated_at) VALUES (?, ?, datetime('now')) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+            (key, value),
+        )
 
 
 def get_all_settings() -> dict[str, str]:
-    conn = get_db()
-    rows = conn.execute("SELECT key, value FROM system_settings").fetchall()
-    conn.close()
+    with db_connection() as conn:
+        rows = conn.execute("SELECT key, value FROM system_settings").fetchall()
     return {r["key"]: r["value"] for r in rows}

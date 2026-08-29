@@ -17,7 +17,8 @@ import {
 } from "./nn-math";
 import NetworkCanvas from "./NetworkCanvas";
 import TrainingPanel from "./TrainingPanel";
-import BackpropOverlay, { useBackpropAnimator } from "./BackpropAnimator";
+import BackpropOverlay from "./BackpropAnimator";
+import { useBackpropAnimator } from "./useBackpropAnimator";
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
