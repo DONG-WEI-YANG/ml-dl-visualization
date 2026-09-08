@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 
 class UserCreate(BaseModel):
+    class_name: str = ''
     username: str
     password: str
     display_name: str = ""
@@ -11,6 +12,7 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
+    class_name: str | None = None
     display_name: str | None = None
     email: str | None = None
     role: str | None = None
@@ -20,6 +22,7 @@ class UserUpdate(BaseModel):
 
 
 class UserOut(BaseModel):
+    class_name: str = ''
     id: int
     username: str
     display_name: str
@@ -49,6 +52,7 @@ class ImportRow(BaseModel):
 
 
 class ImportRequest(BaseModel):
+    class_name: str = ''
     semester: str = ""
     rows: list[ImportRow]
 

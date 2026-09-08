@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchAPI } from "../../lib/api";
+import { useAuth } from "../../hooks/useAuth";
 
 interface Question {
   id: string;
@@ -16,6 +17,7 @@ interface GradeResult {
 }
 
 export default function QuizPanel({ week }: { week: number }) {
+  const { token } = useAuth();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<GradeResult | null>(null);
@@ -44,7 +46,7 @@ export default function QuizPanel({ week }: { week: number }) {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchAPI<GradeResult>("/api/quiz/submit", { week, answers });
+      const data = await fetchAPI<GradeResult>("/api/quiz/submit", { week, answers }, token ?? undefined);
       setResult(data);
     } catch {
       setError("submit");

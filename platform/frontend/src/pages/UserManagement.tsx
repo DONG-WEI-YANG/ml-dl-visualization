@@ -10,6 +10,7 @@ interface User {
   email: string;
   role: "admin" | "teacher" | "student";
   semester: string;
+  class_name: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -27,7 +28,7 @@ const ROLE_COLORS: Record<string, string> = {
   student: "bg-green-100 text-green-700",
 };
 
-const CURRENT_YEAR = 114; // 民國年
+const CURRENT_YEAR = new Date().getFullYear() - 1911 - (new Date().getMonth() < 7 ? 1 : 0);
 const SEMESTER_OPTIONS = Array.from({ length: 11 }, (_, i) => {
   const y = CURRENT_YEAR - 5 + i;
   return [`${y}-1`, `${y}-2`];
@@ -43,6 +44,8 @@ export default function UserManagement() {
   const { user: me, token, logout } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [filterRole, setFilterRole] = useState<string>("");
+  const [filterClass, setFilterClass] = useState("");
+  const [filterYear, setFilterYear] = useState("");
   const [filterSemester, setFilterSemester] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; type: "ok" | "err" }>({ text: "", type: "ok" });
@@ -52,11 +55,11 @@ export default function UserManagement() {
 
   // Create form
   const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({ username: "", password: "", display_name: "", email: "", role: "student", semester: "" });
+  const [createForm, setCreateForm] = useState({ username: "", password: "", display_name: "", email: "", role: "student", semester: "", class_name: "" });
 
   // Edit form
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editForm, setEditForm] = useState({ display_name: "", email: "", role: "", password: "", semester: "" });
+  const [editForm, setEditForm] = useState({ display_name: "", email: "", role: "", password: "", semester: "", class_name: "" });
 
   // Teacher-student assignment
   const [assignMode, setAssignMode] = useState<{ teacherId: number; teacherName: string } | null>(null);
@@ -86,13 +89,15 @@ export default function UserManagement() {
       const params = new URLSearchParams();
       if (filterRole) params.set("role", filterRole);
       if (filterSemester) params.set("semester", filterSemester);
+      if (filterClass.trim()) params.set("class_name", filterClass.trim());
+      if (filterYear.trim()) params.set("academic_year", filterYear.trim());
       const qs = params.toString();
       const url = `/api/admin/users${qs ? `?${qs}` : ""}`;
       const data = await authFetch(url);
       setUsers(data);
     } catch { flash("無法載入使用者列表", "err"); }
     setLoading(false);
-  }, [authFetch, filterRole, filterSemester, flash]);
+  }, [authFetch, filterRole, filterSemester, filterClass, filterYear, flash]);
 
   useEffect(() => { if (token) void fetchUsers(); }, [token, fetchUsers]);
 
@@ -111,7 +116,7 @@ export default function UserManagement() {
       await authFetch("/api/auth/register", "POST", createForm);
       flash("帳號建立成功");
       setShowCreate(false);
-      setCreateForm({ username: "", password: "", display_name: "", email: "", role: "student", semester: "" });
+      setCreateForm({ username: "", password: "", display_name: "", email: "", role: "student", semester: "", class_name: "" });
       fetchUsers();
     } catch (err: unknown) {
       flash((err as Error).message || "建立失敗", "err");
@@ -126,6 +131,7 @@ export default function UserManagement() {
     if (editForm.email !== editingUser.email) body.email = editForm.email;
     if (editForm.role !== editingUser.role) body.role = editForm.role;
     if (editForm.semester !== (editingUser.semester || "")) body.semester = editForm.semester;
+    if (editForm.class_name !== (editingUser.class_name || "")) body.class_name = editForm.class_name;
     if (editForm.password) body.password = editForm.password;
     if (Object.keys(body).length === 0) { setEditingUser(null); return; }
     try {
@@ -282,6 +288,10 @@ export default function UserManagement() {
         </select>
       </div>
 
+      <div className="flex flex-wrap gap-3">
+        <label className="text-sm">學年<input aria-label="學年篩選" placeholder="例如 115" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="block border rounded px-3 py-2" /></label>
+        <label className="text-sm">班級<input aria-label="班級篩選" placeholder="全部班級" value={filterClass} onChange={(e) => setFilterClass(e.target.value)} className="block border rounded px-3 py-2" /></label>
+      </div>
       {/* User Table */}
       {loading ? (
         <div className="text-gray-400 text-center py-8">載入中...</div>
@@ -310,7 +320,7 @@ export default function UserManagement() {
                       {ROLE_LABELS[u.role]}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-xs text-gray-500">{formatSemester(u.semester)}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500">{formatSemester(u.semester)}<div>{u.class_name || "未分班"}</div></td>
                   <td className="px-4 py-3">
                     <span className={`text-xs ${u.is_active ? "text-green-600" : "text-gray-400"}`}>
                       {u.is_active ? "啟用" : "停用"}
@@ -320,7 +330,7 @@ export default function UserManagement() {
                     <button
                       onClick={() => {
                         setEditingUser(u);
-                        setEditForm({ display_name: u.display_name, email: u.email, role: u.role, password: "", semester: u.semester || "" });
+                        setEditForm({ display_name: u.display_name, email: u.email, role: u.role, password: "", semester: u.semester || "", class_name: u.class_name || "" });
                       }}
                       className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded"
                     >
@@ -414,6 +424,9 @@ export default function UserManagement() {
                   <option key={s} value={s}>{formatSemester(s)}</option>
                 ))}
               </select>
+              <label className="block text-sm mt-3">班級
+                <input aria-label="班級" value={createForm.class_name} onChange={(e) => setCreateForm({ ...createForm, class_name: e.target.value })} placeholder="例如 護理一甲" className="mt-1 w-full border rounded-lg px-3 py-2" />
+              </label>
             </div>
             <div className="flex gap-2 justify-end pt-2">
               <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">取消</button>
@@ -470,6 +483,9 @@ export default function UserManagement() {
                   <option key={s} value={s}>{formatSemester(s)}</option>
                 ))}
               </select>
+              <label className="block text-sm mt-3">班級
+                <input aria-label="班級" value={editForm.class_name} onChange={(e) => setEditForm({ ...editForm, class_name: e.target.value })} placeholder="例如 護理一甲" className="mt-1 w-full border rounded-lg px-3 py-2" />
+              </label>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">新密碼 (留空不修改)</label>

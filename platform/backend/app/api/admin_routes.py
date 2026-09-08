@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from app.auth.models import UserOut, UserUpdate, UserCreate, ImportRow, ImportRequest
 from app.auth.utils import hash_password
 from app.auth.dependencies import require_admin, require_teacher_or_admin
-from app.db import get_db, get_all_settings, set_setting
+from app.db import get_db, get_all_settings, set_setting, sync_enrollment
 from app.llm.factory import list_available_providers
 from app.nlp.trainer import train_models
 from app.audit import log_audit
@@ -20,6 +20,7 @@ def _user_out(row) -> UserOut:
         display_name=row["display_name"],
         email=row["email"],
         semester=row["semester"],
+        class_name=row["class_name"],
         role=row["role"],
         is_active=bool(row["is_active"]),
         created_at=row["created_at"],
@@ -35,6 +36,8 @@ def _user_out(row) -> UserOut:
 async def list_users(
     role: str | None = Query(None),
     semester: str | None = Query(None),
+    class_name: str | None = Query(None),
+    academic_year: str | None = Query(None),
     admin: dict = Depends(require_admin),
 ):
     conn = get_db()
@@ -46,6 +49,12 @@ async def list_users(
     if semester:
         conditions.append("semester = ?")
         params.append(semester)
+    if class_name:
+        conditions.append('class_name = ?')
+        params.append(class_name)
+    if academic_year:
+        conditions.append("substr(semester, 1, instr(semester, '-') - 1) = ?")
+        params.append(academic_year)
     where = f" WHERE {' AND '.join(conditions)}"
     rows = conn.execute(f"SELECT * FROM users{where} ORDER BY id", params).fetchall()
     conn.close()
@@ -76,6 +85,10 @@ async def update_user(user_id: int, data: UserUpdate, request: Request, admin: d
 
     updates = []
     params = []
+    sync_enrollment(conn, user_id)
+    if data.class_name is not None:
+        updates.append('class_name = ?')
+        params.append(data.class_name.strip())
     if data.display_name is not None:
         updates.append("display_name = ?")
         params.append(data.display_name)
@@ -103,12 +116,13 @@ async def update_user(user_id: int, data: UserUpdate, request: Request, admin: d
         updates.append("updated_at = datetime('now')")
         params.append(user_id)
         conn.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = ?", params)
-        conn.commit()
+    sync_enrollment(conn, user_id)
+    conn.commit()
 
     updated = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     conn.close()
 
-    changed = [f for f in ("display_name", "email", "role", "is_active", "semester")
+    changed = [f for f in ("display_name", "email", "role", "is_active", "semester", "class_name")
                if getattr(data, f) is not None]
     ip = request.client.host if request.client else ""
     if changed:
@@ -153,10 +167,14 @@ async def import_users(req: ImportRequest, request: Request, admin: dict = Depen
             skipped.append({"username": row.username, "reason": "帳號為空"})
             continue
         existing = conn.execute(
-            "SELECT id, deleted_at FROM users WHERE username = ?", (username,)
+            "SELECT id, deleted_at, is_active, role, semester FROM users WHERE username = ?", (username,)
         ).fetchone()
         if existing:
-            if existing["deleted_at"] is not None:
+            if existing['role'] != 'student':
+                skipped.append({'username': username, 'reason': '非學生帳號，無法匯入'})
+                continue
+            sync_enrollment(conn, existing['id'])
+            if existing["deleted_at"] is not None or not existing['is_active']:
                 # Re-enrolling student: restore the archived account so their
                 # learning history (keyed by user id) stays linked.
                 initial_password = secrets.token_urlsafe(9)  # 12 chars
@@ -168,16 +186,20 @@ async def import_users(req: ImportRequest, request: Request, admin: dict = Depen
                 )
                 restored.append({"username": username, "initial_password": initial_password})
                 restored_ids.append(existing["id"])
+                conn.execute('UPDATE users SET class_name = ? WHERE id = ?', (req.class_name.strip(), existing['id']))
+                sync_enrollment(conn, existing['id'])
             else:
                 skipped.append({"username": username, "reason": "帳號已存在"})
             continue
         initial_password = secrets.token_urlsafe(9)  # 12 chars
-        conn.execute(
+        cursor = conn.execute(
             "INSERT INTO users (username, password_hash, display_name, email, role, "
             "semester, must_change_password) VALUES (?, ?, ?, ?, 'student', ?, 1)",
             (username, hash_password(initial_password),
              row.display_name.strip() or username, row.email.strip(), semester),
         )
+        conn.execute('UPDATE users SET class_name = ? WHERE id = ?', (req.class_name.strip(), cursor.lastrowid))
+        sync_enrollment(conn, cursor.lastrowid)
         created.append({"username": username, "initial_password": initial_password})
     conn.commit()
     conn.close()

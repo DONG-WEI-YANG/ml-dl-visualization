@@ -11,6 +11,8 @@ from app.db import get_db, get_setting
 from app.auth.utils import decode_token
 from app.auth.dependencies import get_current_user, require_admin
 from app.llm.quick_answer import build_quick_answer
+from app.analytics.tracker import record_event
+from app.analytics.models import LearningEvent
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +81,9 @@ async def _stream_chat_events(
         ):
             yield {"type": "refinement", "content": _safe_text(chunk)}
         total_ms = round((time.monotonic() - started) * 1000)
+        if student_id:
+            record_event(LearningEvent(student_id=student_id, week=week,
+                                       event_type='llm_chat', topic=topic))
         logger.info("AI stream week=%d draft_ms=%s total_ms=%d", week, draft_ms, total_ms)
         yield {"type": "done", "elapsed_ms": total_ms, "draft_ms": draft_ms}
     except Exception as exc:
@@ -175,6 +180,8 @@ async def chat(req: ChatRequest, user: dict = Depends(get_current_user)):
             mode=req.mode,
             student_id=str(user["id"]),
         )
+        record_event(LearningEvent(student_id=str(user['id']), week=req.week,
+                                   event_type='llm_chat', topic=req.topic))
         return {"response": _safe_text(response.content), "model": response.model}
     except Exception as e:
         logger.error("Chat error: %s", e, exc_info=True)

@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import Dashboard from "../pages/Dashboard";
 
+vi.mock("../hooks/useAuth", () => ({ useAuth: () => ({ token: "test-token" }) }));
+
 const mockFetchAPI = vi.fn();
 vi.mock("../lib/api", () => ({
   fetchAPI: (...args: unknown[]) => mockFetchAPI(...args),
@@ -38,7 +40,7 @@ describe("Dashboard", () => {
   });
 
   it("displays class summary", async () => {
-    mockFetchAPI.mockResolvedValueOnce(MOCK_SUMMARY);
+    mockFetchAPI.mockResolvedValueOnce(MOCK_SUMMARY).mockResolvedValueOnce([]);
     render(<Dashboard />);
     await waitFor(() => {
       expect(screen.getByText("30")).toBeInTheDocument();
@@ -47,13 +49,13 @@ describe("Dashboard", () => {
   });
 
   it("shows error on fetch failure", async () => {
-    mockFetchAPI.mockRejectedValueOnce(new Error("fail"));
+    mockFetchAPI.mockRejectedValueOnce(new Error("fail")).mockResolvedValueOnce([]);
     render(<Dashboard />);
     await waitFor(() => { expect(screen.getByText("無法載入班級總覽資料")).toBeInTheDocument(); });
   });
 
   it("looks up student analytics", async () => {
-    mockFetchAPI.mockResolvedValueOnce(MOCK_SUMMARY);
+    mockFetchAPI.mockResolvedValueOnce(MOCK_SUMMARY).mockResolvedValueOnce([]);
     render(<Dashboard />);
     await waitFor(() => screen.getByText("30"));
     const input = screen.getByPlaceholderText("輸入學生 ID");
@@ -64,7 +66,7 @@ describe("Dashboard", () => {
   });
 
   it("shows student not found error", async () => {
-    mockFetchAPI.mockResolvedValueOnce(MOCK_SUMMARY);
+    mockFetchAPI.mockResolvedValueOnce(MOCK_SUMMARY).mockResolvedValueOnce([]);
     render(<Dashboard />);
     await waitFor(() => screen.getByText("30"));
     const input = screen.getByPlaceholderText("輸入學生 ID");
@@ -74,3 +76,16 @@ describe("Dashboard", () => {
     await waitFor(() => { expect(screen.getByText("找不到該學生資料")).toBeInTheDocument(); });
   });
 });
+
+ it("loads a zero-progress roster with authentication and opens the selected term", async () => {
+    mockFetchAPI.mockImplementation((path: string) => {
+      if (path.startsWith('/api/analytics/roster')) return Promise.resolve([{id: 7, username: 's007', display_name: 'Student Seven', semester: '115-1', class_name: 'A', is_active: true, total_events: 0, total_weeks_completed: 0, average_score: null, last_activity: null, total_time_minutes: 0}]);
+      if (path.startsWith('/api/analytics/students/')) return Promise.resolve(MOCK_STUDENT);
+      return Promise.resolve(MOCK_SUMMARY);
+    });
+    render(<Dashboard />);
+    await waitFor(() => expect(screen.getByText('Student Seven')).toBeInTheDocument());
+    expect(mockFetchAPI).toHaveBeenCalledWith(expect.stringContaining('/api/analytics/roster'), undefined, 'test-token');
+    fireEvent.click(screen.getByRole('button', { name: /s007/ }));
+    await waitFor(() => expect(mockFetchAPI).toHaveBeenCalledWith('/api/analytics/students/7?semester=115-1', undefined, 'test-token'));
+ });

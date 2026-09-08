@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Request
 from app.auth.models import LoginRequest, TokenResponse, UserOut, UserCreate, ChangePasswordRequest
 from app.auth.utils import verify_password, hash_password, create_token
 from app.auth.dependencies import get_current_user, require_admin
-from app.db import db_connection, get_setting
+from app.db import db_connection, get_setting, sync_enrollment
 from app.audit import log_audit
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
@@ -15,6 +15,7 @@ def _user_out(row: dict) -> UserOut:
         display_name=row["display_name"],
         email=row["email"],
         semester=row["semester"],
+        class_name=row["class_name"],
         role=row["role"],
         is_active=bool(row["is_active"]),
         created_at=row["created_at"],
@@ -88,6 +89,8 @@ async def register(req: UserCreate, request: Request, admin: dict = Depends(requ
             (req.username, hash_password(req.password), req.display_name or req.username, req.email, req.role, semester),
         )
         user_id = cursor.lastrowid or 0
+        conn.execute('UPDATE users SET class_name = ? WHERE id = ?', (req.class_name.strip(), user_id))
+        sync_enrollment(conn, user_id)
         user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     log_audit("user.create", actor=admin, target_type="user", target_id=user_id,
               detail={"username": req.username, "role": req.role}, ip=request.client.host if request.client else "")

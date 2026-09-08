@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { fetchAPI } from "../lib/api";
+import { useAuth } from "../hooks/useAuth";
 import {
   BarChart,
   Bar,
@@ -18,6 +19,12 @@ interface ClassSummary {
   total_events: number;
   average_score: number;
   popular_llm_topics: { topic: string; count: number }[];
+}
+
+interface RosterStudent {
+  id: number; username: string; display_name: string; semester: string; class_name: string;
+  is_active: boolean; total_events: number; total_weeks_completed: number; quiz_weeks: number;
+  average_score: number | null; last_activity: string | null; total_time_minutes: number;
 }
 
 interface WeekProgress {
@@ -40,6 +47,12 @@ interface StudentAnalytics {
 }
 
 export default function Dashboard() {
+  const { token } = useAuth();
+  const [roster, setRoster] = useState<RosterStudent[]>([]);
+  const [filters, setFilters] = useState({ academic_year: "", semester: "", class_name: "" });
+  const [query, setQuery] = useState("");
+  const [selectedLabel, setSelectedLabel] = useState("");
+  const studentRequest = useRef(0);
   const [summary, setSummary] = useState<ClassSummary | null>(null);
   const [studentId, setStudentId] = useState("");
   const [studentData, setStudentData] = useState<StudentAnalytics | null>(null);
@@ -48,20 +61,35 @@ export default function Dashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchAPI<ClassSummary>("/api/analytics/summary")
-      .then(setSummary)
-      .catch(() => setError("無法載入班級總覽資料"))
-      .finally(() => setLoading(false));
-  }, []);
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    setStudentData(null);
+    studentRequest.current += 1;
+    setStudentLoading(false);
+    Promise.all([
+      fetchAPI<ClassSummary>(`/api/analytics/summary${query}`, undefined, token ?? undefined),
+      fetchAPI<RosterStudent[]>(`/api/analytics/roster${query}`, undefined, token ?? undefined),
+    ]).then(([totals, students]) => {
+      if (!cancelled) { setSummary(totals); setRoster(students); }
+    }).catch(() => {
+      if (!cancelled) { setSummary(null); setRoster([]); setError("無法載入班級總覽資料"); }
+    }).finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; studentRequest.current += 1; };
+  }, [query, token]);
 
-  const lookupStudent = () => {
-    if (!studentId.trim()) return;
+  const lookupStudent = (id = studentId.trim(), semester?: string, label = id) => {
+    if (!id) return;
     setStudentLoading(true);
     setError("");
-    fetchAPI<StudentAnalytics>(`/api/analytics/students/${studentId.trim()}`)
-      .then(setStudentData)
-      .catch(() => setError("找不到該學生資料"))
-      .finally(() => setStudentLoading(false));
+    setStudentData(null);
+    const request = ++studentRequest.current;
+    setSelectedLabel(label);
+    const suffix = semester !== undefined ? `?semester=${encodeURIComponent(semester)}` : "";
+    fetchAPI<StudentAnalytics>(`/api/analytics/students/${encodeURIComponent(id)}${suffix}`, undefined, token ?? undefined)
+      .then((data) => { if (request === studentRequest.current) setStudentData(data); })
+      .catch(() => { if (request === studentRequest.current) setError("找不到該學生資料"); })
+      .finally(() => { if (request === studentRequest.current) setStudentLoading(false); });
   };
 
   const stats = summary
@@ -75,6 +103,29 @@ export default function Dashboard() {
   return (
     <div className="max-w-6xl mx-auto p-8 space-y-8">
       <h1 className="text-2xl font-bold text-gray-900">學習分析儀表板</h1>
+      <form className="flex flex-wrap gap-3 items-end" onSubmit={(e) => {
+        e.preventDefault();
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => { if (value.trim()) params.set(key, value.trim()); });
+        setQuery(params.size ? `?${params}` : "");
+      }}>
+        <label>學年<input aria-label="學年" placeholder="115" value={filters.academic_year} onChange={(e) => setFilters({ ...filters, academic_year: e.target.value })} className="block border rounded px-3 py-2 w-24" /></label>
+        <label>學期<input aria-label="學期" placeholder="115-1" value={filters.semester} onChange={(e) => setFilters({ ...filters, semester: e.target.value })} className="block border rounded px-3 py-2 w-32" /></label>
+        <label>班級<input aria-label="班級" placeholder="全部班級" value={filters.class_name} onChange={(e) => setFilters({ ...filters, class_name: e.target.value })} className="block border rounded px-3 py-2" /></label>
+        <button className="bg-blue-600 text-white rounded px-4 py-2">套用篩選</button>
+      </form>
+      {!loading && <section className="border rounded-xl p-4 overflow-x-auto">
+        <h2 className="text-lg font-semibold mb-2">學生進度名單</h2>
+        <p className="text-sm text-gray-500 mb-3">包含尚未開始的學生；教師只會看到已指派名單。點選學號查看該學期詳情。完成週次以已評分作業計算。</p>
+        <table className="w-full min-w-[960px] whitespace-nowrap text-sm text-left"><thead><tr>{["學號", "姓名", "學期", "班級", "帳號", "學習狀態", "測驗週次", "作業完成週次", "平均分數", "最後活動"].map((h) => <th key={h} className="p-2">{h}</th>)}</tr></thead>
+          <tbody>{roster.map((r) => <tr key={`${r.id}:${r.semester}`} className="border-t">
+            <td className="p-2"><button disabled={studentLoading} className="text-blue-600 underline" onClick={() => lookupStudent(String(r.id), r.semester, `${r.display_name || r.username} · ${r.semester || "未分類"}`)}>{r.username}</button></td>
+            <td className="p-2">{r.display_name}</td><td className="p-2">{r.semester || "未分類"}</td><td className="p-2">{r.class_name || "未分班"}</td>
+            <td className="p-2">{r.is_active ? "已開通" : "停用"}</td><td className="p-2">{r.total_events ? "學習中" : "尚未開始"}</td>
+            <td className="p-2">{r.quiz_weeks ?? 0} / 18</td><td className="p-2">{r.total_weeks_completed} / 18</td><td className="p-2">{r.average_score == null ? "—" : r.average_score.toFixed(1)}</td><td className="p-2">{r.last_activity ? r.last_activity.replace("T", " ").slice(0, 16) : "—"}</td>
+          </tr>)}</tbody></table>
+        {roster.length === 0 && <p className="p-3 text-gray-500">沒有符合條件的學生；請確認班級、學期與師生指派。</p>}
+      </section>}
 
       {/* Summary stat cards */}
       {loading ? (
@@ -126,7 +177,7 @@ export default function Dashboard() {
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm flex-1 max-w-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
-            onClick={lookupStudent}
+            onClick={() => lookupStudent()}
             disabled={studentLoading}
             className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
           >
@@ -138,12 +189,13 @@ export default function Dashboard() {
 
         {studentData && (
           <div className="space-y-6">
+            <p className="font-medium">{selectedLabel}</p>
             {/* Student summary cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
                 { label: "完成週次", value: `${studentData.total_weeks_completed} / 18` },
                 { label: "總學習時間", value: `${studentData.total_time_minutes} 分鐘` },
-                { label: "平均分數", value: studentData.average_score.toFixed(1) },
+                { label: "作業平均分數", value: studentData.average_score.toFixed(1) },
                 { label: "LLM 對話主題數", value: studentData.llm_topics.length },
               ].map((s) => (
                 <div key={s.label} className="bg-gray-50 rounded-lg p-3">

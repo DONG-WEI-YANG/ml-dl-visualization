@@ -16,6 +16,7 @@ interface UserImportDialogProps {
 export default function UserImportDialog({ onDone, onClose }: UserImportDialogProps) {
   const { token } = useAuth();
   const [raw, setRaw] = useState("");
+  const [className, setClassName] = useState("");
   const [semester, setSemester] = useState("");
   const [result, setResult] = useState<ImportResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -40,7 +41,7 @@ export default function UserImportDialog({ onDone, onClose }: UserImportDialogPr
     try {
       const res = await fetchAPI<ImportResult>(
         "/api/admin/users/import",
-        { semester, rows },
+        { semester, class_name: className.trim(), rows },
         token ?? undefined,
       );
       setResult(res);
@@ -82,6 +83,12 @@ export default function UserImportDialog({ onDone, onClose }: UserImportDialogPr
                 placeholder="例如 115-1"
                 className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </label>
+            <label className="block text-sm text-gray-600">
+              班級（本次匯入名單）
+              <input value={className} onChange={(e) => setClassName(e.target.value)} placeholder="例如 護理一甲"
+                className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            </label>
+            <p className="text-sm text-gray-500">停用或封存的重修生會沿用原帳號重新開通，保留歷史紀錄並產生新初始密碼。仍啟用的既有帳號會略過，可在帳號編輯調整學期與班級。</p>
             <label className="block text-sm text-gray-600">
               名單內容
               <textarea value={raw} onChange={(e) => setRaw(e.target.value)} rows={8}

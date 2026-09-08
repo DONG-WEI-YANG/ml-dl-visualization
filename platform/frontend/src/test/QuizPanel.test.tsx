@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import QuizPanel from "../components/quiz/QuizPanel";
 
+vi.mock("../hooks/useAuth", () => ({ useAuth: () => ({ token: "test-token" }) }));
+
 const mockFetchAPI = vi.fn();
 vi.mock("../lib/api", () => ({
   fetchAPI: (...args: unknown[]) => mockFetchAPI(...args),

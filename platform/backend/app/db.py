@@ -122,6 +122,25 @@ def init_db():
                 )
                 conn.commit()
     # Seed default admin if none exists
+    # Additive migration: unknown historical event terms remain unclassified.
+    for table, column, definition in (
+        ('users', 'class_name', "TEXT NOT NULL DEFAULT ''"),
+        ('learning_events', 'semester', "TEXT NOT NULL DEFAULT ''"),
+    ):
+        columns = {r[1] for r in conn.execute(f'PRAGMA table_info({table})')}
+        if column not in columns:
+            conn.execute(f'ALTER TABLE {table} ADD COLUMN {column} {definition}')
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS enrollments (
+            student_id INTEGER NOT NULL REFERENCES users(id),
+            semester TEXT NOT NULL,
+            class_name TEXT NOT NULL DEFAULT '',
+            PRIMARY KEY(student_id, semester)
+        );
+        INSERT OR IGNORE INTO enrollments(student_id, semester, class_name)
+        SELECT id, semester, class_name FROM users WHERE role = 'student';
+        CREATE INDEX IF NOT EXISTS idx_events_student_term ON learning_events(student_id, semester);
+    """)
     existing = conn.execute("SELECT id FROM users WHERE role = 'admin' LIMIT 1").fetchone()
     if not existing:
         from app.auth.utils import hash_password
@@ -145,6 +164,16 @@ def init_db():
         )
     conn.commit()
     conn.close()
+
+
+def sync_enrollment(conn, user_id: int):
+    """Snapshot the current placement without overwriting earlier semesters."""
+    conn.execute(
+        "INSERT INTO enrollments(student_id, semester, class_name) "
+        "SELECT id, semester, class_name FROM users WHERE id = ? AND role = 'student' "
+        "ON CONFLICT(student_id, semester) DO UPDATE SET class_name = excluded.class_name",
+        (user_id,),
+    )
 
 
 def get_setting(key: str, default: str = "") -> str:
