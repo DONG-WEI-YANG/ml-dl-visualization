@@ -1,5 +1,7 @@
 # 專案記憶
 
+- GitHub Pages 站內導覽必須使用 React Router `Link`／`Navigate` 保留 `/ml-dl-visualization` basename；不可使用 `href="/dashboard"` 等網域根路徑。2026-09-08 已修正 AuditLog 學習儀表板連結，回歸測試位於 `src/test/AuditLog.test.tsx`。
+
 - 本儲存庫根目錄為 `D:\course\教材教具\ml-dl-visualization`；外層 `D:\course\教材教具` 也是獨立 Git 儲存庫，平台功能應在本儲存庫提交。
 - 使用者於 2026-09-08 授權記憶、commit、push、部署學年班級與重修進度功能；真實學生名單之後再匯入，勿自行建立正式學生、匯入測試名單或宣稱正式開通完成。
 - 正式前端：`https://dong-wei-yang.github.io/ml-dl-visualization/`，帳號管理路徑 `/admin/users`；後端：`https://kevin19830331-ml-dl-viz-api.hf.space`。

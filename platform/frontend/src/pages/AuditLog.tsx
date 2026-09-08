@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { fetchAPI, API_BASE } from "../lib/api";
 import { useAuth } from "../hooks/useAuth";
 
@@ -114,7 +115,7 @@ export default function AuditLog() {
 
       {tab === "learning" ? (
         <p className="text-sm text-gray-500">
-          學習行為統計請見 <a href="/dashboard" className="text-blue-600 underline">學習儀表板</a>（沿用既有分析資料）。
+          學習行為統計請見 <Link to="/dashboard" className="text-blue-600 underline">學習儀表板</Link>（沿用既有分析資料）。
         </p>
       ) : (
         <>
