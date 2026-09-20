@@ -2,6 +2,8 @@
 
 程式與 RAG 共用 `DATABASE_PATH`；本機預設 `data/app.db`，Compose / HF image 明確使用 `/data/app.db`。Compose 使用 named volume 並唯讀掛載教材。容器以 `APP_ENV=production` 啟動，需設定獨立強秘密 `JWT_SECRET`，初次建立管理員亦需安全的 `DEFAULT_ADMIN_PASSWORD`，勿提交 `.env`。
 
+2026-09-20 已完成使用者授權的 HF 初始化與正常重啟驗證，詳見 [部署紀錄](deployment-2026-09-20.md)。以下備份步驟仍適用之後有正式資料的升級。
+
 ## 首次變更正式部署前
 
 2026-09-20 使用者明確授權本次 HF 空資料初始化，可省略舊資料備份與還原步驟。`hf-initialize.yml` 只在手動輸入 `initialize-empty` 時建立私有 bucket、設定金鑰與掛載，不刪除既有 bucket 檔案；此例外不適用未來學生資料。初始化後仍必須驗證真實掛載、應用程式寫入與重啟後保留。

@@ -12,7 +12,7 @@
 - 詳細操作與升級說明：`docs/enrollment-progress.md`。遷移只加欄位與學籍快照，正式部署前確認資料保全；不要上傳本機 SQLite、初始密碼清單或測試資料。
 - 驗證指令：後端 `.venv/Scripts/python.exe -m pytest tests/ -q`；前端 `npm test`、`npm run lint`、`npm run build`。2026-09-08 本機結果：後端 138 passed / 3 skipped（空題庫），前端 131 passed，lint/build 通過。此為當時結果，後續需按變更重新確認。
 
-- 2026-09-20 稽核修復尚待正式部署：見 `docs/audit-remediation-2026-09-20.md`。不得把本機題庫／測試成功宣稱為正式站修復完成。
+- 2026-09-20 稽核修復已發布，HF runtime SHA `d80e88ab996e9a98aa286195aa80bb51aee0d148`；私有 bucket `kevin19830331/ml-dl-viz-private-data` 掛載 `/data`，DB `/data/app.db`。正常重啟後改過的管理員密碼仍有效；54 題、1059 RAG chunks、1 管理員、0 學生／學習事件。完整證據見 `docs/deployment-2026-09-20.md`，日後需重新查核狀態。
 - 主資料庫與 RAG 共用 `DATABASE_PATH`；正式 HF 變更前必須先完成真實資料備份、還原驗證及持久化掛載，操作見 `docs/storage-operations.md`。勿為了讓 CI 發布而直接略過 `HF_STORAGE_MIGRATION_VERIFIED` 部署檢查。
 - 2026-09-20 使用者明確授權 HF 重新初始化，現有正式資料可捨棄；本次初始化不再要求舊資料備份。仍需先確認持久儲存、正式金鑰及重啟驗證，不得把此授權延伸為日後可刪除學生資料。
 - `APP_ENV` 預設 production；本機使用 `.env.example` 明確 development，測試 conftest 明確 test。正式環境拒絕預設 JWT key；JWT 升級後舊 token 失效，改密碼回傳替換 session。學習事件 API 不再接受用戶端成績，教師作業評分使用 `/api/analytics/assignments/grade`。
