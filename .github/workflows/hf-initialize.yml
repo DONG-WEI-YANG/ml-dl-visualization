@@ -42,7 +42,8 @@ jobs:
           assert account['name'] == 'kevin19830331'
           password = os.environ['INITIAL_ADMIN_PASSWORD']
           assert len(password) >= 24, 'Missing strong initial administrator secret'
-          runtime = api.get_space_runtime(repo)
+          # The /runtime endpoint omits volumes; space_info includes them.
+          runtime = api.space_info(repo).runtime
           volumes = list(runtime.volumes or [])
           for volume in volumes:
               if volume.mount_path == '/data':
@@ -62,7 +63,7 @@ jobs:
               volumes.append(Volume(type='bucket', source=bucket, mount_path='/data', read_only=False))
               api.set_space_volumes(repo, volumes=volumes)
           for attempt in range(12):
-              result = api.get_space_runtime(repo)
+              result = api.space_info(repo).runtime
               if any(v.mount_path == '/data' and v.source == bucket and not v.read_only for v in result.volumes or []):
                   break
               time.sleep(5)

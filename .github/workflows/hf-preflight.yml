@@ -30,7 +30,7 @@ jobs:
           print('Billing capability:', account.get('canPay'), 'PRO:', account.get('isPro'))
           for bucket in api.list_buckets(namespace=account['name']):
               print('Bucket:', bucket.id, 'private:', bucket.private, 'bytes:', bucket.size)
-          runtime = api.get_space_runtime(repo)
+          runtime = api.space_info(repo).runtime
           print('Runtime stage:', runtime.stage)
           print('Hardware:', runtime.hardware)
           volumes = getattr(runtime, 'volumes', None)
