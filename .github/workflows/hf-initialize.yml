@@ -32,6 +32,7 @@ jobs:
           python - <<'PY'
           import os
           import secrets
+          import time
           from huggingface_hub import HfApi, Volume
 
           api = HfApi(token=os.environ['HF_TOKEN'])
@@ -60,8 +61,13 @@ jobs:
           if not any(v.mount_path == '/data' for v in volumes):
               volumes.append(Volume(type='bucket', source=bucket, mount_path='/data', read_only=False))
               api.set_space_volumes(repo, volumes=volumes)
-          result = api.get_space_runtime(repo)
-          assert any(v.mount_path == '/data' and v.source == bucket and not v.read_only for v in result.volumes or [])
+          for attempt in range(12):
+              result = api.get_space_runtime(repo)
+              if any(v.mount_path == '/data' and v.source == bucket and not v.read_only for v in result.volumes or []):
+                  break
+              time.sleep(5)
+          else:
+              raise RuntimeError('The requested /data volume has not appeared in runtime metadata')
           assert {'JWT_SECRET', 'DEFAULT_ADMIN_PASSWORD'} <= api.get_space_secrets(repo).keys()
           print('Private /data volume and production configuration verified. No existing bucket files deleted.')
           print('Backend deployment and runtime persistence verification remain required.')
