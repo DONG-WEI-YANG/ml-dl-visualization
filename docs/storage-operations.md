@@ -4,6 +4,8 @@
 
 ## 首次變更正式部署前
 
+2026-09-20 使用者明確授權本次 HF 空資料初始化，可省略舊資料備份與還原步驟。`hf-initialize.yml` 只在手動輸入 `initialize-empty` 時建立私有 bucket、設定金鑰與掛載，不刪除既有 bucket 檔案；此例外不適用未來學生資料。初始化後仍必須驗證真實掛載、應用程式寫入與重啟後保留。
+
 1. 暫停部署及寫入，在既有正式環境找到實際 DB，記錄使用者、學習事件與題目筆數。禁止用本機 DB 覆蓋正式 DB。
 2. 在現有後端目錄執行 `python scripts/backup_database.py <existing-db> <new-backup-path>`，將備份安全下載到獨立儲存。SQLite backup API 支援一致性快照；不要僅複製可能有 WAL 的主檔。
 3. 演練 `python scripts/backup_database.py <backup> <new-restore-path>`，驗證業務筆數、RAG 查詢及 18 週題库，不只 integrity_check。腳本不覆蓋既有目的檔。備份包含個資與密碼雜湊，應限制存取、加密並建立保存期限。

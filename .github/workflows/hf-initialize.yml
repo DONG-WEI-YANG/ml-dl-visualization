@@ -1,0 +1,68 @@
+name: Initialize private HF storage
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type initialize-empty (authorized fresh initialization)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hf-space
+  cancel-in-progress: false
+
+jobs:
+  initialize:
+    if: inputs.confirmation == 'initialize-empty'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install huggingface_hub
+      - name: Configure private storage and production secrets
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          INITIAL_ADMIN_PASSWORD: ${{ secrets.HF_INITIAL_ADMIN_PASSWORD }}
+        run: |
+          python - <<'PY'
+          import os
+          import secrets
+          from huggingface_hub import HfApi, Volume
+
+          api = HfApi(token=os.environ['HF_TOKEN'])
+          repo = 'kevin19830331/ml-dl-viz-api'
+          bucket = 'kevin19830331/ml-dl-viz-private-data'
+          account = api.whoami()
+          assert account['name'] == 'kevin19830331'
+          password = os.environ['INITIAL_ADMIN_PASSWORD']
+          assert len(password) >= 24, 'Missing strong initial administrator secret'
+          runtime = api.get_space_runtime(repo)
+          volumes = list(runtime.volumes or [])
+          for volume in volumes:
+              if volume.mount_path == '/data':
+                  assert volume.type == 'bucket' and volume.source == bucket and not volume.read_only, 'Unexpected /data mount; refusing replacement'
+          # Free-tier bucket only: no subscription or hardware purchase is made.
+          api.create_bucket(bucket, private=True, exist_ok=True)
+          info = api.bucket_info(bucket)
+          assert info.private, 'Refusing to store account data in a public bucket'
+          existing = api.get_space_secrets(repo)
+          if 'JWT_SECRET' not in existing:
+              api.add_space_secret(repo, 'JWT_SECRET', secrets.token_urlsafe(48))
+          if 'DEFAULT_ADMIN_PASSWORD' not in existing:
+              api.add_space_secret(repo, 'DEFAULT_ADMIN_PASSWORD', password)
+          api.add_space_variable(repo, 'APP_ENV', 'production')
+          api.add_space_variable(repo, 'DATABASE_PATH', '/data/app.db')
+          if not any(v.mount_path == '/data' for v in volumes):
+              volumes.append(Volume(type='bucket', source=bucket, mount_path='/data', read_only=False))
+              api.set_space_volumes(repo, volumes=volumes)
+          result = api.get_space_runtime(repo)
+          assert any(v.mount_path == '/data' and v.source == bucket and not v.read_only for v in result.volumes or [])
+          assert {'JWT_SECRET', 'DEFAULT_ADMIN_PASSWORD'} <= api.get_space_secrets(repo).keys()
+          print('Private /data volume and production configuration verified. No existing bucket files deleted.')
+          print('Backend deployment and runtime persistence verification remain required.')
+          PY
