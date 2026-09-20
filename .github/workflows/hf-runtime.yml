@@ -1,0 +1,49 @@
+name: HF runtime verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      restart:
+        description: 'Restart the Space to verify persistence (no factory reset)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hf-space
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install huggingface_hub
+      - name: Inspect runtime and durable files
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          RESTART: ${{ inputs.restart }}
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi
+          api = HfApi(token=os.environ['HF_TOKEN'])
+          repo = 'kevin19830331/ml-dl-viz-api'
+          info = api.space_info(repo)
+          print('Source SHA:', info.sha)
+          print('Runtime:', info.runtime.stage, info.runtime.raw.get('sha'))
+          for item in api.list_bucket_tree('kevin19830331/ml-dl-viz-private-data', recursive=True):
+              print('Durable file:', item.path, 'bytes:', getattr(item, 'size', None))
+          if os.environ['RESTART'] == 'true':
+              assert info.runtime.stage == 'RUNNING', 'Wait for the current build to finish'
+              api.restart_space(repo)
+              print('Normal restart requested; verify application state after startup.')
+          PY
+      - name: Recent runtime logs
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: hf spaces logs kevin19830331/ml-dl-viz-api --tail 100
