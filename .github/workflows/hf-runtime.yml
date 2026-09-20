@@ -47,6 +47,29 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: hf spaces logs kevin19830331/ml-dl-viz-api --tail 100
+      - name: Verify stored database during maintenance
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os
+          import sqlite3
+          import tempfile
+          from pathlib import Path
+          from huggingface_hub import HfApi
+          api = HfApi(token=os.environ['HF_TOKEN'])
+          # Inspection only; not a replacement for a consistent live SQLite backup.
+          with tempfile.TemporaryDirectory() as directory:
+              path = Path(directory) / 'app.db'
+              api.download_bucket_files('kevin19830331/ml-dl-viz-private-data', files=[('app.db', str(path))])
+              with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True) as db:
+                  assert db.execute('PRAGMA integrity_check').fetchall() == [('ok',)]
+                  assert db.execute('PRAGMA foreign_key_check').fetchall() == []
+                  print('Stored SQLite integrity and foreign keys: OK')
+                  for table in ('users', 'quiz_questions', 'learning_events', 'rag_chunks'):
+                      print(table, db.execute('SELECT COUNT(*) FROM ' + table).fetchone()[0])
+                  assert db.execute('SELECT COUNT(*) FROM quiz_questions').fetchone()[0] >= 54
+          PY
       - name: Recent build logs
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
