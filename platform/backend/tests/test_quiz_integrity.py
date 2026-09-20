@@ -10,7 +10,18 @@ QUESTION_IDS = ("integrity-q1", "integrity-q2")
 
 
 @pytest.fixture(autouse=True)
-def integrity_questions():
+def integrity_questions(tmp_path, monkeypatch):
+    import sqlite3
+    import app.db as db_module
+    path = tmp_path / 'integrity.db'
+    source = db_module.get_db()
+    target = sqlite3.connect(path)
+    source.backup(target)
+    source.close()
+    target.execute('DELETE FROM quiz_questions')
+    target.commit()
+    target.close()
+    monkeypatch.setattr(db_module, 'DB_PATH', path)
     with db_connection() as conn:
         conn.executemany(
             "INSERT OR REPLACE INTO quiz_questions "

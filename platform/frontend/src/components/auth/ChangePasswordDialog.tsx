@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { fetchAPI, APIError } from "../../lib/api";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth, type AuthSession } from "../../hooks/useAuth";
 
 interface ChangePasswordDialogProps {
   forced?: boolean;
@@ -8,7 +8,7 @@ interface ChangePasswordDialogProps {
 }
 
 export default function ChangePasswordDialog({ forced = false, onClose }: ChangePasswordDialogProps) {
-  const { token, retryVerification } = useAuth();
+  const { token, acceptSession, retryVerification } = useAuth();
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -27,9 +27,10 @@ export default function ChangePasswordDialog({ forced = false, onClose }: Change
     }
     setSubmitting(true);
     try {
-      await fetchAPI("/api/auth/change-password",
+      const session = await fetchAPI<AuthSession | { status: string }>("/api/auth/change-password",
         { old_password: oldPassword, new_password: newPassword }, token ?? undefined);
-      await retryVerification();
+      if ("access_token" in session) acceptSession(session);
+      else await retryVerification(); // Support the previous backend during rollout.
       onClose();
     } catch (e) {
       if (e instanceof APIError && e.status === 401) setError("舊密碼錯誤");

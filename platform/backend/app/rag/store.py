@@ -8,9 +8,7 @@ import hashlib
 import sqlite3
 import json
 import re
-from pathlib import Path
-
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "app.db"
+from app import db
 
 # Regex to match CJK Unified Ideographs (common Chinese/Japanese/Korean characters)
 _CJK_RE = re.compile(r"([\u4e00-\u9fff\u3400-\u4dbf])")
@@ -22,10 +20,7 @@ def _space_cjk(text: str) -> str:
 
 
 def get_db() -> sqlite3.Connection:
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH))
-    conn.row_factory = sqlite3.Row
-    return conn
+    return db.get_db()
 
 
 def init_rag_tables():

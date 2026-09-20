@@ -2,12 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import ChangePasswordDialog from "../ChangePasswordDialog";
 
+const auth = vi.hoisted(() => ({ acceptSession: vi.fn(), retryVerification: vi.fn().mockResolvedValue(undefined) }));
+
 vi.mock("../../../lib/api", async (importOriginal) => {
   const mod = await importOriginal<typeof import("../../../lib/api")>();
   return { ...mod, fetchAPI: vi.fn().mockResolvedValue({ status: "ok" }) };
 });
 vi.mock("../../../hooks/useAuth", () => ({
-  useAuth: () => ({ token: "t", retryVerification: vi.fn() }),
+  useAuth: () => ({ token: "t", ...auth }),
 }));
 
 import { fetchAPI } from "../../../lib/api";
@@ -44,6 +46,8 @@ describe("ChangePasswordDialog", () => {
     fireEvent.change(screen.getByLabelText(/確認新密碼/), { target: { value: "newpassword9" } });
     fireEvent.click(screen.getByRole("button", { name: /確認變更/ }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(auth.retryVerification).toHaveBeenCalledOnce();
+    expect(auth.acceptSession).not.toHaveBeenCalled();
     expect(fetchAPI).toHaveBeenCalledWith(
       "/api/auth/change-password",
       { old_password: "oldpass1", new_password: "newpassword9" },

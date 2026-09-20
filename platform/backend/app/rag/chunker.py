@@ -1,6 +1,7 @@
 """Parse curriculum markdown files into chunks with metadata."""
 
 import re
+import os
 from pathlib import Path
 
 # Try multiple paths: local dev, Docker container, relative
@@ -9,7 +10,7 @@ _CANDIDATES = [
     Path(__file__).parent.parent.parent / "curriculum",                # /app/curriculum in Docker
     Path("/app/curriculum"),                                           # absolute Docker path
 ]
-CURRICULUM_DIR = next((p for p in _CANDIDATES if p.exists()), _CANDIDATES[0])
+CURRICULUM_DIR = Path(os.environ["CURRICULUM_DIR"]) if os.environ.get("CURRICULUM_DIR") else next((p for p in _CANDIDATES if p.exists()), _CANDIDATES[0])
 
 # Files worth indexing per week (skip rubric / teacher-guide for student-facing RAG)
 INDEXABLE_FILES = ["lecture.md", "slides.md", "assignment.md"]

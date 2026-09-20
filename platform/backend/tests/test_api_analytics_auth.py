@@ -37,14 +37,15 @@ def test_student_event_is_bound_to_authenticated_identity():
 
     response = client.post(
         "/api/analytics/events",
-        json={"student_id": "someone-else", "week": 2, "event_type": "quiz", "score": 88},
+        json={"student_id": "someone-else", "week": 2, "event_type": "viz_interaction", "duration_seconds": 120},
         headers=headers,
     )
 
     assert response.status_code == 200
     own = client.get(f"/api/analytics/students/{student_id}", headers=headers)
     assert own.status_code == 200
-    assert own.json()["weekly_progress"][0]["quiz_score"] == 88
+    assert own.json()["weekly_progress"][0]["time_spent_minutes"] == 2
+    assert own.json()["weekly_progress"][0]["quiz_score"] is None
     spoofed = client.get("/api/analytics/students/someone-else", headers=headers)
     assert spoofed.status_code == 403
 

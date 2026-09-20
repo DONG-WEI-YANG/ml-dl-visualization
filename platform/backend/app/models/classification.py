@@ -22,7 +22,7 @@ def train_and_get_decision_boundary(
     if model_type == "logistic":
         model = LogisticRegression(C=C, max_iter=1000)
     else:
-        model = SVC(C=C, kernel=kernel, probability=True)
+        model = SVC(C=C, kernel=kernel, probability=True, max_iter=1000)
     model.fit(X_scaled, y_arr)
 
     if n_features == 3:
@@ -100,7 +100,7 @@ def get_roc_pr_curves(
     if model_type == "logistic":
         model = LogisticRegression(C=C, max_iter=1000)
     else:
-        model = SVC(C=C, probability=True)
+        model = SVC(C=C, probability=True, max_iter=1000)
     model.fit(X_arr, y_arr)
     proba = model.predict_proba(X_arr)[:, 1]
     fpr, tpr, _ = roc_curve(y_arr, proba)

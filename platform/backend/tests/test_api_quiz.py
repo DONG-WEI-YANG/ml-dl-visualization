@@ -5,29 +5,30 @@ from app.main import app
 
 client = TestClient(app)
 
-# Helper: check if quiz data has been seeded
-_quiz_seeded = None
+@pytest.fixture(autouse=True)
+def seeded_quiz_db(tmp_path, monkeypatch):
+    """Clone the isolated test DB and seed real curriculum questions per test."""
+    import sqlite3
+    import app.db as db_module
+    from app.quiz.seed import seed_quiz_questions
+    path = tmp_path / 'quiz.db'
+    source = db_module.get_db()
+    target = sqlite3.connect(path)
+    source.backup(target)
+    source.close()
+    target.execute('DELETE FROM quiz_questions')
+    seed_quiz_questions(target)
+    target.commit()
+    target.close()
+    monkeypatch.setattr(db_module, 'DB_PATH', path)
 
-def _has_quiz_data() -> bool:
-    global _quiz_seeded
-    if _quiz_seeded is None:
-        resp = client.get("/api/quiz/week/1")
-        _quiz_seeded = len(resp.json().get("questions", [])) > 0
-    return _quiz_seeded
 
-needs_quiz_data = pytest.mark.skipif(
-    "not _has_quiz_data()",
-    reason="Quiz DB not seeded (CI uses empty DB)",
-)
-
-
-@needs_quiz_data
 def test_get_quiz_week_1():
     resp = client.get("/api/quiz/week/1")
     assert resp.status_code == 200
     data = resp.json()
     assert data["week"] == 1
-    assert len(data["questions"]) == 10
+    assert len(data["questions"]) == 3
     # Answers and explanations should not be included; category should be
     for q in data["questions"]:
         assert "id" in q
@@ -38,11 +39,11 @@ def test_get_quiz_week_1():
         assert "explanation" not in q
 
 
-@needs_quiz_data
-def test_get_quiz_week_18():
-    resp = client.get("/api/quiz/week/18")
+@pytest.mark.parametrize("week", range(2, 19))
+def test_get_quiz_all_other_weeks(week):
+    resp = client.get(f"/api/quiz/week/{week}")
     assert resp.status_code == 200
-    assert len(resp.json()["questions"]) == 10
+    assert len(resp.json()["questions"]) == 3
 
 
 def test_get_quiz_invalid_week():
@@ -51,7 +52,6 @@ def test_get_quiz_invalid_week():
     assert resp.json()["questions"] == []
 
 
-@needs_quiz_data
 def test_submit_quiz():
     # Get questions first
     resp = client.get("/api/quiz/week/1")
@@ -64,7 +64,7 @@ def test_submit_quiz():
     assert "score" in data
     assert "total" in data
     assert "percentage" in data
-    assert data["total"] == 10
+    assert data["total"] == 3
 
 
 def test_submit_quiz_empty_answers():
@@ -135,3 +135,17 @@ def test_admin_delete_question_not_found_is_chinese():
     resp = client.delete("/api/admin/quiz/questions/does-not-exist", headers=_admin_headers())
     assert resp.status_code == 404
     assert "不存在" in resp.json()["detail"]
+
+@pytest.mark.parametrize('week', range(1, 19))
+def test_seed_answers_grade_to_full_score(week):
+    from app.quiz.seed import load_seed
+    questions = [q for q in load_seed()['questions'] if q['week'] == week]
+    response = client.post('/api/quiz/submit', json={
+        'week': week, 'answers': {q['id']: q['answer'] for q in questions},
+    })
+    assert response.status_code == 200
+    result = response.json()
+    assert result['total'] == len(questions) == 3
+    assert result['score'] == 3
+    assert result['percentage'] == 100
+    assert all(row['correct'] for row in result['results'])

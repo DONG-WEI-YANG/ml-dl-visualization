@@ -23,10 +23,14 @@ def run_gradient_descent(
     weights_history = []
     loss_history = []
 
+    # Histories contain pre-update states, including the initial state.
     for _ in range(epochs):
         pred = X_arr @ w + b
         error = pred - y_arr
-        loss = float(np.mean(error**2))
+        with np.errstate(over="raise", invalid="raise"):
+            loss = float(np.mean(error**2))
+        if not np.isfinite(loss):
+            raise ValueError("Gradient descent diverged")
         loss_history.append(loss)
         weights_history.append(w.tolist() + [b])
         grad_w = (2 / n) * (X_arr.T @ error)
@@ -34,11 +38,16 @@ def run_gradient_descent(
         w -= learning_rate * grad_w
         b -= learning_rate * grad_b
 
+    with np.errstate(over="raise", invalid="raise"):
+        final_loss = float(np.mean((X_arr @ w + b - y_arr) ** 2))
+    if not np.isfinite(final_loss):
+        raise ValueError("Gradient descent diverged")
+
     return GradientDescentResult(
         weights_history=weights_history,
         loss_history=loss_history,
         final_weights=w.tolist() + [b],
-        final_loss=loss_history[-1],
+        final_loss=final_loss,
     )
 
 

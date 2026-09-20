@@ -22,9 +22,8 @@ def test_record_event():
         json={
             "student_id": "ignored-client-value",
             "week": 1,
-            "event_type": "quiz",
+            "event_type": "viz_interaction",
             "topic": "python basics",
-            "score": 85.0,
             "duration_seconds": 300,
         },
         headers=headers,
@@ -36,17 +35,19 @@ def test_record_event():
 
 
 def test_get_student_analytics():
-    student_id, headers = _admin_identity()
+    _, headers = _admin_identity()
+    response = client.post('/api/auth/register', headers=headers, json={
+        'username': 'analytics_graded_student', 'password': 'test-password', 'role': 'student'})
+    assert response.status_code == 200
+    student_id = response.json()['id']
     # Record a few events first
     for i in range(3):
         client.post(
-            "/api/analytics/events",
+            "/api/analytics/assignments/grade",
             json={
-                "student_id": "ignored-client-value",
+                "student_id": str(student_id),
                 "week": i + 1,
-                "event_type": "assignment",
                 "score": 70 + i * 10,
-                "duration_seconds": 600,
             },
             headers=headers,
         )

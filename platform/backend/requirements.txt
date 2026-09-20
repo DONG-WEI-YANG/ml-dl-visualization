@@ -1,7 +1,8 @@
-fastapi>=0.115.0
+# Security-reviewed web/NLP stack; see docs/dependency-remediation-2026-09-20.md.
+fastapi==0.141.1
 uvicorn[standard]>=0.34.0
-pydantic>=2.10.0
-pydantic-settings>=2.0.0
+pydantic==2.13.5
+pydantic-settings==2.14.2
 scikit-learn>=1.8.0,<1.9.0
 scikit-image>=0.24.0
 numpy>=2.0.0
@@ -12,11 +13,11 @@ openai>=1.60.0
 websockets>=14.0
 python-dotenv>=1.0.0
 httpx>=0.28.0
-python-multipart>=0.0.7
+python-multipart==0.0.31
 jieba>=0.42.1
 snownlp>=0.12.3
 langdetect>=1.0.9
-nltk>=3.9.0
+nltk==3.10.3
 textstat>=0.7.4
 sentence-transformers>=3.0.0
 rapidfuzz>=3.10.0
@@ -32,3 +33,15 @@ opencc-python-reimplemented>=0.1.7
 cn2an>=0.5.20
 emoji>=2.10.0
 thulac>=0.2.2
+
+# Explicit pins prevent a resolver selecting audited vulnerable transitives.
+starlette==1.3.1
+anyio==4.14.2
+click==8.5.0
+idna==3.20
+
+# Audited networking/image transitives, tested in an isolated target.
+aiohttp==3.14.3
+pillow==12.3.0
+requests==2.33.0
+urllib3==2.7.0

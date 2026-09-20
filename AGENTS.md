@@ -11,3 +11,7 @@
 - 教師進度名單 `/api/analytics/roster` 包含零活動學生，按學期分列；總學生數按 ID 去重。測驗週次與已評分作業週次分開，個人分析作業平均與總覽測驗／作業平均不可混稱。
 - 詳細操作與升級說明：`docs/enrollment-progress.md`。遷移只加欄位與學籍快照，正式部署前確認資料保全；不要上傳本機 SQLite、初始密碼清單或測試資料。
 - 驗證指令：後端 `.venv/Scripts/python.exe -m pytest tests/ -q`；前端 `npm test`、`npm run lint`、`npm run build`。2026-09-08 本機結果：後端 138 passed / 3 skipped（空題庫），前端 131 passed，lint/build 通過。此為當時結果，後續需按變更重新確認。
+
+- 2026-09-20 稽核修復尚待正式部署：見 `docs/audit-remediation-2026-09-20.md`。不得把本機題庫／測試成功宣稱為正式站修復完成。
+- 主資料庫與 RAG 共用 `DATABASE_PATH`；正式 HF 變更前必須先完成真實資料備份、還原驗證及持久化掛載，操作見 `docs/storage-operations.md`。勿為了讓 CI 發布而直接略過 `HF_STORAGE_MIGRATION_VERIFIED` 部署檢查。
+- `APP_ENV` 預設 production；本機使用 `.env.example` 明確 development，測試 conftest 明確 test。正式環境拒絕預設 JWT key；JWT 升級後舊 token 失效，改密碼回傳替換 session。學習事件 API 不再接受用戶端成績，教師作業評分使用 `/api/analytics/assignments/grade`。

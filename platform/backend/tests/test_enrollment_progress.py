@@ -22,6 +22,11 @@ def create(role='student', semester='115-1', class_name='護理一甲'):
         'semester': semester, 'class_name': class_name,
     })
     assert response.status_code == 200, response.text
+    # These enrollment scenarios require a fully onboarded account.
+    login = client.post('/api/auth/login', json={'username': response.json()['username'], 'password': 'test-pass-123'})
+    changed = client.post('/api/auth/change-password', headers={'Authorization': 'Bearer ' + login.json()['access_token']},
+                          json={'old_password': 'test-pass-123', 'new_password': 'onboarded-pass-456'})
+    assert changed.status_code == 200
     return response.json()
 
 
@@ -46,7 +51,7 @@ def test_retake_preserves_identity_history_and_separates_terms():
     student = create()
     headers = {'Authorization': 'Bearer ' + create_token(student['id'], student['username'], 'student')}
     event = {'student_id': str(student['id']), 'week': 1, 'event_type': 'assignment', 'score': 80, 'semester': 'spoofed'}
-    assert client.post('/api/analytics/events', json=event, headers=headers).status_code == 200
+    assert client.post('/api/analytics/assignments/grade', json=event, headers=admin_headers()).status_code == 200
     client.put(f"/api/admin/users/{student['id']}", json={'is_active': False}, headers=admin_headers())
     result = client.post('/api/admin/users/import', json={'semester': '115-2', 'class_name': '重修班', 'rows': [{'username': student['username']}]}, headers=admin_headers())
     assert result.status_code == 200

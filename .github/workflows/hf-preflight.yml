@@ -1,0 +1,43 @@
+name: HF storage preflight (read only)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install huggingface_hub
+      - name: Inspect deployment prerequisites without restarting the Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from huggingface_hub import HfApi
+
+          api = HfApi(token=os.environ['HF_TOKEN'])
+          repo = 'kevin19830331/ml-dl-viz-api'
+          print('Authenticated account:', api.whoami()['name'])
+          runtime = api.get_space_runtime(repo)
+          print('Runtime stage:', runtime.stage)
+          print('Hardware:', runtime.hardware)
+          volumes = getattr(runtime, 'volumes', None)
+          print('Attached volume count:', len(volumes or []))
+          for volume in volumes or []:
+              print('Volume:', json.dumps({key: getattr(volume, key, None) for key in
+                    ('type', 'source', 'mount_path', 'read_only')}))
+          variables = api.get_space_variables(repo)
+          print('Variable names:', sorted(variables))
+          for name in ('APP_ENV', 'DATABASE_PATH'):
+              print(name, ':', variables[name].value if name in variables else '(not set as variable)')
+          print('Secret names:', sorted(api.get_space_secrets(repo)))
+          print('Read-only inspection complete. No backup or migration is implied.')
+          PY

@@ -1,0 +1,762 @@
+{
+  "version": "2026-09-20.1",
+  "provenance": "Authored concept checks grounded in the repository weekly lectures; weeks 3–4 also adapt concepts from curriculum/assessment/concept-quiz-template.md. Baseline: three questions per week, not the full assessment template.",
+  "questions": [
+    {
+      "id": "curriculum-w01-q01",
+      "week": 1,
+      "question": "深度學習與機器學習的關係為何？",
+      "options": [
+        "深度學習是機器學習的一部分",
+        "兩者完全無關",
+        "所有機器學習都是深度學習"
+      ],
+      "answer": 0,
+      "explanation": "深度學習以多層神經網路學習表示，是機器學習的子領域。",
+      "category": "concept",
+      "source": "curriculum/week-01/lecture.md"
+    },
+    {
+      "id": "curriculum-w01-q02",
+      "week": 1,
+      "question": "Jupyter Notebook 的主要特色是什麼？",
+      "options": [
+        "只能編輯圖片",
+        "只能執行編譯後的程式",
+        "結合程式碼、執行結果與文字說明"
+      ],
+      "answer": 2,
+      "explanation": "Notebook 以儲存格整合程式碼、輸出與 Markdown 說明。",
+      "category": "concept",
+      "source": "curriculum/week-01/lecture.md"
+    },
+    {
+      "id": "curriculum-w01-q03",
+      "week": 1,
+      "question": "監督式學習的訓練資料通常包含什麼？",
+      "options": [
+        "只有模型參數",
+        "輸入特徵與目標標籤",
+        "只有沒有標籤的輸入"
+      ],
+      "answer": 1,
+      "explanation": "監督式學習利用輸入與已知目標之間的關係訓練模型。",
+      "category": "concept",
+      "source": "curriculum/week-01/lecture.md"
+    },
+    {
+      "id": "curriculum-w02-q01",
+      "week": 2,
+      "question": "觀察單一連續變數的分布，適合哪種圖？",
+      "options": [
+        "直方圖",
+        "流程圖",
+        "組織圖"
+      ],
+      "answer": 0,
+      "explanation": "直方圖將數值分箱，以次數呈現資料分布。",
+      "category": "concept",
+      "source": "curriculum/week-02/lecture.md"
+    },
+    {
+      "id": "curriculum-w02-q02",
+      "week": 2,
+      "question": "分析兩個數值變數的關係，適合哪種圖？",
+      "options": [
+        "圓餅圖",
+        "組織圖",
+        "散布圖"
+      ],
+      "answer": 2,
+      "explanation": "散布圖以兩軸分別表示兩個變數，呈現關聯與離群點。",
+      "category": "concept",
+      "source": "curriculum/week-02/lecture.md"
+    },
+    {
+      "id": "curriculum-w02-q03",
+      "week": 2,
+      "question": "EDA 發現缺失值後，較適當的做法是什麼？",
+      "options": [
+        "直接當作沒有缺失",
+        "了解缺失原因再選擇處理方法",
+        "一律填入最大值"
+      ],
+      "answer": 1,
+      "explanation": "缺失值處理需考慮原因、比例與任務，不能任意填補。",
+      "category": "concept",
+      "source": "curriculum/week-02/lecture.md"
+    },
+    {
+      "id": "curriculum-w03-q01",
+      "week": 3,
+      "question": "保留測試集的主要目的為何？",
+      "options": [
+        "估計未見資料上的泛化表現",
+        "直接更新模型權重",
+        "反覆挑選最佳超參數"
+      ],
+      "answer": 0,
+      "explanation": "測試集應保留作最終評估，避免模型選擇造成樂觀偏誤。",
+      "category": "concept",
+      "source": "curriculum/week-03/lecture.md"
+    },
+    {
+      "id": "curriculum-w03-q02",
+      "week": 3,
+      "question": "5 折交叉驗證每次通常使用多少資料作驗證？",
+      "options": [
+        "80%",
+        "50%",
+        "20%"
+      ],
+      "answer": 2,
+      "explanation": "五等份中每次保留一份作驗證，因此比例是 1/5。",
+      "category": "concept",
+      "source": "curriculum/week-03/lecture.md"
+    },
+    {
+      "id": "curriculum-w03-q03",
+      "week": 3,
+      "question": "訓練準確率 99%、測試準確率 60%，較可能代表什麼？",
+      "options": [
+        "必然欠擬合",
+        "過擬合",
+        "必然沒有雜訊"
+      ],
+      "answer": 1,
+      "explanation": "訓練表現遠優於測試表現，可能表示模型記住了訓練資料的細節與雜訊。",
+      "category": "concept",
+      "source": "curriculum/week-03/lecture.md"
+    },
+    {
+      "id": "curriculum-w04-q01",
+      "week": 4,
+      "question": "均方誤差 MSE 如何計算？",
+      "options": [
+        "預測誤差平方的平均",
+        "預測誤差直接相加",
+        "預測值的最大值"
+      ],
+      "answer": 0,
+      "explanation": "MSE 將每個預測值與真值之差平方後取平均。",
+      "category": "concept",
+      "source": "curriculum/week-04/lecture.md"
+    },
+    {
+      "id": "curriculum-w04-q02",
+      "week": 4,
+      "question": "梯度下降通常沿哪個方向更新參數？",
+      "options": [
+        "損失函數梯度的方向",
+        "固定沿所有座標的正方向",
+        "損失函數梯度的反方向"
+      ],
+      "answer": 2,
+      "explanation": "負梯度方向是局部降低損失的方向。",
+      "category": "concept",
+      "source": "curriculum/week-04/lecture.md"
+    },
+    {
+      "id": "curriculum-w04-q03",
+      "week": 4,
+      "question": "學習率過大可能造成什麼現象？",
+      "options": [
+        "參數必定不變",
+        "震盪或發散",
+        "保證一步到最佳解"
+      ],
+      "answer": 1,
+      "explanation": "過大步幅可能跨越低損失區域，導致震盪或發散。",
+      "category": "concept",
+      "source": "curriculum/week-04/lecture.md"
+    },
+    {
+      "id": "curriculum-w05-q01",
+      "week": 5,
+      "question": "二元邏輯迴歸常以哪個函數將分數轉為機率？",
+      "options": [
+        "Sigmoid",
+        "取整數函數",
+        "絕對值函數"
+      ],
+      "answer": 0,
+      "explanation": "Sigmoid 將實數映射到 0 與 1 之間。",
+      "category": "concept",
+      "source": "curriculum/week-05/lecture.md"
+    },
+    {
+      "id": "curriculum-w05-q02",
+      "week": 5,
+      "question": "Recall 的分母是什麼？",
+      "options": [
+        "所有預測正例 TP + FP",
+        "所有實際負例 TN + FP",
+        "所有實際正例 TP + FN"
+      ],
+      "answer": 2,
+      "explanation": "召回率 TP/(TP+FN) 衡量實際正例中被找出的比例。",
+      "category": "concept",
+      "source": "curriculum/week-05/lecture.md"
+    },
+    {
+      "id": "curriculum-w05-q03",
+      "week": 5,
+      "question": "在相同預測機率下，降低正例判定閾值通常如何影響召回率？",
+      "options": [
+        "使召回率固定為零",
+        "不降低召回率",
+        "必定降低召回率"
+      ],
+      "answer": 1,
+      "explanation": "降低閾值可使更多樣本被判為正例，因此 TP 不減、FN 不增。",
+      "category": "concept",
+      "source": "curriculum/week-05/lecture.md"
+    },
+    {
+      "id": "curriculum-w06-q01",
+      "week": 6,
+      "question": "線性 SVM 的核心目標是什麼？",
+      "options": [
+        "尋找較大的分類間隔",
+        "最大化訓練資料筆數",
+        "把所有特徵設為零"
+      ],
+      "answer": 0,
+      "explanation": "SVM 在分類約束與正則化下尋找具大間隔的分隔超平面。",
+      "category": "concept",
+      "source": "curriculum/week-06/lecture.md"
+    },
+    {
+      "id": "curriculum-w06-q02",
+      "week": 6,
+      "question": "核技巧主要用來處理哪種需求？",
+      "options": [
+        "自動刪除所有標籤",
+        "保證所有資料線性可分",
+        "隱式表示非線性的特徵關係"
+      ],
+      "answer": 2,
+      "explanation": "核函數以內積形式隱式處理特徵映射，支援非線性邊界。",
+      "category": "concept",
+      "source": "curriculum/week-06/lecture.md"
+    },
+    {
+      "id": "curriculum-w06-q03",
+      "week": 6,
+      "question": "SVM 的 C 增大，通常代表什麼？",
+      "options": [
+        "輸入維度自動減少",
+        "對違反間隔的懲罰增加",
+        "完全忽略分類錯誤"
+      ],
+      "answer": 1,
+      "explanation": "較大的 C 更重視減少訓練違規，相對降低正則化強度。",
+      "category": "concept",
+      "source": "curriculum/week-06/lecture.md"
+    },
+    {
+      "id": "curriculum-w07-q01",
+      "week": 7,
+      "question": "限制決策樹最大深度有何主要作用？",
+      "options": [
+        "限制模型複雜度以緩解過擬合",
+        "保證训练誤差為零",
+        "使所有葉節點消失"
+      ],
+      "answer": 0,
+      "explanation": "較淺的樹較難記住訓練資料細節，可降低過擬合風險。",
+      "category": "concept",
+      "source": "curriculum/week-07/lecture.md"
+    },
+    {
+      "id": "curriculum-w07-q02",
+      "week": 7,
+      "question": "隨機森林分類通常如何整合多棵樹的結果？",
+      "options": [
+        "只使用最後一棵樹",
+        "將所有類別編號相乘",
+        "投票或平均類別機率"
+      ],
+      "answer": 2,
+      "explanation": "森林利用多棵樹整合預測，降低單一樹的變異。",
+      "category": "concept",
+      "source": "curriculum/week-07/lecture.md"
+    },
+    {
+      "id": "curriculum-w07-q03",
+      "week": 7,
+      "question": "平方誤差下的梯度提升，新樹主要擬合什麼？",
+      "options": [
+        "固定全零標籤",
+        "目前模型的殘差",
+        "資料列編號"
+      ],
+      "answer": 1,
+      "explanation": "平方誤差的負梯度對應殘差，新樹逐步修正既有模型的錯誤。",
+      "category": "concept",
+      "source": "curriculum/week-07/lecture.md"
+    },
+    {
+      "id": "curriculum-w08-q01",
+      "week": 8,
+      "question": "SHAP 值主要描述什麼？",
+      "options": [
+        "特徵對預測相對於基準值的貢獻",
+        "特徵必然造成結果的因果效應",
+        "資料檔案大小"
+      ],
+      "answer": 0,
+      "explanation": "SHAP 分配特徵對模型預測的貢獻，不直接證明因果關係。",
+      "category": "concept",
+      "source": "curriculum/week-08/lecture.md"
+    },
+    {
+      "id": "curriculum-w08-q02",
+      "week": 8,
+      "question": "Permutation importance 如何衡量特徵重要度？",
+      "options": [
+        "比較特徵名稱長度",
+        "直接以資料列數排序",
+        "打亂特徵後觀察模型效能下降"
+      ],
+      "answer": 2,
+      "explanation": "打亂特徵會破壞其資訊，效能下降可反映模型對該特徵的依賴。",
+      "category": "concept",
+      "source": "curriculum/week-08/lecture.md"
+    },
+    {
+      "id": "curriculum-w08-q03",
+      "week": 8,
+      "question": "局部解釋主要關注什麼？",
+      "options": [
+        "所有模型的訓練時間",
+        "單一樣本的預測原因",
+        "整個資料庫的檔案格式"
+      ],
+      "answer": 1,
+      "explanation": "局部解釋說明特定樣本的預測，全域解釋則關注整體行為。",
+      "category": "concept",
+      "source": "curriculum/week-08/lecture.md"
+    },
+    {
+      "id": "curriculum-w09-q01",
+      "week": 9,
+      "question": "標準化器應在哪些資料上 fit？",
+      "options": [
+        "僅訓練資料",
+        "訓練與測試資料合併",
+        "僅測試資料"
+      ],
+      "answer": 0,
+      "explanation": "僅在訓練集估計統計量，再套用到驗證與測試集，避免資料洩漏。",
+      "category": "concept",
+      "source": "curriculum/week-09/lecture.md"
+    },
+    {
+      "id": "curriculum-w09-q02",
+      "week": 9,
+      "question": "One-hot encoding 適合處理什麼？",
+      "options": [
+        "影像檔案壓縮",
+        "自動建立目標標籤",
+        "無自然大小順序的類別特徵"
+      ],
+      "answer": 2,
+      "explanation": "One-hot 以獨立指示欄位表示類別，避免暗示不存在的大小順序。",
+      "category": "concept",
+      "source": "curriculum/week-09/lecture.md"
+    },
+    {
+      "id": "curriculum-w09-q03",
+      "week": 9,
+      "question": "Pipeline 的主要優點是什麼？",
+      "options": [
+        "不再需要驗證集",
+        "一致串接前處理與模型並降低洩漏風險",
+        "保證任何資料都達到滿分"
+      ],
+      "answer": 1,
+      "explanation": "Pipeline 將前處理與估計器整合，交叉驗證時可在各訓練折獨立 fit。",
+      "category": "concept",
+      "source": "curriculum/week-09/lecture.md"
+    },
+    {
+      "id": "curriculum-w10-q01",
+      "week": 10,
+      "question": "哪一項通常屬於超參數？",
+      "options": [
+        "決策樹最大深度",
+        "線性模型訓練得到的權重",
+        "每筆資料的預測值"
+      ],
+      "answer": 0,
+      "explanation": "最大深度由訓練程序外設定；模型權重則由資料學得。",
+      "category": "concept",
+      "source": "curriculum/week-10/lecture.md"
+    },
+    {
+      "id": "curriculum-w10-q02",
+      "week": 10,
+      "question": "Grid search 如何搜尋超參數？",
+      "options": [
+        "只改動資料標籤",
+        "保證找到所有實數範圍的全域最佳值",
+        "評估指定網格中的參數組合"
+      ],
+      "answer": 2,
+      "explanation": "網格搜尋只涵蓋預先指定的離散組合。",
+      "category": "concept",
+      "source": "curriculum/week-10/lecture.md"
+    },
+    {
+      "id": "curriculum-w10-q03",
+      "week": 10,
+      "question": "學習曲線通常比較什麼？",
+      "options": [
+        "每個使用者的登入次數",
+        "不同訓練樣本數下的訓練與驗證效能",
+        "不同檔名的字數"
+      ],
+      "answer": 1,
+      "explanation": "學習曲線呈現資料量變化對訓練與泛化表現的影響。",
+      "category": "concept",
+      "source": "curriculum/week-10/lecture.md"
+    },
+    {
+      "id": "curriculum-w11-q01",
+      "week": 11,
+      "question": "ReLU 的定義是什麼？",
+      "options": [
+        "max(0, x)",
+        "x 的平方",
+        "固定輸出 1"
+      ],
+      "answer": 0,
+      "explanation": "ReLU 對負輸入輸出零，對非負輸入保留原值。",
+      "category": "concept",
+      "source": "curriculum/week-11/lecture.md"
+    },
+    {
+      "id": "curriculum-w11-q02",
+      "week": 11,
+      "question": "Dropout 在訓練時通常如何運作？",
+      "options": [
+        "永久刪除全部隱藏層",
+        "只保留最大權重",
+        "隨機停用部分單元"
+      ],
+      "answer": 2,
+      "explanation": "Dropout 隨機遮蔽單元以降低共適應；一般推論時不隨機遮蔽。",
+      "category": "concept",
+      "source": "curriculum/week-11/lecture.md"
+    },
+    {
+      "id": "curriculum-w11-q03",
+      "week": 11,
+      "question": "反向傳播主要計算什麼？",
+      "options": [
+        "類別名稱的字母數",
+        "損失對參數的梯度",
+        "資料集的下載速度"
+      ],
+      "answer": 1,
+      "explanation": "反向傳播利用鏈式法則高效計算梯度，供優化器更新參數。",
+      "category": "concept",
+      "source": "curriculum/week-11/lecture.md"
+    },
+    {
+      "id": "curriculum-w12-q01",
+      "week": 12,
+      "question": "CNN 卷積層的權重共享代表什麼？",
+      "options": [
+        "同一卷積核套用於不同空間位置",
+        "所有層只有一個相同參數",
+        "每張影像都必須有獨立模型"
+      ],
+      "answer": 0,
+      "explanation": "卷積核在影像位置間共享參數以提取局部模式。",
+      "category": "concept",
+      "source": "curriculum/week-12/lecture.md"
+    },
+    {
+      "id": "curriculum-w12-q02",
+      "week": 12,
+      "question": "Max pooling 如何形成輸出？",
+      "options": [
+        "取所有權重之和",
+        "直接輸出類別名稱",
+        "取局部區域最大值"
+      ],
+      "answer": 2,
+      "explanation": "最大池化在各視窗取最大值，常用於縮小特徵圖空間尺寸。",
+      "category": "concept",
+      "source": "curriculum/week-12/lecture.md"
+    },
+    {
+      "id": "curriculum-w12-q03",
+      "week": 12,
+      "question": "Grad-CAM 的熱圖主要用來觀察什麼？",
+      "options": [
+        "訓練資料的全部標籤",
+        "與特定類別預測相關的影像區域",
+        "影像的唯一正確因果機制"
+      ],
+      "answer": 1,
+      "explanation": "Grad-CAM 以梯度加權特徵圖呈現與類別分數相關的區域。",
+      "category": "concept",
+      "source": "curriculum/week-12/lecture.md"
+    },
+    {
+      "id": "curriculum-w13-q01",
+      "week": 13,
+      "question": "RNN 如何利用序列中的先前資訊？",
+      "options": [
+        "透過隱藏狀態傳遞資訊",
+        "每一步都丟棄所有先前資訊",
+        "將所有時間位置視為同一標籤"
+      ],
+      "answer": 0,
+      "explanation": "RNN 的隱藏狀態隨序列步驟更新並攜帶過去資訊。",
+      "category": "concept",
+      "source": "curriculum/week-13/lecture.md"
+    },
+    {
+      "id": "curriculum-w13-q02",
+      "week": 13,
+      "question": "LSTM 的閘門主要用來控制什麼？",
+      "options": [
+        "資料檔案的壓縮率",
+        "網路連線頻寬",
+        "資訊的保留、寫入與輸出"
+      ],
+      "answer": 2,
+      "explanation": "LSTM 透過閘門控制記憶資訊流，有助於學習較長期依賴。",
+      "category": "concept",
+      "source": "curriculum/week-13/lecture.md"
+    },
+    {
+      "id": "curriculum-w13-q03",
+      "week": 13,
+      "question": "Self-attention 的主要作用是什麼？",
+      "options": [
+        "完全不使用輸入內容",
+        "依內容關係加權整合序列資訊",
+        "強制每個位置只看自己"
+      ],
+      "answer": 1,
+      "explanation": "Self-attention 依查詢與鍵的關係分配權重，再整合值向量。",
+      "category": "concept",
+      "source": "curriculum/week-13/lecture.md"
+    },
+    {
+      "id": "curriculum-w14-q01",
+      "week": 14,
+      "question": "Early stopping 通常依據什麼決定停止？",
+      "options": [
+        "驗證表現持續不再改善",
+        "測試集每次都達到滿分",
+        "訓練資料檔名改變"
+      ],
+      "answer": 0,
+      "explanation": "早停監測驗證表現，以避免持續訓練造成過擬合。",
+      "category": "concept",
+      "source": "curriculum/week-14/lecture.md"
+    },
+    {
+      "id": "curriculum-w14-q02",
+      "week": 14,
+      "question": "Gradient clipping 主要針對哪個問題？",
+      "options": [
+        "缺少資料欄位名稱",
+        "所有梯度恆為零",
+        "梯度爆炸"
+      ],
+      "answer": 2,
+      "explanation": "梯度裁剪限制梯度大小，避免單次更新幅度過大。",
+      "category": "concept",
+      "source": "curriculum/week-14/lecture.md"
+    },
+    {
+      "id": "curriculum-w14-q03",
+      "week": 14,
+      "question": "資料增強應維持什麼條件？",
+      "options": [
+        "只產生完全相同副本",
+        "轉換後仍符合原標籤語意",
+        "任意改變正確標籤"
+      ],
+      "answer": 1,
+      "explanation": "資料增強需使用合理且保留標籤語意的變換。",
+      "category": "concept",
+      "source": "curriculum/week-14/lecture.md"
+    },
+    {
+      "id": "curriculum-w15-q01",
+      "week": 15,
+      "question": "資料類別高度不平衡時，只看 accuracy 有何風險？",
+      "options": [
+        "可能掩蓋少數類別表現差",
+        "必定比所有其他指標嚴格",
+        "可以完全不看錯誤案例"
+      ],
+      "answer": 0,
+      "explanation": "多數類別可主導 accuracy，應搭配召回率、精確率等指標。",
+      "category": "concept",
+      "source": "curriculum/week-15/lecture.md"
+    },
+    {
+      "id": "curriculum-w15-q02",
+      "week": 15,
+      "question": "評估群體公平性時，應如何檢查？",
+      "options": [
+        "只看全體平均值",
+        "完全不檢查資料代表性",
+        "分群比較相關錯誤率與效能"
+      ],
+      "answer": 2,
+      "explanation": "群體分解可揭露被整體平均掩蓋的差異。",
+      "category": "concept",
+      "source": "curriculum/week-15/lecture.md"
+    },
+    {
+      "id": "curriculum-w15-q03",
+      "week": 15,
+      "question": "穩健性評估主要關注什麼？",
+      "options": [
+        "是否只有訓練集得分高",
+        "擾動或分布變化下的表現",
+        "模型檔名是否好看"
+      ],
+      "answer": 1,
+      "explanation": "穩健性反映模型面對噪音、擾動或環境變化時的可靠程度。",
+      "category": "concept",
+      "source": "curriculum/week-15/lecture.md"
+    },
+    {
+      "id": "curriculum-w16-q01",
+      "week": 16,
+      "question": "為了重現模型，版本管理應保存什麼？",
+      "options": [
+        "資料、程式、設定與模型版本",
+        "僅模型檔案的顏色",
+        "只保存最終分數"
+      ],
+      "answer": 0,
+      "explanation": "重現需要追蹤資料、程式、訓練設定與產物的對應關係。",
+      "category": "concept",
+      "source": "curriculum/week-16/lecture.md"
+    },
+    {
+      "id": "curriculum-w16-q02",
+      "week": 16,
+      "question": "推論服務主要負責什麼？",
+      "options": [
+        "每次請求都人工重新標註全資料",
+        "永久刪除所有模型版本",
+        "接收輸入並回傳模型預測"
+      ],
+      "answer": 2,
+      "explanation": "推論服務載入模型並對輸入執行預測。",
+      "category": "concept",
+      "source": "curriculum/week-16/lecture.md"
+    },
+    {
+      "id": "curriculum-w16-q03",
+      "week": 16,
+      "question": "模型上線後為何仍需監測資料漂移？",
+      "options": [
+        "漂移只會發生在訓練前",
+        "輸入分布可能隨時間改變",
+        "上線後模型必定永遠正確"
+      ],
+      "answer": 1,
+      "explanation": "資料分布變化可能影響效能，應持續監測與評估。",
+      "category": "concept",
+      "source": "curriculum/week-16/lecture.md"
+    },
+    {
+      "id": "curriculum-w17-q01",
+      "week": 17,
+      "question": "文字嵌入主要將文字表示為什麼？",
+      "options": [
+        "可比較語意的數值向量",
+        "必定正確的答案",
+        "資料庫密碼"
+      ],
+      "answer": 0,
+      "explanation": "嵌入將文字映射為向量，使語意相近內容可透過相似度檢索。",
+      "category": "concept",
+      "source": "curriculum/week-17/lecture.md"
+    },
+    {
+      "id": "curriculum-w17-q02",
+      "week": 17,
+      "question": "RAG 的典型流程為何？",
+      "options": [
+        "只重複訓練模型而不檢索",
+        "將所有回答固定為同一句",
+        "先檢索相關內容再提供給模型生成"
+      ],
+      "answer": 2,
+      "explanation": "RAG 將檢索內容加入生成上下文，以提供任務相關依據。",
+      "category": "concept",
+      "source": "curriculum/week-17/lecture.md"
+    },
+    {
+      "id": "curriculum-w17-q03",
+      "week": 17,
+      "question": "加入 RAG 是否保證回答完全正確？",
+      "options": [
+        "保證來源永遠最新",
+        "不保證，仍需檢查檢索與生成結果",
+        "保證永遠沒有幻覺"
+      ],
+      "answer": 1,
+      "explanation": "檢索可能不相關或錯誤，模型也可能誤用內容，因此仍需驗證。",
+      "category": "concept",
+      "source": "curriculum/week-17/lecture.md"
+    },
+    {
+      "id": "curriculum-w18-q01",
+      "week": 18,
+      "question": "專題展示模型成果時，哪種做法較完整？",
+      "options": [
+        "說明問題、方法、評估與限制",
+        "只展示最高分而隱藏評估方式",
+        "只列出使用的套件名稱"
+      ],
+      "answer": 0,
+      "explanation": "完整展示需讓觀眾理解任務、方法、證據與適用限制。",
+      "category": "concept",
+      "source": "curriculum/week-18/lecture.md"
+    },
+    {
+      "id": "curriculum-w18-q02",
+      "week": 18,
+      "question": "專題結果未達預期時，反思應包含什麼？",
+      "options": [
+        "刪除所有失敗紀錄",
+        "任意修改測試標籤以提高分數",
+        "分析錯誤與限制並提出改進方向"
+      ],
+      "answer": 2,
+      "explanation": "反思應依證據分析失敗原因，提出可驗證的改進。",
+      "category": "concept",
+      "source": "curriculum/week-18/lecture.md"
+    },
+    {
+      "id": "curriculum-w18-q03",
+      "week": 18,
+      "question": "為了讓他人重現專題，應提供什麼？",
+      "options": [
+        "只有最高準確率數字",
+        "執行環境、步驟與資料處理說明",
+        "只有截圖"
+      ],
+      "answer": 1,
+      "explanation": "清楚記錄環境、資料處理與執行步驟可支持重現與審查。",
+      "category": "concept",
+      "source": "curriculum/week-18/lecture.md"
+    }
+  ]
+}

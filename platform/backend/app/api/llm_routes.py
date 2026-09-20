@@ -1,15 +1,14 @@
 import logging
 import asyncio
 import time
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Depends
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query, Depends, HTTPException
 from pydantic import BaseModel
 from app.llm.factory import ProviderResolution, resolve_llm_provider
 from app.llm.tutor import AITutor
 from app.llm.base import LLMMessage
 from app.config import settings
-from app.db import get_db, get_setting
-from app.auth.utils import decode_token
-from app.auth.dependencies import get_current_user, require_admin
+from app.db import get_setting
+from app.auth.dependencies import get_current_user, require_admin, authenticate_token
 from app.llm.quick_answer import build_quick_answer
 from app.analytics.tracker import record_event
 from app.analytics.models import LearningEvent
@@ -190,23 +189,20 @@ async def chat(req: ChatRequest, user: dict = Depends(get_current_user)):
 
 @router.websocket("/ws/chat")
 async def chat_ws(websocket: WebSocket, token: str = Query(default="")):
-    payload = decode_token(token) if token else None
-    if not payload:
-        await websocket.close(code=4401, reason="需要登入")
-        return
-    conn = get_db()
-    user = conn.execute(
-        "SELECT id FROM users WHERE id = ? AND is_active = 1 AND deleted_at IS NULL",
-        (payload["sub"],),
-    ).fetchone()
-    conn.close()
-    if not user:
-        await websocket.close(code=4401, reason="需要登入")
+    try:
+        user = authenticate_token(token)
+    except HTTPException as exc:
+        await websocket.close(code=4403 if exc.status_code == 403 else 4401, reason=exc.detail)
         return
     await websocket.accept()
     try:
         while True:
             data = await websocket.receive_json()
+            try:
+                user = authenticate_token(token)
+            except HTTPException as exc:
+                await websocket.close(code=4403 if exc.status_code == 403 else 4401, reason=exc.detail)
+                return
             messages = [LLMMessage(**m) for m in data.get("messages", [])]
             week = data.get("week", 1)
             topic = data.get("topic", "")
@@ -218,6 +214,11 @@ async def chat_ws(websocket: WebSocket, token: str = Query(default="")):
                 mode,
                 student_id=str(user["id"]),
             ):
+                try:
+                    authenticate_token(token)
+                except HTTPException as exc:
+                    await websocket.close(code=4403 if exc.status_code == 403 else 4401, reason=exc.detail)
+                    return
                 await websocket.send_json(event)
     except WebSocketDisconnect:
         pass

@@ -113,6 +113,10 @@ async def update_user(user_id: int, data: UserUpdate, request: Request, admin: d
         updates.append("must_change_password = 1")
 
     if updates:
+        if (data.password is not None
+            or (data.role is not None and data.role != row['role'])
+            or (data.is_active is not None and data.is_active != bool(row['is_active']))):
+            updates.append('session_version = session_version + 1')
         updates.append("updated_at = datetime('now')")
         params.append(user_id)
         conn.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = ?", params)
@@ -140,7 +144,7 @@ async def delete_user(user_id: int, request: Request, user=Depends(require_admin
         raise HTTPException(status_code=400, detail="不能刪除自己的帳號")
     db = get_db()
     cursor = db.execute(
-        "UPDATE users SET is_active = 0, deleted_at = datetime('now'), "
+        "UPDATE users SET is_active = 0, deleted_at = datetime('now'), session_version = session_version + 1, "
         "updated_at = datetime('now') WHERE id = ? AND deleted_at IS NULL",
         (user_id,),
     )
@@ -180,7 +184,7 @@ async def import_users(req: ImportRequest, request: Request, admin: dict = Depen
                 initial_password = secrets.token_urlsafe(9)  # 12 chars
                 conn.execute(
                     "UPDATE users SET deleted_at = NULL, is_active = 1, password_hash = ?, "
-                    "must_change_password = 1, semester = ?, updated_at = datetime('now') "
+                    "must_change_password = 1, session_version = session_version + 1, semester = ?, updated_at = datetime('now') "
                     "WHERE id = ?",
                     (hash_password(initial_password), semester, existing["id"]),
                 )
@@ -216,7 +220,7 @@ async def import_users(req: ImportRequest, request: Request, admin: dict = Depen
 async def archive_semester(semester: str, request: Request, admin: dict = Depends(require_admin)):
     conn = get_db()
     cursor = conn.execute(
-        "UPDATE users SET is_active = 0, updated_at = datetime('now') "
+        "UPDATE users SET is_active = 0, session_version = session_version + 1, updated_at = datetime('now') "
         "WHERE semester = ? AND role = 'student' AND is_active = 1 AND deleted_at IS NULL",
         (semester,),
     )

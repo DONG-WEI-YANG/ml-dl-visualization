@@ -5,6 +5,11 @@ from pathlib import Path
 
 import pytest
 
+# Explicit test configuration; never inherit a workstation's production secrets.
+os.environ['APP_ENV'] = 'test'
+os.environ['JWT_SECRET'] = 'isolated-test-signing-secret-0123456789'
+os.environ['DEFAULT_ADMIN_PASSWORD'] = 'admin123'
+
 # Create temp DB before any app imports
 _test_db = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
 _test_db.close()
@@ -19,6 +24,11 @@ from app.rag.store import init_rag_tables
 
 init_db()
 init_rag_tables()
+
+# Existing API tests use an already-onboarded administrator. Forced-change
+# behavior is exercised separately with accounts that retain the flag.
+with db_module.db_connection() as conn:
+    conn.execute("UPDATE users SET must_change_password = 0 WHERE username = 'admin'")
 
 
 @pytest.fixture(autouse=True)

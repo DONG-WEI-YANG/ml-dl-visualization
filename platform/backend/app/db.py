@@ -2,8 +2,9 @@ import sqlite3
 from contextlib import contextmanager
 from collections.abc import Iterator
 from pathlib import Path
+from app.config import settings
 
-DB_PATH = Path(__file__).parent.parent / "data" / "app.db"
+DB_PATH = settings.database_path
 
 
 def get_db() -> sqlite3.Connection:
@@ -94,6 +95,10 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_audit_timestamp ON audit_logs(timestamp);
         CREATE INDEX IF NOT EXISTS idx_audit_actor ON audit_logs(actor_id);
         CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs(action);
+        CREATE TABLE IF NOT EXISTS revoked_tokens (
+            jti TEXT PRIMARY KEY,
+            expires_at INTEGER NOT NULL
+        );
     """)
     # Migration: add semester column if not exists
     try:
@@ -105,6 +110,7 @@ def init_db():
     for ddl in (
         "ALTER TABLE users ADD COLUMN deleted_at TEXT",
         "ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0",
     ):
         try:
             conn.execute(ddl)
@@ -145,6 +151,12 @@ def init_db():
     if not existing:
         from app.auth.utils import hash_password
         from app.config import settings
+        if settings.app_env == 'production' and (
+            len(settings.default_admin_password) < 12
+            or settings.default_admin_password == 'admin123'
+        ):
+            conn.close()
+            raise RuntimeError('Initial production administrator requires DEFAULT_ADMIN_PASSWORD of at least 12 characters')
         conn.execute(
             "INSERT INTO users (username, password_hash, display_name, role, must_change_password) "
             "VALUES (?, ?, ?, ?, 1)",
@@ -162,6 +174,8 @@ def init_db():
         conn.execute(
             "INSERT OR IGNORE INTO system_settings (key, value) VALUES (?, ?)", (k, v)
         )
+    from app.quiz.seed import seed_quiz_questions
+    seed_quiz_questions(conn)
     conn.commit()
     conn.close()
 

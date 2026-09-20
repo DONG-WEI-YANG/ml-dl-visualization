@@ -73,22 +73,20 @@ from contextlib import asynccontextmanager
 
 def _auto_ingest_curriculum():
     """Auto-ingest curriculum if RAG is empty (e.g. after container restart)."""
-    try:
-        from app.rag.store import get_stats
-        stats = get_stats()
-        if stats.get("curriculum_chunks", 0) > 0:
-            logger.info("RAG already has %d curriculum chunks, skipping auto-ingest", stats["curriculum_chunks"])
-            return
-        from app.rag.chunker import load_curriculum_chunks
-        chunks = load_curriculum_chunks()
-        if not chunks:
-            logger.info("No local curriculum files found, skipping auto-ingest")
-            return
-        from app.rag.store import ingest_chunks
-        count = ingest_chunks(chunks)
-        logger.info("Auto-ingested %d curriculum chunks into RAG", count)
-    except Exception as e:
-        logger.warning("Auto-ingest failed (non-fatal): %s", e)
+    from app.rag.store import get_stats, ingest_chunks
+    from app.rag.chunker import load_curriculum_chunks
+    stats = get_stats()
+    if stats.get("curriculum_chunks", 0) > 0:
+        return "ready"
+    chunks = load_curriculum_chunks()
+    if not chunks:
+        logger.warning("No curriculum files available for RAG")
+        return "unavailable"
+    count = ingest_chunks(chunks)
+    if count <= 0:
+        raise RuntimeError("Curriculum ingestion produced no indexed chunks")
+    logger.info("Auto-ingested %d curriculum chunks into RAG", count)
+    return "ready"
 
 
 async def _initialize_rag_background():
@@ -96,8 +94,9 @@ async def _initialize_rag_background():
     readiness.rag = "indexing"
     started = time.monotonic()
     try:
-        await asyncio.to_thread(_auto_ingest_curriculum)
-        readiness.rag = "ready"
+        readiness.rag = await asyncio.to_thread(_auto_ingest_curriculum)
+        if readiness.rag != "ready":
+            readiness.status = "degraded"
         logger.info("RAG background initialization completed in %.0fms", (time.monotonic() - started) * 1000)
     except Exception:
         readiness.rag = "error"
@@ -117,6 +116,7 @@ async def lifespan(app: FastAPI):
         readiness.database = "error"
         readiness.status = "degraded"
         logger.exception("Core database initialization failed")
+        raise
     rag_task = asyncio.create_task(_initialize_rag_background())
     # Start daily web enrichment background task
     from app.rag.web_enricher import start_daily_enrichment

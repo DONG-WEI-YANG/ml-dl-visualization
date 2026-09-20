@@ -22,9 +22,8 @@ function RouteFallback() {
 
 function ForcedPasswordGate() {
   const { user } = useAuth();
-  const [dismissed, setDismissed] = useState(false);
-  if (!user?.must_change_password || dismissed) return null;
-  return <ChangePasswordDialog forced onClose={() => setDismissed(true)} />;
+  if (!user?.must_change_password) return null;
+  return <ChangePasswordDialog forced onClose={() => {}} />;
 }
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -36,6 +35,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   if (verification === "unverified" && !offlineEntry) return <CloudLoadingState phase="unavailable" onEnterOffline={() => setOfflineEntry(true)} onRetry={() => void retryVerification()} onLogout={logout} />;
   if (offlineEntry || verification === "unverified") return <>{children}</>;
   if (!user) return <Navigate to="/login" replace />;
+  if (user.must_change_password) return <ForcedPasswordGate />;
   return <>{children}</>;
 }
 
@@ -58,7 +58,6 @@ export default function App() {
               element={
                 <RequireAuth>
                   <Layout />
-                  <ForcedPasswordGate />
                 </RequireAuth>
               }
             >

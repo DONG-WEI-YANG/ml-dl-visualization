@@ -29,12 +29,14 @@ uvicorn app.main:app --reload --port 8000
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `APP_ENV` | `production`, `development`, or `test`; `.env.example` explicitly selects local development | `production` |
+| `DATABASE_PATH` | Shared SQLite path for users, events, quizzes and RAG | `data/app.db` beside backend code |
 | `ANTHROPIC_API_KEY` | Anthropic Claude API key | (required for Claude) |
 | `OPENAI_API_KEY` | OpenAI API key | (required for GPT) |
 | `LLM_PROVIDER` | LLM provider: `anthropic`, `openai`, `ollama`, `local` | `anthropic` |
 | `MODEL_NAME` | Model name | `claude-sonnet-4-20250514` |
-| `JWT_SECRET` | JWT signing secret (change in production!) | default dev value |
-| `DEFAULT_ADMIN_PASSWORD` | Initial admin password | `admin123` |
+| `JWT_SECRET` | Production requires a unique secret of at least 32 characters; default key refuses startup | development-only default |
+| `DEFAULT_ADMIN_PASSWORD` | Production initial admin requires at least 12 characters; never resets an existing admin | `admin123` in development |
 | `CORS_ORIGINS` | Comma-separated allowed origins | `http://localhost:5173` |
 
 ## API Endpoints
@@ -43,6 +45,10 @@ uvicorn app.main:app --reload --port 8000
 - `POST /login` - Login, returns JWT token
 - `GET /me` - Get current user info
 - `POST /register` - Create new user (admin only)
+- `POST /change-password` - Returns a replacement `{access_token, token_type, user}` and invalidates all previous tokens for this account
+- `POST /logout` - Revokes the current token; other sessions remain valid
+
+Accounts requiring an initial password change can only use `/me`, `/change-password`, and `/logout`. All other authenticated routes and WebSockets enforce the restriction. HTTP and WebSocket requests check session revocation. Offline browser sign-out clears local state but cannot confirm server-side revocation until the logout request succeeds.
 
 ### Admin (`/api/admin`)
 - `GET /users` - List all users
@@ -63,16 +69,21 @@ uvicorn app.main:app --reload --port 8000
 - `POST /decision-boundary` - Train and get decision boundary
 - `POST /roc-pr` - ROC/PR curves
 - `POST /tree` - Decision tree / random forest
-- `GET /activations` - Activation function curves
+- `GET /activation-functions` - Activation function curves
+
+Model jobs run outside the event loop, with two concurrent jobs per process. Overload returns 503 with Retry-After; invalid shapes, excessive limits and divergence return 422. Limits include 500 rows, 20 features, 1,000 epochs, landscape resolution 100, and 200 trees / depth 15.
 
 ### Analytics (`/api/analytics`)
-- `POST /events` - Record learning event
+- `POST /events` - Record an authenticated user's `viz_interaction`; score and client timestamp are forbidden
+- `POST /assignments/grade` - Teacher/admin grading: `{student_id: string, week: 1..18, score: 0..100}`. Teachers must be assigned to the target student; the server records grader and audit information
 - `GET /students/{id}` - Student analytics
 - `GET /summary` - Class summary
 
 ### Quiz (`/api/quiz`)
 - `GET /week/{week}` - Get quiz questions
 - `POST /submit` - Submit and grade quiz
+
+Initialization inserts a validated, versioned baseline of 54 questions (3 per week) without replacing existing question IDs or teacher edits. See [quiz seed notes](app/quiz/README.md). No student accounts are created by seeding.
 
 ### RAG (`/api/rag`)
 - `POST /search` - Search curriculum
@@ -112,5 +123,7 @@ backend/
 
 ```bash
 docker build -t ml-dl-backend .
-docker run -p 8000:8000 --env-file .env ml-dl-backend
+docker run -p 8000:8000 --env-file .env -e APP_ENV=production -v backend-data:/data ml-dl-backend
 ```
+
+Set production secrets first. Use the repository's Docker Compose setup to mount curriculum as well. Before updating an existing HF Space, follow [storage operations](../../docs/storage-operations.md); deployment is gated until verified backup and persistent storage migration. This release invalidates legacy JWTs, so existing sessions must log in again.

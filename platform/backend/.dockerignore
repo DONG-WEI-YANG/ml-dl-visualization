@@ -6,3 +6,17 @@ data/nlp_models/*.pkl
 .env
 .venv
 *.egg-info
+
+*.db
+*.db-*
+*.sqlite*
+backups
+
+.env*
+**/.env*
+**/*.db*
+**/*.sqlite*
+**/*.pem
+**/*.key
+**/backups
+data
