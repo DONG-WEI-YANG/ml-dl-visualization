@@ -47,3 +47,7 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: hf spaces logs kevin19830331/ml-dl-viz-api --tail 100
+      - name: Recent build logs
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: hf spaces logs kevin19830331/ml-dl-viz-api --build --tail 50
