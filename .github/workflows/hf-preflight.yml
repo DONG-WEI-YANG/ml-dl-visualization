@@ -25,7 +25,11 @@ jobs:
 
           api = HfApi(token=os.environ['HF_TOKEN'])
           repo = 'kevin19830331/ml-dl-viz-api'
-          print('Authenticated account:', api.whoami()['name'])
+          account = api.whoami()
+          print('Authenticated account:', account['name'])
+          print('Billing capability:', account.get('canPay'), 'PRO:', account.get('isPro'))
+          for bucket in api.list_buckets(namespace=account['name']):
+              print('Bucket:', bucket.id, 'private:', bucket.private, 'bytes:', bucket.size)
           runtime = api.get_space_runtime(repo)
           print('Runtime stage:', runtime.stage)
           print('Hardware:', runtime.hardware)

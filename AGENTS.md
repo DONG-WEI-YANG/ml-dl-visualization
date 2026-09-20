@@ -14,4 +14,5 @@
 
 - 2026-09-20 稽核修復尚待正式部署：見 `docs/audit-remediation-2026-09-20.md`。不得把本機題庫／測試成功宣稱為正式站修復完成。
 - 主資料庫與 RAG 共用 `DATABASE_PATH`；正式 HF 變更前必須先完成真實資料備份、還原驗證及持久化掛載，操作見 `docs/storage-operations.md`。勿為了讓 CI 發布而直接略過 `HF_STORAGE_MIGRATION_VERIFIED` 部署檢查。
+- 2026-09-20 使用者明確授權 HF 重新初始化，現有正式資料可捨棄；本次初始化不再要求舊資料備份。仍需先確認持久儲存、正式金鑰及重啟驗證，不得把此授權延伸為日後可刪除學生資料。
 - `APP_ENV` 預設 production；本機使用 `.env.example` 明確 development，測試 conftest 明確 test。正式環境拒絕預設 JWT key；JWT 升級後舊 token 失效，改密碼回傳替換 session。學習事件 API 不再接受用戶端成績，教師作業評分使用 `/api/analytics/assignments/grade`。
