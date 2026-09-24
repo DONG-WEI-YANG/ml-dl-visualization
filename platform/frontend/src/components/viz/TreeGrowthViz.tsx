@@ -92,7 +92,7 @@ export default function TreeGrowthViz() {
         ))}
       </div>
 
-      <svg viewBox="0 0 400 250" className="w-full border border-gray-200 rounded-lg bg-white">
+      <svg viewBox="0 0 480 250" className="w-full border border-gray-200 rounded-lg bg-white">
         {typeof tree !== "string" && <RenderNode node={tree} x={200} y={30} dx={120} />}
       </svg>
 
