@@ -280,8 +280,8 @@ $$\phi(x_1, x_2) = (x_1^2, x_2^2, \sqrt{2} x_1 x_2)$$
 
 ```svg
 <figure class="md-figure">
-<svg viewBox="0 0 720 340" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="核技巧 2D 到 3D 映射示意圖">
-  <rect x="0" y="0" width="720" height="340" fill="#ffffff"/>
+<svg viewBox="0 0 720 356" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="核技巧 2D 到 3D 映射示意圖">
+  <rect x="0" y="0" width="720" height="356" fill="#ffffff"/>
   <!-- LEFT: 2D input space, ring-shaped data not linearly separable -->
   <g transform="translate(20,30)">
     <rect x="0" y="0" width="300" height="280" fill="#fafafa" stroke="#e5e7eb"/>

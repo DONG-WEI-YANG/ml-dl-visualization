@@ -1,5 +1,6 @@
 from pathlib import Path
 from urllib.parse import quote
+import base64
 import html
 import re
 
@@ -51,12 +52,33 @@ FILE_MAP = {
 }
 
 
+_IMG_MIME = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+             ".gif": "image/gif", ".webp": "image/webp", ".svg": "image/svg+xml"}
+
+
+def _embed_asset(week_id: int, src: str) -> str | None:
+    """Return a data: URI for a week-relative image, or None if unavailable.
+
+    The HTML is downloaded as an attachment and opened from disk, where
+    root-relative /api/... URLs cannot resolve, so figures must be inlined.
+    """
+    try:
+        week_dir = (CURRICULUM_DIR / f"week-{week_id:02d}").resolve()
+        path = (week_dir / src).resolve()
+    except (OSError, ValueError):
+        return None
+    mime = _IMG_MIME.get(path.suffix.lower())
+    if mime is None or not path.is_relative_to(week_dir) or not path.is_file():
+        return None
+    return f"data:{mime};base64,{base64.b64encode(path.read_bytes()).decode('ascii')}"
+
+
 def _inline(text: str, week_id: int | None = None) -> str:
     """Apply inline markdown (bold, inline code, images) to a text fragment."""
     def _img(m: "re.Match[str]") -> str:
         alt, src = m.group(1), m.group(2)
         if week_id is not None and not re.match(r'^(https?:|/|data:)', src):
-            src = f"/api/curriculum/week/{week_id}/assets/{src}"
+            src = _embed_asset(week_id, src) or f"/api/curriculum/week/{week_id}/assets/{src}"
         return f'<img src="{src}" alt="{alt}" class="md-img" />'
     text = re.sub(r'!\[([^\]]*)\]\(([^)]+)\)', _img, text)
     text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
@@ -206,7 +228,11 @@ def _md_to_html(md_path: Path, title: str, week_id: int | None = None) -> str:
   table.md-table thead th {{ color: #1e3a5f; font-weight: 600; }}
   table.md-table tbody tr:nth-child(even) {{ background: #fafafa; }}
   mjx-container {{ overflow-x: auto; overflow-y: hidden; }}
-  @media print {{ body {{ margin: 20px; }} }}
+  @media print {{
+    body {{ margin: 20px; }}
+    pre {{ white-space: pre-wrap; overflow-wrap: anywhere; }}
+    figure.md-figure, img.md-img, pre {{ break-inside: avoid; }}
+  }}
 </style>
 <script>
   window.MathJax = {{
