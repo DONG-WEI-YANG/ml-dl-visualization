@@ -184,6 +184,16 @@ def test_admin_reset_password_applies_once(monkeypatch):
     assert verify_password("Changed-By-Admin-1", _admin_row(path)["password_hash"])
 
 
+def test_admin_reset_password_strips_pasted_whitespace(monkeypatch):
+    """Secrets pasted into a web form often carry a trailing newline/space; the
+    login page trims the password, so the stored value must be trimmed too."""
+    from app.auth.utils import verify_password
+    path = _fresh_db(monkeypatch)
+    monkeypatch.setattr(settings, "admin_reset_password", "  Recovery-Pass-2026\n")
+    db_module.init_db()
+    assert verify_password("Recovery-Pass-2026", _admin_row(path)["password_hash"])
+
+
 def test_admin_reset_password_ignores_short_values(monkeypatch):
     from app.auth.utils import verify_password
     path = _fresh_db(monkeypatch)

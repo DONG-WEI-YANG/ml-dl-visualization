@@ -199,7 +199,9 @@ def _apply_admin_reset(conn) -> None:
     """
     from app.auth.utils import hash_password, verify_password
     from app.config import settings
-    value = settings.admin_reset_password
+    # Trim: pasted secrets often carry a trailing newline, and the login page
+    # trims what the user types, so an untrimmed value could never match.
+    value = settings.admin_reset_password.strip()
     if not value:
         return
     if len(value) < 12:

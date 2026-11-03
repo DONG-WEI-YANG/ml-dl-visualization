@@ -11,6 +11,8 @@ function loginErrorMessage(err: unknown): string {
   // 403 carries a specific reason (pending approval, rejected, disabled);
   // anything else stays generic so usernames can't be probed.
   if (err instanceof APIError && err.status === 403 && err.detail) return err.detail;
+  if (err instanceof APIError && err.status === 429) return "嘗試次數過多，請一分鐘後再試";
+  if (err instanceof APIError && err.kind === "server") return "伺服器暫時異常，請稍後再試";
   if (err instanceof APIError && (err.kind === "timeout" || err.kind === "offline")) {
     return "無法連線到伺服器，請稍後再試（雲端服務可能正在喚醒）";
   }
