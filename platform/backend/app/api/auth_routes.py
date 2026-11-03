@@ -6,6 +6,7 @@ from fastapi.security import HTTPAuthorizationCredentials
 import time
 from app.db import db_connection, get_setting, sync_enrollment
 from app.audit import log_audit
+from app.net import client_ip
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
@@ -29,7 +30,7 @@ def _user_out(row: dict) -> UserOut:
 
 @router.post("/login", response_model=TokenResponse)
 async def login(req: LoginRequest, request: Request):
-    ip = request.client.host if request.client else ""
+    ip = client_ip(request)
     with db_connection() as conn:
         user = conn.execute(
             "SELECT * FROM users WHERE username = ? AND deleted_at IS NULL", (req.username,)
@@ -58,7 +59,7 @@ async def logout(request: Request, user: dict = Depends(get_password_change_user
         conn.execute('DELETE FROM revoked_tokens WHERE expires_at <= ?', (int(time.time()),))
         conn.execute('INSERT OR IGNORE INTO revoked_tokens(jti, expires_at) VALUES (?, ?)',
                      (payload['jti'], payload['exp']))
-    ip = request.client.host if request.client else ""
+    ip = client_ip(request)
     log_audit("logout", actor=user, ip=ip)
     return {"status": "ok"}
 
@@ -72,7 +73,7 @@ async def me(user: dict = Depends(get_password_change_user)):
 async def change_password(
     req: ChangePasswordRequest, request: Request, user: dict = Depends(get_password_change_user)
 ):
-    ip = request.client.host if request.client else ""
+    ip = client_ip(request)
     if len(req.new_password) < 8:
         raise HTTPException(status_code=400, detail="新密碼長度至少 8 碼")
     if not verify_password(req.old_password, user["password_hash"]):
@@ -114,7 +115,7 @@ async def register(req: UserCreate, request: Request, admin: dict = Depends(requ
         sync_enrollment(conn, user_id)
         user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     log_audit("user.create", actor=admin, target_type="user", target_id=user_id,
-              detail={"username": req.username, "role": req.role}, ip=request.client.host if request.client else "")
+              detail={"username": req.username, "role": req.role}, ip=client_ip(request))
     return _user_out(dict(user))
 
 
@@ -136,5 +137,5 @@ async def signup(req: SignupRequest, request: Request):
         user_id = cursor.lastrowid or 0
         row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     log_audit("user.signup", target_type="user", target_id=user_id,
-              detail={"username": username}, ip=request.client.host if request.client else "")
+              detail={"username": username}, ip=client_ip(request))
     return _user_out(dict(row))

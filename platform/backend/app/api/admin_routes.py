@@ -9,6 +9,7 @@ from app.db import get_db, get_all_settings, set_setting, sync_enrollment
 from app.llm.factory import list_available_providers
 from app.nlp.trainer import train_models
 from app.audit import log_audit
+from app.net import client_ip
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -147,7 +148,7 @@ async def update_user(user_id: int, data: UserUpdate, request: Request, admin: d
 
     changed = [f for f in ("display_name", "email", "role", "is_active", "semester", "class_name")
                if getattr(data, f) is not None]
-    ip = request.client.host if request.client else ""
+    ip = client_ip(request)
     if changed:
         log_audit("user.update", actor=admin, target_type="user", target_id=user_id,
                   detail={"fields": changed}, ip=ip)
@@ -171,7 +172,7 @@ async def delete_user(user_id: int, request: Request, user=Depends(require_admin
     db.close()
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="使用者不存在")
-    ip = request.client.host if request.client else ""
+    ip = client_ip(request)
     log_audit("user.delete", actor=user, target_type="user", target_id=user_id, ip=ip)
     return {"deleted": True}
 
@@ -181,7 +182,7 @@ async def import_users(req: ImportRequest, request: Request, admin: dict = Depen
     from app.db import get_setting
     semester = req.semester or get_setting("current_semester", "")
     conn = get_db()
-    ip = request.client.host if request.client else ""
+    ip = client_ip(request)
     created, skipped, restored = [], [], []
     restored_ids = []  # audited after commit — log_audit opens its own connection
     for row in req.rows:
@@ -235,10 +236,6 @@ async def import_users(req: ImportRequest, request: Request, admin: dict = Depen
     return {"created": created, "skipped": skipped, "restored": restored}
 
 
-def _client_ip(request: Request) -> str:
-    return request.client.host if request.client else ""
-
-
 def _set_approval(user_id: int, approve: bool, request: Request, admin: dict) -> UserOut:
     conn = get_db()
     row = conn.execute("SELECT * FROM users WHERE id = ? AND deleted_at IS NULL", (user_id,)).fetchone()
@@ -259,7 +256,7 @@ def _set_approval(user_id: int, approve: bool, request: Request, admin: dict) ->
     updated = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     conn.close()
     log_audit("user.signup_approve" if approve else "user.signup_reject", actor=admin,
-              target_type="user", target_id=user_id, detail={"username": row["username"]}, ip=_client_ip(request))
+              target_type="user", target_id=user_id, detail={"username": row["username"]}, ip=client_ip(request))
     return _user_out(updated)
 
 
@@ -308,7 +305,7 @@ async def bulk_user_action(req: BulkUserAction, request: Request, admin: dict = 
     conn.commit()
     conn.close()
     log_audit(f"user.bulk_{req.action}", actor=admin, target_type="user",
-              detail={"ids": [r["id"] for r in rows]}, ip=_client_ip(request))
+              detail={"ids": [r["id"] for r in rows]}, ip=client_ip(request))
     return {"updated": len(rows), "passwords": passwords}
 
 
@@ -322,7 +319,7 @@ async def archive_semester(semester: str, request: Request, admin: dict = Depend
     )
     conn.commit()
     conn.close()
-    ip = request.client.host if request.client else ""
+    ip = client_ip(request)
     log_audit("semester.archive", actor=admin, target_type="semester", target_id=semester,
               detail={"archived": cursor.rowcount}, ip=ip)
     return {"archived": cursor.rowcount}
@@ -352,7 +349,7 @@ async def assign_student_to_teacher(teacher_id: int, student_id: int, request: R
     )
     conn.commit()
     conn.close()
-    ip = request.client.host if request.client else ""
+    ip = client_ip(request)
     log_audit("teacher_student.assign", actor=admin, target_type="teacher_student",
               target_id=f"{teacher_id}:{student_id}", ip=ip)
     return {"status": "assigned"}
@@ -364,7 +361,7 @@ async def remove_student_from_teacher(teacher_id: int, student_id: int, request:
     conn.execute("DELETE FROM teacher_students WHERE teacher_id = ? AND student_id = ?", (teacher_id, student_id))
     conn.commit()
     conn.close()
-    ip = request.client.host if request.client else ""
+    ip = client_ip(request)
     log_audit("teacher_student.remove", actor=admin, target_type="teacher_student",
               target_id=f"{teacher_id}:{student_id}", ip=ip)
     return {"status": "removed"}
@@ -415,7 +412,7 @@ async def update_settings(data: dict, request: Request, admin: dict = Depends(re
         if key not in allowed_keys:
             raise HTTPException(status_code=400, detail=f"不允許的設定項: {key}")
         set_setting(key, str(value))
-    ip = request.client.host if request.client else ""
+    ip = client_ip(request)
     log_audit("settings.update", actor=admin, target_type="setting",
               detail={"keys": sorted(data.keys())}, ip=ip)
     return {"status": "updated", "settings": get_all_settings()}
@@ -441,7 +438,7 @@ async def train_nlp_models(request: Request, admin: dict = Depends(require_admin
         reload_topic()
         reload_reranker()
 
-        ip = request.client.host if request.client else ""
+        ip = client_ip(request)
         log_audit("nlp.train", actor=admin, target_type="nlp", ip=ip)
         return {"status": "trained", "results": results}
     except Exception as e:
@@ -456,7 +453,7 @@ async def trigger_enrichment(request: Request, admin: dict = Depends(require_adm
     """Manually trigger web enrichment. Admin only."""
     from app.rag.web_enricher import enrich_from_web
     result = await enrich_from_web()
-    ip = request.client.host if request.client else ""
+    ip = client_ip(request)
     log_audit("enrichment.trigger", actor=admin, target_type="nlp", ip=ip)
     return {"status": "ok", **result}
 
@@ -493,7 +490,7 @@ async def admin_create_question(body: dict, request: Request, _user=Depends(requ
         raise HTTPException(400, "題目 ID 已存在")
     except Exception as e:
         raise HTTPException(400, f"建立題目失敗：{e}")
-    ip = request.client.host if request.client else ""
+    ip = client_ip(request)
     log_audit("quiz.create", actor=_user, target_type="quiz_question", target_id=body["id"], ip=ip)
     return {"question": q}
 
@@ -504,7 +501,7 @@ async def admin_update_question(question_id: str, body: dict, request: Request, 
     q = update_question(question_id, body)
     if not q:
         raise HTTPException(404, "題目不存在")
-    ip = request.client.host if request.client else ""
+    ip = client_ip(request)
     log_audit("quiz.update", actor=_user, target_type="quiz_question", target_id=question_id, ip=ip)
     return {"question": q}
 
@@ -514,6 +511,6 @@ async def admin_delete_question(question_id: str, request: Request, _user=Depend
     from app.quiz.questions import delete_question
     if not delete_question(question_id):
         raise HTTPException(404, "題目不存在")
-    ip = request.client.host if request.client else ""
+    ip = client_ip(request)
     log_audit("quiz.delete", actor=_user, target_type="quiz_question", target_id=question_id, ip=ip)
     return {"deleted": True}

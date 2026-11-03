@@ -20,6 +20,7 @@ from app.config import settings
 from app.db import init_db, get_db
 from app.rag.store import init_rag_tables
 from app.readiness import readiness
+from app.net import client_ip
 
 # ── Logging ──
 logging.basicConfig(
@@ -49,13 +50,13 @@ RATE_WINDOW = 60  # seconds
 
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
-    client_ip = request.client.host if request.client else "unknown"
+    ip = client_ip(request) or "unknown"
     now = time.time()
     # Clean old entries
-    _rate_limits[client_ip] = [t for t in _rate_limits[client_ip] if now - t < RATE_WINDOW]
-    if len(_rate_limits[client_ip]) >= RATE_LIMIT:
+    _rate_limits[ip] = [t for t in _rate_limits[ip] if now - t < RATE_WINDOW]
+    if len(_rate_limits[ip]) >= RATE_LIMIT:
         return JSONResponse({"detail": "Too many requests"}, status_code=429)
-    _rate_limits[client_ip].append(now)
+    _rate_limits[ip].append(now)
     return await call_next(request)
 
 

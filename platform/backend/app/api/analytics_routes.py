@@ -5,6 +5,7 @@ from app.analytics.tracker import record_event, get_student_analytics, get_class
 from app.auth.dependencies import get_current_user, require_teacher_or_admin
 from app.db import db_connection
 from app.audit import log_audit
+from app.net import client_ip
 
 router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
 
@@ -48,7 +49,7 @@ async def grade_assignment(grade: AssignmentGrade, request: Request,
         event_type='assignment', score=grade.score,
         metadata={'graded_by': user['id'], 'source': 'teacher_grading'}))
     log_audit('assignment.grade', actor=user, target_type='learning_event', target_id=event_id,
-              detail=grade.model_dump(), ip=request.client.host if request.client else '')
+              detail=grade.model_dump(), ip=client_ip(request))
     return {'id': event_id, 'status': 'recorded', 'student_id': grade.student_id}
 
 
