@@ -5,6 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ML/DL 視覺化互動教學平台</title>
+    <!-- Apply the saved theme before first paint to avoid a light flash -->
+    <script>
+      (function(){
+        try {
+          var p = localStorage.getItem("theme-preference") || "system";
+          var dark = p === "dark" || (p === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
     <!-- GitHub Pages SPA redirect handler -->
     <script>
       (function(){

@@ -1,1 +1,131 @@
 @import "tailwindcss";
+
+/* Dark mode is class-based so the user can override the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Dark theme by palette remapping: Tailwind 4 utilities read colors from
+ * CSS variables, so reversing the neutral scale and darkening light tints
+ * themes every page without per-component dark: classes.
+ */
+:root.dark {
+  color-scheme: dark;
+  --surface: #0e1525;
+  --color-gray-50: #151d2e;
+  --color-slate-50: #151d2e;
+  --color-gray-100: #1c2638;
+  --color-slate-100: #1c2638;
+  --color-gray-200: #2a3548;
+  --color-slate-200: #2a3548;
+  --color-gray-300: #3b475c;
+  --color-slate-300: #3b475c;
+  --color-gray-400: #7c8799;
+  --color-slate-400: #7c8799;
+  --color-gray-500: #9aa4b5;
+  --color-slate-500: #9aa4b5;
+  --color-gray-600: #b6bfcc;
+  --color-slate-600: #b6bfcc;
+  --color-gray-700: #cfd6e0;
+  --color-slate-700: #cfd6e0;
+  --color-gray-800: #e3e8ef;
+  --color-slate-800: #e3e8ef;
+  --color-gray-900: #f1f4f8;
+  --color-slate-900: #f1f4f8;
+  --color-gray-950: #ffffff;
+  --color-slate-950: #ffffff;
+  --color-blue-50: color-mix(in oklab, var(--color-blue-500) 14%, var(--surface));
+  --color-blue-100: color-mix(in oklab, var(--color-blue-500) 22%, var(--surface));
+  --color-blue-200: color-mix(in oklab, var(--color-blue-500) 34%, var(--surface));
+  --color-indigo-50: color-mix(in oklab, var(--color-indigo-500) 14%, var(--surface));
+  --color-indigo-100: color-mix(in oklab, var(--color-indigo-500) 22%, var(--surface));
+  --color-indigo-200: color-mix(in oklab, var(--color-indigo-500) 34%, var(--surface));
+  --color-amber-50: color-mix(in oklab, var(--color-amber-500) 14%, var(--surface));
+  --color-amber-100: color-mix(in oklab, var(--color-amber-500) 22%, var(--surface));
+  --color-amber-200: color-mix(in oklab, var(--color-amber-500) 34%, var(--surface));
+  --color-red-50: color-mix(in oklab, var(--color-red-500) 14%, var(--surface));
+  --color-red-100: color-mix(in oklab, var(--color-red-500) 22%, var(--surface));
+  --color-red-200: color-mix(in oklab, var(--color-red-500) 34%, var(--surface));
+  --color-purple-50: color-mix(in oklab, var(--color-purple-500) 14%, var(--surface));
+  --color-purple-100: color-mix(in oklab, var(--color-purple-500) 22%, var(--surface));
+  --color-purple-200: color-mix(in oklab, var(--color-purple-500) 34%, var(--surface));
+  --color-green-50: color-mix(in oklab, var(--color-green-500) 14%, var(--surface));
+  --color-green-100: color-mix(in oklab, var(--color-green-500) 22%, var(--surface));
+  --color-green-200: color-mix(in oklab, var(--color-green-500) 34%, var(--surface));
+  --color-teal-50: color-mix(in oklab, var(--color-teal-500) 14%, var(--surface));
+  --color-teal-100: color-mix(in oklab, var(--color-teal-500) 22%, var(--surface));
+  --color-teal-200: color-mix(in oklab, var(--color-teal-500) 34%, var(--surface));
+  --color-orange-50: color-mix(in oklab, var(--color-orange-500) 14%, var(--surface));
+  --color-orange-100: color-mix(in oklab, var(--color-orange-500) 22%, var(--surface));
+  --color-orange-200: color-mix(in oklab, var(--color-orange-500) 34%, var(--surface));
+  --color-yellow-50: color-mix(in oklab, var(--color-yellow-500) 14%, var(--surface));
+  --color-yellow-100: color-mix(in oklab, var(--color-yellow-500) 22%, var(--surface));
+  --color-yellow-200: color-mix(in oklab, var(--color-yellow-500) 34%, var(--surface));
+  --color-emerald-50: color-mix(in oklab, var(--color-emerald-500) 14%, var(--surface));
+  --color-emerald-100: color-mix(in oklab, var(--color-emerald-500) 22%, var(--surface));
+  --color-emerald-200: color-mix(in oklab, var(--color-emerald-500) 34%, var(--surface));
+  --color-violet-50: color-mix(in oklab, var(--color-violet-500) 14%, var(--surface));
+  --color-violet-100: color-mix(in oklab, var(--color-violet-500) 22%, var(--surface));
+  --color-violet-200: color-mix(in oklab, var(--color-violet-500) 34%, var(--surface));
+  --color-rose-50: color-mix(in oklab, var(--color-rose-500) 14%, var(--surface));
+  --color-rose-100: color-mix(in oklab, var(--color-rose-500) 22%, var(--surface));
+  --color-rose-200: color-mix(in oklab, var(--color-rose-500) 34%, var(--surface));
+  --color-pink-50: color-mix(in oklab, var(--color-pink-500) 14%, var(--surface));
+  --color-pink-100: color-mix(in oklab, var(--color-pink-500) 22%, var(--surface));
+  --color-pink-200: color-mix(in oklab, var(--color-pink-500) 34%, var(--surface));
+  --color-cyan-50: color-mix(in oklab, var(--color-cyan-500) 14%, var(--surface));
+  --color-cyan-100: color-mix(in oklab, var(--color-cyan-500) 22%, var(--surface));
+  --color-cyan-200: color-mix(in oklab, var(--color-cyan-500) 34%, var(--surface));
+  --color-sky-50: color-mix(in oklab, var(--color-sky-500) 14%, var(--surface));
+  --color-sky-100: color-mix(in oklab, var(--color-sky-500) 22%, var(--surface));
+  --color-sky-200: color-mix(in oklab, var(--color-sky-500) 34%, var(--surface));
+  --color-lime-50: color-mix(in oklab, var(--color-lime-500) 14%, var(--surface));
+  --color-lime-100: color-mix(in oklab, var(--color-lime-500) 22%, var(--surface));
+  --color-lime-200: color-mix(in oklab, var(--color-lime-500) 34%, var(--surface));
+  --color-fuchsia-50: color-mix(in oklab, var(--color-fuchsia-500) 14%, var(--surface));
+  --color-fuchsia-100: color-mix(in oklab, var(--color-fuchsia-500) 22%, var(--surface));
+  --color-fuchsia-200: color-mix(in oklab, var(--color-fuchsia-500) 34%, var(--surface));
+}
+
+:root.dark body { background-color: var(--surface); color: var(--color-gray-800); }
+.dark .bg-white { background-color: var(--surface); }
+.dark .bg-white\/80, .dark .bg-white\/90 { background-color: color-mix(in oklab, var(--surface) 88%, transparent); }
+.dark .border-white { border-color: var(--color-gray-200); }
+/* Keep intentionally dark blocks (terminals, selected pills) dark. */
+.dark .bg-gray-800, .dark .bg-slate-800 { background-color: #1e293b; }
+.dark .bg-gray-900, .dark .bg-slate-900 { background-color: #020617; }
+.dark .bg-gray-900.text-white, .dark .bg-gray-800.text-white { background-color: #e2e8f0; color: #0f172a; }
+/* Saturated text shades are tuned for white; lift them for contrast on dark. */
+.dark .text-blue-600 { color: var(--color-blue-400); }
+.dark :is(.text-blue-700, .text-blue-800, .text-blue-900) { color: var(--color-blue-300); }
+.dark .text-indigo-600 { color: var(--color-indigo-400); }
+.dark :is(.text-indigo-700, .text-indigo-800, .text-indigo-900) { color: var(--color-indigo-300); }
+.dark .text-amber-600 { color: var(--color-amber-400); }
+.dark :is(.text-amber-700, .text-amber-800, .text-amber-900) { color: var(--color-amber-300); }
+.dark .text-red-600 { color: var(--color-red-400); }
+.dark :is(.text-red-700, .text-red-800, .text-red-900) { color: var(--color-red-300); }
+.dark .text-purple-600 { color: var(--color-purple-400); }
+.dark :is(.text-purple-700, .text-purple-800, .text-purple-900) { color: var(--color-purple-300); }
+.dark .text-green-600 { color: var(--color-green-400); }
+.dark :is(.text-green-700, .text-green-800, .text-green-900) { color: var(--color-green-300); }
+.dark .text-teal-600 { color: var(--color-teal-400); }
+.dark :is(.text-teal-700, .text-teal-800, .text-teal-900) { color: var(--color-teal-300); }
+.dark .text-orange-600 { color: var(--color-orange-400); }
+.dark :is(.text-orange-700, .text-orange-800, .text-orange-900) { color: var(--color-orange-300); }
+.dark .text-yellow-600 { color: var(--color-yellow-400); }
+.dark :is(.text-yellow-700, .text-yellow-800, .text-yellow-900) { color: var(--color-yellow-300); }
+.dark .text-emerald-600 { color: var(--color-emerald-400); }
+.dark :is(.text-emerald-700, .text-emerald-800, .text-emerald-900) { color: var(--color-emerald-300); }
+.dark .text-violet-600 { color: var(--color-violet-400); }
+.dark :is(.text-violet-700, .text-violet-800, .text-violet-900) { color: var(--color-violet-300); }
+.dark .text-rose-600 { color: var(--color-rose-400); }
+.dark :is(.text-rose-700, .text-rose-800, .text-rose-900) { color: var(--color-rose-300); }
+.dark .text-pink-600 { color: var(--color-pink-400); }
+.dark :is(.text-pink-700, .text-pink-800, .text-pink-900) { color: var(--color-pink-300); }
+.dark .text-cyan-600 { color: var(--color-cyan-400); }
+.dark :is(.text-cyan-700, .text-cyan-800, .text-cyan-900) { color: var(--color-cyan-300); }
+.dark .text-sky-600 { color: var(--color-sky-400); }
+.dark :is(.text-sky-700, .text-sky-800, .text-sky-900) { color: var(--color-sky-300); }
+.dark .text-lime-600 { color: var(--color-lime-400); }
+.dark :is(.text-lime-700, .text-lime-800, .text-lime-900) { color: var(--color-lime-300); }
+.dark .text-fuchsia-600 { color: var(--color-fuchsia-400); }
+.dark :is(.text-fuchsia-700, .text-fuchsia-800, .text-fuchsia-900) { color: var(--color-fuchsia-300); }

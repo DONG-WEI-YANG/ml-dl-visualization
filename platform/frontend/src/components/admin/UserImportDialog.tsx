@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { fetchAPI } from "../../lib/api";
 import { useAuth } from "../../hooks/useAuth";
+import { stripHeader } from "../../lib/csv";
 
 interface ImportResult {
   created: { username: string; initial_password: string }[];
@@ -89,6 +90,20 @@ export default function UserImportDialog({ onDone, onClose }: UserImportDialogPr
                 className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
             </label>
             <p className="text-sm text-gray-500">停用或封存的重修生會沿用原帳號重新開通，保留歷史紀錄並產生新初始密碼。仍啟用的既有帳號會略過，可在帳號編輯調整學期與班級。</p>
+            <label className="block text-sm text-gray-600">
+              從檔案載入（CSV，Excel 可「另存為 CSV UTF-8」）
+              <input
+                type="file"
+                accept=".csv,.txt,text/csv"
+                aria-label="選擇 CSV 檔案"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setRaw(stripHeader(await file.text()));
+                }}
+                className="mt-1 block w-full text-sm text-gray-600 file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700"
+              />
+            </label>
             <label className="block text-sm text-gray-600">
               名單內容
               <textarea value={raw} onChange={(e) => setRaw(e.target.value)} rows={8}

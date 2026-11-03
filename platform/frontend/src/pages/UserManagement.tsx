@@ -12,8 +12,35 @@ interface User {
   semester: string;
   class_name: string;
   is_active: boolean;
+  approval_status?: "approved" | "pending" | "rejected";
   created_at: string;
   updated_at: string;
+}
+
+type BulkAction = "activate" | "deactivate" | "reset_password" | "set_class";
+
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "全部狀態" },
+  { value: "active", label: "啟用" },
+  { value: "inactive", label: "停用" },
+  { value: "pending", label: "待審核" },
+  { value: "rejected", label: "未通過" },
+];
+
+function statusLabel(u: User): { text: string; cls: string } {
+  if (u.approval_status === "pending") return { text: "待審核", cls: "text-amber-600" };
+  if (u.approval_status === "rejected") return { text: "未通過", cls: "text-red-500" };
+  return u.is_active ? { text: "啟用", cls: "text-green-600" } : { text: "停用", cls: "text-gray-400" };
+}
+
+function downloadPasswordCsv(rows: { username: string; initial_password: string }[], filename: string) {
+  const csv = "\uFEFF帳號,初始密碼\n" + rows.map((r) => `${r.username},${r.initial_password}`).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -47,6 +74,12 @@ export default function UserManagement() {
   const [filterClass, setFilterClass] = useState("");
   const [filterYear, setFilterYear] = useState("");
   const [filterSemester, setFilterSemester] = useState<string>("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [pending, setPending] = useState<User[]>([]);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [resetPasswords, setResetPasswords] = useState<{ username: string; initial_password: string }[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; type: "ok" | "err" }>({ text: "", type: "ok" });
 
@@ -91,15 +124,25 @@ export default function UserManagement() {
       if (filterSemester) params.set("semester", filterSemester);
       if (filterClass.trim()) params.set("class_name", filterClass.trim());
       if (filterYear.trim()) params.set("academic_year", filterYear.trim());
+      if (filterStatus) params.set("status", filterStatus);
+      if (debouncedSearch.trim()) params.set("q", debouncedSearch.trim());
       const qs = params.toString();
       const url = `/api/admin/users${qs ? `?${qs}` : ""}`;
       const data = await authFetch(url);
       setUsers(data);
+      setSelected(new Set());
+      const pend = await authFetch("/api/admin/users?status=pending");
+      setPending(pend);
     } catch { flash("無法載入使用者列表", "err"); }
     setLoading(false);
-  }, [authFetch, filterRole, filterSemester, filterClass, filterYear, flash]);
+  }, [authFetch, filterRole, filterSemester, filterClass, filterYear, filterStatus, debouncedSearch, flash]);
 
   useEffect(() => { if (token) void fetchUsers(); }, [token, fetchUsers]);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setDebouncedSearch(search), 300);
+    return () => window.clearTimeout(id);
+  }, [search]);
 
   if (me?.role !== "admin") {
     return (
@@ -153,6 +196,50 @@ export default function UserManagement() {
       fetchUsers();
     } catch (err: unknown) {
       flash((err as Error).message || "刪除失敗", "err");
+    }
+  };
+
+  const handleApproval = async (u: User, approve: boolean) => {
+    const name = u.display_name || u.username;
+    if (!approve && !confirm(`確定不通過 ${name} 的帳號申請？`)) return;
+    try {
+      await authFetch(`/api/admin/users/${u.id}/${approve ? "approve" : "reject"}`, "POST");
+      flash(approve ? `已核准 ${name}` : `已退回 ${name} 的申請`);
+      fetchUsers();
+    } catch (err: unknown) {
+      flash((err as Error).message || "操作失敗", "err");
+    }
+  };
+
+  const selectable = (u: User) => u.id !== me?.id && (u.approval_status ?? "approved") === "approved";
+  const visibleSelectable = users.filter(selectable);
+  const allSelected = visibleSelectable.length > 0 && visibleSelectable.every((u) => selected.has(u.id));
+  const toggleOne = (id: number) => setSelected((s) => {
+    const next = new Set(s);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(visibleSelectable.map((u) => u.id)));
+
+  const handleBulk = async (action: BulkAction) => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    const body: Record<string, unknown> = { ids, action };
+    if (action === "set_class") {
+      const cls = window.prompt(`將 ${ids.length} 個帳號設定到哪個班級？`);
+      if (!cls?.trim()) return;
+      body.class_name = cls.trim();
+    } else {
+      const verb = { activate: "啟用", deactivate: "停用", reset_password: "重設密碼" }[action];
+      if (!confirm(`確定要${verb}選取的 ${ids.length} 個帳號？`)) return;
+    }
+    try {
+      const data = await authFetch("/api/admin/users/bulk", "POST", body);
+      flash(`已更新 ${data.updated} 個帳號`);
+      if (action === "reset_password" && data.passwords?.length) setResetPasswords(data.passwords);
+      fetchUsers();
+    } catch (err: unknown) {
+      flash((err as Error).message || "批次操作失敗", "err");
     }
   };
 
@@ -212,9 +299,9 @@ export default function UserManagement() {
   return (
     <div className="max-w-5xl mx-auto p-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold text-gray-900">帳號管理</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={handleArchiveSemester}
             className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
@@ -241,8 +328,33 @@ export default function UserManagement() {
         </div>
       )}
 
+      {/* Pending sign-up requests */}
+      {pending.length > 0 && (
+        <section className="border border-amber-200 bg-amber-50 rounded-xl p-4 space-y-2" aria-label="待審核申請">
+          <h2 className="text-sm font-semibold text-amber-800">待審核的帳號申請（{pending.length}）</h2>
+          <ul className="divide-y divide-amber-100">
+            {pending.map((u) => (
+              <li key={u.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <div className="text-sm text-gray-800">
+                  <span className="font-mono">{u.username}</span>
+                  <span className="ml-2">{u.display_name}</span>
+                  <span className="ml-2 text-xs text-gray-500">{u.class_name || "未填班級"}{u.email ? ` · ${u.email}` : ""}</span>
+                  <span className="ml-2 text-xs text-gray-400">{u.created_at?.slice(0, 16)}</span>
+                </div>
+                <div className="flex gap-1">
+                  <button onClick={() => handleApproval(u, true)}
+                    className="px-3 py-1 text-xs bg-green-600 text-white rounded-lg hover:bg-green-700">核准</button>
+                  <button onClick={() => handleApproval(u, false)}
+                    className="px-3 py-1 text-xs text-red-600 border border-red-200 rounded-lg hover:bg-red-50">不通過</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Stats */}
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
           { label: "全部", value: counts.total, color: "bg-gray-50 text-gray-700" },
           { label: "管理員", value: counts.admin, color: "bg-red-50 text-red-700" },
@@ -274,6 +386,26 @@ export default function UserManagement() {
         ))}
       </div>
 
+      {/* Search + status */}
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="搜尋學號、姓名、Email、班級"
+          aria-label="搜尋使用者"
+          className="flex-1 min-w-[220px] px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
+        />
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value)}
+          aria-label="狀態篩選"
+          className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white"
+        >
+          {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
+
       {/* Semester Filter */}
       <div className="flex items-center gap-2">
         <select
@@ -292,14 +424,29 @@ export default function UserManagement() {
         <label className="text-sm">學年<input aria-label="學年篩選" placeholder="例如 115" value={filterYear} onChange={(e) => setFilterYear(e.target.value)} className="block border rounded px-3 py-2" /></label>
         <label className="text-sm">班級<input aria-label="班級篩選" placeholder="全部班級" value={filterClass} onChange={(e) => setFilterClass(e.target.value)} className="block border rounded px-3 py-2" /></label>
       </div>
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-xl text-sm" role="toolbar" aria-label="批次操作">
+          <span className="text-blue-800 font-medium">已選取 {selected.size} 個帳號</span>
+          <button onClick={() => handleBulk("activate")} className="px-3 py-1 text-xs bg-white border border-gray-300 rounded-lg hover:bg-gray-50">啟用</button>
+          <button onClick={() => handleBulk("deactivate")} className="px-3 py-1 text-xs bg-white border border-gray-300 rounded-lg hover:bg-gray-50">停用</button>
+          <button onClick={() => handleBulk("reset_password")} className="px-3 py-1 text-xs bg-white border border-gray-300 rounded-lg hover:bg-gray-50">重設密碼</button>
+          <button onClick={() => handleBulk("set_class")} className="px-3 py-1 text-xs bg-white border border-gray-300 rounded-lg hover:bg-gray-50">設定班級</button>
+          <button onClick={() => setSelected(new Set())} className="ml-auto px-3 py-1 text-xs text-gray-600 hover:underline">取消選取</button>
+        </div>
+      )}
+
       {/* User Table */}
       {loading ? (
         <div className="text-gray-400 text-center py-8">載入中...</div>
       ) : (
-        <div className="border border-gray-200 rounded-xl overflow-hidden">
+        <div className="border border-gray-200 rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-gray-600">
               <tr>
+                <th className="px-3 py-3 w-8">
+                  <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="全選" disabled={visibleSelectable.length === 0} />
+                </th>
                 <th className="text-left px-4 py-3 font-medium">帳號</th>
                 <th className="text-left px-4 py-3 font-medium">顯示名稱</th>
                 <th className="text-left px-4 py-3 font-medium">Email</th>
@@ -311,7 +458,12 @@ export default function UserManagement() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {users.map((u) => (
-                <tr key={u.id} className={`${!u.is_active ? "opacity-50 bg-gray-50" : "hover:bg-gray-50"}`}>
+                <tr key={u.id} className={`${!u.is_active ? "opacity-60 bg-gray-50" : "hover:bg-gray-50"}`}>
+                  <td className="px-3 py-3">
+                    {selectable(u) && (
+                      <input type="checkbox" checked={selected.has(u.id)} onChange={() => toggleOne(u.id)} aria-label={`選取 ${u.username}`} />
+                    )}
+                  </td>
                   <td className="px-4 py-3 font-mono text-gray-900">{u.username}</td>
                   <td className="px-4 py-3 text-gray-700">{u.display_name}</td>
                   <td className="px-4 py-3 text-gray-500">{u.email || "-"}</td>
@@ -322,9 +474,7 @@ export default function UserManagement() {
                   </td>
                   <td className="px-4 py-3 text-xs text-gray-500">{formatSemester(u.semester)}<div>{u.class_name || "未分班"}</div></td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs ${u.is_active ? "text-green-600" : "text-gray-400"}`}>
-                      {u.is_active ? "啟用" : "停用"}
-                    </span>
+                    <span className={`text-xs ${statusLabel(u).cls}`}>{statusLabel(u).text}</span>
                   </td>
                   <td className="px-4 py-3 text-right space-x-1">
                     <button
@@ -356,7 +506,7 @@ export default function UserManagement() {
                 </tr>
               ))}
               {users.length === 0 && (
-                <tr><td colSpan={7} className="text-center py-8 text-gray-400">沒有使用者</td></tr>
+                <tr><td colSpan={8} className="text-center py-8 text-gray-400">沒有符合條件的使用者</td></tr>
               )}
             </tbody>
           </table>
@@ -552,6 +702,32 @@ export default function UserManagement() {
 
             <div className="flex justify-end pt-2">
               <button onClick={() => setAssignMode(null)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">關閉</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resetPasswords && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="新密碼">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md space-y-4">
+            <h2 className="text-lg font-bold text-gray-900">已重設 {resetPasswords.length} 個帳號的密碼</h2>
+            <p className="text-sm text-amber-600">新密碼僅顯示這一次，使用者首次登入需更換。請下載保存。</p>
+            <div className="max-h-64 overflow-y-auto border border-gray-200 rounded-lg">
+              <table className="w-full text-sm">
+                <tbody>
+                  {resetPasswords.map((r) => (
+                    <tr key={r.username} className="border-t border-gray-100 first:border-0">
+                      <td className="px-3 py-1.5 font-mono">{r.username}</td>
+                      <td className="px-3 py-1.5 font-mono">{r.initial_password}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button onClick={() => downloadPasswordCsv(resetPasswords, "重設密碼清單.csv")}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">下載 CSV</button>
+              <button onClick={() => setResetPasswords(null)} className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">完成</button>
             </div>
           </div>
         </div>

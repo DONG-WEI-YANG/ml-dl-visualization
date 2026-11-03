@@ -3,7 +3,7 @@ export const API_BASE = import.meta.env.VITE_API_BASE || "";
 export type APIErrorKind = "unauthorized" | "timeout" | "offline" | "server" | "unknown";
 
 export class APIError extends Error {
-  constructor(public kind: APIErrorKind, message: string, public status?: number) {
+  constructor(public kind: APIErrorKind, message: string, public status?: number, public detail?: string) {
     super(message);
     this.name = "APIError";
   }
@@ -34,7 +34,14 @@ export async function fetchAPI<T>(path: string, body?: unknown, token?: string, 
     });
     if (!res.ok) {
       const kind: APIErrorKind = res.status === 401 ? "unauthorized" : res.status >= 500 ? "server" : "unknown";
-      throw new APIError(kind, `API error: ${res.status}`, res.status);
+      let detail: string | undefined;
+      try {
+        const payload = await res.json();
+        if (typeof payload?.detail === "string") detail = payload.detail;
+      } catch {
+        /* non-JSON error body */
+      }
+      throw new APIError(kind, `API error: ${res.status}`, res.status, detail);
     }
     return res.json();
   } catch (error) {
