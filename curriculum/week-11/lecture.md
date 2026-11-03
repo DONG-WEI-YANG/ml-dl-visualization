@@ -227,7 +227,7 @@ ReLU'(z) = 1  if z > 0
 - **計算高效**：只需比較與取 max
 - **緩解梯度消失**：正半軸梯度恆為 1，不會飽和
 - **稀疏激活 (Sparse Activation)**：部分神經元輸出為 0，等效於「關閉」
-- 實務中收斂速度比 Sigmoid/Tanh 快約 6 倍（Krizhevsky et al., 2012）
+- 收斂較快：Krizhevsky et al. (2012) 在 CIFAR-10 的 4 層 CNN 實驗中，ReLU 達到 25% 訓練誤差的速度約為 tanh 的 6 倍（實際倍數依網路與資料而異）
 
 **缺點：**
 - **死亡 ReLU (Dying ReLU)**：若神經元進入 z < 0 區域，梯度永遠為 0，該神經元永久「死亡」

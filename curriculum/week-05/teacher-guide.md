@@ -262,6 +262,6 @@ numpy, pandas, matplotlib, seaborn, scikit-learn
 - He & Garcia, "Learning from Imbalanced Data," IEEE TKDE, 2009
 
 ### 業界案例 Industry Case Studies
-- Google: How YouTube Uses ML for Content Moderation (不平衡資料 + 閾值選擇)
-- Netflix: Recommendation vs Classification — When and Why
-- 台灣健保署: AI 輔助醫療影像判讀的 Precision/Recall 要求
+- 醫療篩檢情境：罕見疾病陽性率低，漏診（FN）成本高，閾值應偏向提高 Recall（可搭配 Saito & Rehmsmeier, 2015 討論 PR 曲線）
+- 金融詐欺偵測：詐欺交易通常遠少於 1%，Accuracy 失去參考價值，改看 PR-AUC 與每千筆誤報數
+- 授課提示：引用真實業界數據時，請附上可查證的原始出處

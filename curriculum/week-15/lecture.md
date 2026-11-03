@@ -21,8 +21,8 @@
 
 ```svg
 <figure class="md-figure">
-<svg viewBox="0 0 520 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="多類別混淆矩陣熱圖">
-  <rect x="0" y="0" width="520" height="380" fill="#ffffff"/>
+<svg viewBox="0 0 556 380" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="多類別混淆矩陣熱圖">
+  <rect x="0" y="0" width="556" height="380" fill="#ffffff"/>
   <defs>
     <linearGradient id="cmGrad" x1="0" y1="1" x2="0" y2="0">
       <stop offset="0%" stop-color="#f1f5f9"/>
@@ -358,7 +358,7 @@ $$P(Y=1 | \hat{Y}=p, A=a) = P(Y=1 | \hat{Y}=p, A=b), \quad \forall p, \forall a,
 
 ### 4.5 公平性不可能定理 Impossibility Theorem
 
-> **重要結論：** Chouldechova (2017) 和 Kleinberg et al. (2016) 證明，除了在非常特殊的情況下（基礎比率完全相等或完美分類器），**人口統計均等、等化機會和校準公平三者無法同時滿足。**
+> **重要結論：** Chouldechova (2017) 和 Kleinberg et al. (2016) 證明，除了在非常特殊的情況下（基礎比率完全相等或完美分類器），**校準（Calibration）與等化錯誤率（各群體 FPR、FNR 相等）無法同時滿足。** 人口統計均等雖不在該定理中，但它與校準、等化機會之間也常互相衝突。
 
 這意味著在實務中，我們必須根據應用場景選擇最適當的公平性定義：
 
@@ -520,12 +520,13 @@ Tsipras et al. (2019) 的研究表明，穩健模型學到的特徵在語義上�
 
 ### 7.3 信用評分 — Apple Card 的案例
 
-**背景：** 2019 年，多位使用者發現 Apple Card 的信用額度對女性系統性地低於男性，即使在收入和信用評分相同的情況下。
+**背景：** 2019 年，多位使用者在社群媒體上指控 Apple Card 給女性的信用額度明顯低於男性，部分案例宣稱夫妻財務條件相近。
 
 **問題分析：**
 - Goldman Sachs（Apple Card 的發卡銀行）聲稱未使用性別作為模型輸入
 - 但其他特徵（如消費模式、職業類型）可能間接編碼了性別資訊
-- 紐約金融監管機構介入調查
+- 紐約州金融服務廳（NYDFS）介入調查，2021 年報告認定未發現違法的性別歧視，但指出客戶溝通與透明度不足
+- 教學重點：即使最終未證實歧視，「無法解釋決策」本身就足以造成信任危機
 
 **啟示：**
 - 即使模型不直接使用敏感屬性，代理變數 (Proxy Variables) 仍可能導致歧視
@@ -569,7 +570,7 @@ Tsipras et al. (2019) 的研究表明，穩健模型學到的特徵在語義上�
 | Meta | Responsible AI Pillars | 重視透明度與治理 |
 | OECD | AI Principles | 國際政策標準 |
 | EU | AI Act (2024) | 風險分級監管 |
-| 台灣 | AI 基本法 (2024) | 聚焦人權保障與創新平衡 |
+| 台灣 | 人工智慧基本法（2025 年三讀、2026 年公布施行） | 聚焦人權保障與創新平衡 |
 
 ### 8.3 AI 影響評估 AI Impact Assessment
 

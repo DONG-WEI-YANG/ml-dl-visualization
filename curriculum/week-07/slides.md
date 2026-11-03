@@ -181,7 +181,7 @@ F_2(x) = F_1(x) + η · h_2(x)
 **LightGBM (2017, 微軟):**
 - Leaf-wise 生長（更高效）
 - Histogram-based 分裂（大幅加速）
-- 訓練速度比 XGBoost 快 10-20 倍
+- 訓練速度比傳統 GBDT 最多快約 20 倍（Ke et al., 2017；實際依資料而定）
 - 記憶體使用更少
 
 > 結構化資料 (Tabular Data) 上，這兩者通常是最佳選擇

@@ -253,5 +253,5 @@ jupyter lab
 
 ## 延伸閱讀 Further Reading
 - Andrew Ng, "Machine Learning Yearning"
-- scikit-learn 官方教學：https://scikit-learn.org/stable/tutorial/
+- scikit-learn 官方教學：https://scikit-learn.org/stable/getting_started.html
 - Google ML Crash Course：https://developers.google.com/machine-learning/crash-course

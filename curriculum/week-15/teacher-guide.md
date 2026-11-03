@@ -222,7 +222,7 @@ df = pd.read_csv(url, header=None, names=[...])
 - ProPublica COMPAS 報導：https://www.propublica.org/article/machine-bias-risk-assessments-in-criminal-sentencing
 - Fairlearn 官方教學：https://fairlearn.org/main/user_guide/
 - Google What-If Tool：互動式公平性分析工具
-- AI Fairness 360 (IBM)：https://aif360.mybluemix.net/
+- AI Fairness 360 (IBM)：https://github.com/Trusted-AI/AIF360
 
 ---
 

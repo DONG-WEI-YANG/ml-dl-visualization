@@ -277,7 +277,7 @@ Part 4 bootstrap 執行後：
 
 ### 推薦給學生的補充教材
 
-- Google ML Crash Course — Validation: https://developers.google.com/machine-learning/crash-course/validation
+- Google ML Crash Course — Validation: https://developers.google.com/machine-learning/crash-course/overfitting/dividing-datasets
 - StatQuest YouTube — Cross Validation: https://www.youtube.com/watch?v=fSytzGwwBVw
 - StatQuest YouTube — Bias-Variance Tradeoff: https://www.youtube.com/watch?v=EuBBz3bI-aA
 

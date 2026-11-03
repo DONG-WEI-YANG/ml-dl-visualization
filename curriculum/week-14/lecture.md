@@ -255,11 +255,12 @@ scheduler = LambdaLR(optimizer, lr_lambda=lambda epoch:
 
 Smith & Topin (2019) 提出的超收斂 (Super-Convergence) 策略。核心思想是在整個訓練過程中只使用**一個**學習率週期：先從小到大、再從大到小。
 
-**三階段：**
+**PyTorch 預設為兩階段（`three_phase=False`）：**
 
-1. **上升階段 (Ascending)**：學習率從 `max_lr / div_factor` 線性增加到 `max_lr`（約佔 30% 訓練時間）
-2. **下降階段 (Descending)**：學習率從 `max_lr` 餘弦衰減到 `max_lr / div_factor`（約佔 70% 訓練時間）
-3. **退火階段 (Annihilation)**：學習率進一步降到極小值 `max_lr / final_div_factor`（最後幾個 Epoch）
+1. **上升階段 (Ascending)**：學習率從初始值 `initial_lr = max_lr / div_factor` 增加到 `max_lr`（比例由 `pct_start` 決定，預設 30%）
+2. **下降階段 (Annealing)**：學習率從 `max_lr` 以餘弦方式一路衰減到極小值 `min_lr = initial_lr / final_div_factor`
+
+> 設定 `three_phase=True` 則接近 Smith & Topin 原論文：先回落到 `initial_lr`，最後再退火到 `min_lr`。
 
 ```
 學習率 LR
@@ -272,7 +273,7 @@ Smith & Topin (2019) 提出的超收斂 (Super-Convergence) 策略。核心思�
   │ ╱                 ╲╲╲╲
   │╱                        ╲╲╲╲╲──
   └──────────────────────────────────▶ Epoch
-  │  上升  │     下降     │退火│
+  │  上升  │       下降（餘弦退火）       │
 ```
 
 **PyTorch 實作：**
@@ -288,7 +289,7 @@ scheduler = OneCycleLR(
     steps_per_epoch=len(train_loader),
     pct_start=0.3,       # 上升階段比例
     div_factor=25,        # 初始 LR = max_lr / 25
-    final_div_factor=1e4  # 最終 LR = max_lr / (25 * 10000)
+    final_div_factor=1e4  # 最終 LR = initial_lr / 1e4 = max_lr / (25 * 10000)
 )
 
 for epoch in range(100):

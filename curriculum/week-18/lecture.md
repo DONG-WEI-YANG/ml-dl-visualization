@@ -595,7 +595,7 @@ AI 倫理 (AI Ethics) 是負責任的機器學習實踐者必備的意識。以�
 | 書籍 | "Deep Learning" (Goodfellow et al.) | DL 理論經典 |
 | 書籍 | "Designing Machine Learning Systems" (Huyen) | MLOps 與系統設計 |
 | 實戰 | Kaggle Competitions | 競賽練功 |
-| 實戰 | Papers with Code | 追蹤最新研究與實作 |
+| 實戰 | Hugging Face Papers | 追蹤最新研究與實作 |
 | 社群 | Hugging Face | 開源模型生態系 |
 | 社群 | arXiv / Twitter(X) / Reddit r/MachineLearning | 追蹤最新動態 |
 
@@ -686,8 +686,8 @@ AI 應用工程師         ★★      ★★★★    ★★★     ★★★  
 
 ## 延伸閱讀 Further Reading
 - "The Checklist Manifesto" — Atul Gawande（檢核清單的力量）
-- "Responsible AI Practices" — Google AI（https://ai.google/responsibility/responsible-ai-practices/）
+- "AI Principles" — Google（https://ai.google/principles/）
 - "Model Cards for Model Reporting" — Mitchell et al., 2019
 - "Datasheets for Datasets" — Gebru et al., 2021
 - "Designing Machine Learning Systems" — Chip Huyen
-- Papers with Code: https://paperswithcode.com/
+- Hugging Face Papers（原 Papers with Code 已併入）: https://huggingface.co/papers
