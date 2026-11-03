@@ -2,7 +2,7 @@ import secrets
 import sqlite3
 
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
-from app.auth.models import UserOut, UserUpdate, UserCreate, ImportRow, ImportRequest
+from app.auth.models import UserOut, UserUpdate, UserCreate, ImportRow, ImportRequest, BulkUserAction
 from app.auth.utils import hash_password
 from app.auth.dependencies import require_admin, require_teacher_or_admin
 from app.db import get_db, get_all_settings, set_setting, sync_enrollment
@@ -26,6 +26,7 @@ def _user_out(row) -> UserOut:
         created_at=row["created_at"],
         updated_at=row["updated_at"],
         must_change_password=bool(row["must_change_password"]),
+        approval_status=row["approval_status"],
     )
 
 
@@ -38,6 +39,8 @@ async def list_users(
     semester: str | None = Query(None),
     class_name: str | None = Query(None),
     academic_year: str | None = Query(None),
+    q: str | None = Query(None, max_length=100),
+    status: str | None = Query(None, pattern="^(active|inactive|pending|rejected)$"),
     admin: dict = Depends(require_admin),
 ):
     conn = get_db()
@@ -55,6 +58,22 @@ async def list_users(
     if academic_year:
         conditions.append("substr(semester, 1, instr(semester, '-') - 1) = ?")
         params.append(academic_year)
+    if q and q.strip():
+        # Escape LIKE wildcards so a search for "s_01" matches literally.
+        term = q.strip().replace("!", "!!").replace("%", "!%").replace("_", "!_")
+        like = f"%{term}%"
+        conditions.append(
+            "(username LIKE ? ESCAPE '!' OR display_name LIKE ? ESCAPE '!' "
+            "OR email LIKE ? ESCAPE '!' OR class_name LIKE ? ESCAPE '!')"
+        )
+        params.extend([like] * 4)
+    if status in ("pending", "rejected"):
+        conditions.append("approval_status = ?")
+        params.append(status)
+    elif status == "active":
+        conditions.append("is_active = 1 AND approval_status = 'approved'")
+    elif status == "inactive":
+        conditions.append("is_active = 0 AND approval_status = 'approved'")
     where = f" WHERE {' AND '.join(conditions)}"
     rows = conn.execute(f"SELECT * FROM users{where} ORDER BY id", params).fetchall()
     conn.close()
@@ -183,7 +202,7 @@ async def import_users(req: ImportRequest, request: Request, admin: dict = Depen
                 # learning history (keyed by user id) stays linked.
                 initial_password = secrets.token_urlsafe(9)  # 12 chars
                 conn.execute(
-                    "UPDATE users SET deleted_at = NULL, is_active = 1, password_hash = ?, "
+                    "UPDATE users SET deleted_at = NULL, is_active = 1, approval_status = 'approved', password_hash = ?, "
                     "must_change_password = 1, session_version = session_version + 1, semester = ?, updated_at = datetime('now') "
                     "WHERE id = ?",
                     (hash_password(initial_password), semester, existing["id"]),
@@ -214,6 +233,83 @@ async def import_users(req: ImportRequest, request: Request, admin: dict = Depen
               detail={"created": len(created), "skipped": len(skipped),
                        "restored": len(restored), "semester": semester}, ip=ip)
     return {"created": created, "skipped": skipped, "restored": restored}
+
+
+def _client_ip(request: Request) -> str:
+    return request.client.host if request.client else ""
+
+
+def _set_approval(user_id: int, approve: bool, request: Request, admin: dict) -> UserOut:
+    conn = get_db()
+    row = conn.execute("SELECT * FROM users WHERE id = ? AND deleted_at IS NULL", (user_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="使用者不存在")
+    if row["approval_status"] != "pending":
+        conn.close()
+        raise HTTPException(status_code=400, detail="此帳號不是待審核狀態")
+    conn.execute(
+        "UPDATE users SET approval_status = ?, is_active = ?, session_version = session_version + 1, "
+        "updated_at = datetime('now') WHERE id = ?",
+        ("approved" if approve else "rejected", int(approve), user_id),
+    )
+    if approve:
+        sync_enrollment(conn, user_id)
+    conn.commit()
+    updated = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    conn.close()
+    log_audit("user.signup_approve" if approve else "user.signup_reject", actor=admin,
+              target_type="user", target_id=user_id, detail={"username": row["username"]}, ip=_client_ip(request))
+    return _user_out(updated)
+
+
+@router.post("/users/{user_id}/approve", response_model=UserOut)
+async def approve_signup(user_id: int, request: Request, admin: dict = Depends(require_admin)):
+    return _set_approval(user_id, True, request, admin)
+
+
+@router.post("/users/{user_id}/reject", response_model=UserOut)
+async def reject_signup(user_id: int, request: Request, admin: dict = Depends(require_admin)):
+    return _set_approval(user_id, False, request, admin)
+
+
+@router.post("/users/bulk")
+async def bulk_user_action(req: BulkUserAction, request: Request, admin: dict = Depends(require_admin)):
+    """Apply one action to many accounts. The caller's own account is always skipped
+    so an admin cannot lock themselves out."""
+    ids = sorted({i for i in req.ids if i != admin["id"]})
+    if req.action == "set_class" and not req.class_name.strip():
+        raise HTTPException(status_code=400, detail="請輸入班級名稱")
+    conn = get_db()
+    placeholders = ",".join("?" * len(ids)) or "NULL"
+    rows = conn.execute(
+        f"SELECT id, username FROM users WHERE id IN ({placeholders}) AND deleted_at IS NULL "
+        "AND approval_status = 'approved'",
+        ids,
+    ).fetchall()
+    passwords = []
+    for row in rows:
+        if req.action == "activate":
+            conn.execute("UPDATE users SET is_active = 1, session_version = session_version + 1, "
+                         "updated_at = datetime('now') WHERE id = ?", (row["id"],))
+        elif req.action == "deactivate":
+            conn.execute("UPDATE users SET is_active = 0, session_version = session_version + 1, "
+                         "updated_at = datetime('now') WHERE id = ?", (row["id"],))
+        elif req.action == "reset_password":
+            pw = secrets.token_urlsafe(9)  # 12 chars
+            conn.execute("UPDATE users SET password_hash = ?, must_change_password = 1, "
+                         "session_version = session_version + 1, updated_at = datetime('now') WHERE id = ?",
+                         (hash_password(pw), row["id"]))
+            passwords.append({"username": row["username"], "initial_password": pw})
+        elif req.action == "set_class":
+            conn.execute("UPDATE users SET class_name = ?, updated_at = datetime('now') WHERE id = ?",
+                         (req.class_name.strip(), row["id"]))
+        sync_enrollment(conn, row["id"])
+    conn.commit()
+    conn.close()
+    log_audit(f"user.bulk_{req.action}", actor=admin, target_type="user",
+              detail={"ids": [r["id"] for r in rows]}, ip=_client_ip(request))
+    return {"updated": len(rows), "passwords": passwords}
 
 
 @router.post("/semesters/{semester}/archive")

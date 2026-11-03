@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Request
-from app.auth.models import LoginRequest, TokenResponse, UserOut, UserCreate, ChangePasswordRequest
+from app.auth.models import LoginRequest, TokenResponse, UserOut, UserCreate, ChangePasswordRequest, SignupRequest
 from app.auth.utils import verify_password, hash_password, create_token, decode_token
 from app.auth.dependencies import get_password_change_user, require_admin, security
 from fastapi.security import HTTPAuthorizationCredentials
@@ -23,6 +23,7 @@ def _user_out(row: dict) -> UserOut:
         created_at=row["created_at"],
         updated_at=row["updated_at"],
         must_change_password=bool(row["must_change_password"]),
+        approval_status=row.get("approval_status") or "approved",
     )
 
 
@@ -36,6 +37,11 @@ async def login(req: LoginRequest, request: Request):
     if not user or not verify_password(req.password, user["password_hash"]):
         log_audit("login.failed", detail={"username": req.username}, ip=ip)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="帳號或密碼錯誤")
+    approval = user["approval_status"]
+    if approval in ("pending", "rejected"):
+        log_audit("login.failed", detail={"username": req.username, "reason": approval}, ip=ip)
+        detail = "帳號申請審核中，請等候老師或管理員核准" if approval == "pending" else "帳號申請未通過，請洽授課老師"
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
     if not user["is_active"]:
         log_audit("login.failed", detail={"username": req.username, "reason": "inactive"}, ip=ip)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="帳號已停用")
@@ -110,3 +116,25 @@ async def register(req: UserCreate, request: Request, admin: dict = Depends(requ
     log_audit("user.create", actor=admin, target_type="user", target_id=user_id,
               detail={"username": req.username, "role": req.role}, ip=request.client.host if request.client else "")
     return _user_out(dict(user))
+
+
+@router.post("/signup", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+async def signup(req: SignupRequest, request: Request):
+    """Public account request. Creates an inactive *pending* student that an
+    admin must approve before it can log in. The role is never client-chosen."""
+    username = req.username.strip()
+    semester = get_setting("current_semester", "")
+    with db_connection() as conn:
+        if conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone():
+            raise HTTPException(status_code=409, detail="此帳號（學號）已存在或已申請過")
+        cursor = conn.execute(
+            "INSERT INTO users (username, password_hash, display_name, email, role, semester, "
+            "is_active, approval_status, class_name) VALUES (?, ?, ?, ?, 'student', ?, 0, 'pending', ?)",
+            (username, hash_password(req.password), req.display_name.strip(), req.email.strip(),
+             semester, req.class_name.strip()),
+        )
+        user_id = cursor.lastrowid or 0
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    log_audit("user.signup", target_type="user", target_id=user_id,
+              detail={"username": username}, ip=request.client.host if request.client else "")
+    return _user_out(dict(row))

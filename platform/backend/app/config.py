@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me-in-production-use-a-long-random-string"
     jwt_expire_minutes: int = Field(default=480, ge=1, le=1440)
     default_admin_password: str = "admin123"
+    # One-shot recovery: when set (>=12 chars), the `admin` password is reset
+    # to this value once per distinct value. Remove the secret after logging in.
+    admin_reset_password: str = ""
     cors_origins: str = "http://localhost:5173,https://dong-wei-yang.github.io,https://kevin19830331-ml-dl-viz-api.hf.space"
 
     model_config = {"env_file": ".env"}

@@ -1,3 +1,4 @@
+import logging
 import sqlite3
 from contextlib import contextmanager
 from collections.abc import Iterator
@@ -5,6 +6,10 @@ from pathlib import Path
 from app.config import settings
 
 DB_PATH = settings.database_path
+logger = logging.getLogger(__name__)
+
+# Bookkeeping keys stored in system_settings that are not user-facing config.
+INTERNAL_SETTING_KEYS = frozenset({"admin_reset_applied", "rag_curriculum_fingerprint"})
 
 
 def get_db() -> sqlite3.Connection:
@@ -131,6 +136,8 @@ def init_db():
     # Additive migration: unknown historical event terms remain unclassified.
     for table, column, definition in (
         ('users', 'class_name', "TEXT NOT NULL DEFAULT ''"),
+        # Self-service sign-up: 'pending' accounts cannot log in until approved.
+        ('users', 'approval_status', "TEXT NOT NULL DEFAULT 'approved'"),
         ('learning_events', 'semester', "TEXT NOT NULL DEFAULT ''"),
     ):
         columns = {r[1] for r in conn.execute(f'PRAGMA table_info({table})')}
@@ -162,6 +169,7 @@ def init_db():
             "VALUES (?, ?, ?, ?, 1)",
             ("admin", hash_password(settings.default_admin_password), "系統管理員", "admin"),
         )
+    _apply_admin_reset(conn)
     # Seed default LLM settings
     defaults = {
         "llm_provider": "local",
@@ -178,6 +186,48 @@ def init_db():
     seed_quiz_questions(conn)
     conn.commit()
     conn.close()
+
+
+_ADMIN_RESET_MARKER = "admin_reset_applied"
+
+
+def _apply_admin_reset(conn) -> None:
+    """Reset the `admin` password from ADMIN_RESET_PASSWORD, once per value.
+
+    The marker stores a salted hash of the applied value, so restarting with
+    the secret still set does not undo a password the admin changed later.
+    """
+    from app.auth.utils import hash_password, verify_password
+    from app.config import settings
+    value = settings.admin_reset_password
+    if not value:
+        return
+    if len(value) < 12:
+        logger.warning("ADMIN_RESET_PASSWORD ignored: must be at least 12 characters")
+        return
+    marker = conn.execute(
+        "SELECT value FROM system_settings WHERE key = ?", (_ADMIN_RESET_MARKER,)
+    ).fetchone()
+    if marker and verify_password(value, marker[0]):
+        return
+    cursor = conn.execute(
+        "UPDATE users SET password_hash = ?, must_change_password = 1, is_active = 1, deleted_at = NULL, "
+        "approval_status = 'approved', session_version = session_version + 1, updated_at = datetime('now') "
+        "WHERE username = 'admin'",
+        (hash_password(value),),
+    )
+    if cursor.rowcount == 0:
+        return
+    conn.execute(
+        "INSERT INTO system_settings (key, value, updated_at) VALUES (?, ?, datetime('now')) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+        (_ADMIN_RESET_MARKER, hash_password(value)),
+    )
+    conn.execute(
+        "INSERT INTO audit_logs (actor_username, actor_role, action, target_type, target_id, detail) "
+        "VALUES ('system', 'system', 'user.password_reset', 'user', 'admin', '{\"via\": \"ADMIN_RESET_PASSWORD\"}')"
+    )
+    logger.warning("Admin password reset from ADMIN_RESET_PASSWORD; remove the secret after logging in")
 
 
 def sync_enrollment(conn, user_id: int):
@@ -208,4 +258,4 @@ def set_setting(key: str, value: str):
 def get_all_settings() -> dict[str, str]:
     with db_connection() as conn:
         rows = conn.execute("SELECT key, value FROM system_settings").fetchall()
-    return {r["key"]: r["value"] for r in rows}
+    return {r["key"]: r["value"] for r in rows if r["key"] not in INTERNAL_SETTING_KEYS}
