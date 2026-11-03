@@ -52,13 +52,43 @@ def test_backup_and_restore_roundtrip_preserves_rows(tmp_path):
         copy_database(source, restored)
 
 
-def test_existing_curriculum_is_ready_without_reingestion(monkeypatch):
+_CHUNKS = [{'id': 'w01_lecture_000', 'content': 'old text', 'metadata': {}}]
+
+
+def _run_startup_ingest(monkeypatch, chunks, stored_fingerprint):
+    """Run startup RAG init against a populated index; return ingest calls and saved settings."""
     monkeypatch.setattr(store, 'get_stats', lambda: {'curriculum_chunks': 5})
-    def unexpected():
-        raise AssertionError('Existing curriculum should not be reloaded')
-    monkeypatch.setattr(chunker, 'load_curriculum_chunks', unexpected)
+    monkeypatch.setattr(chunker, 'load_curriculum_chunks', lambda: chunks)
+    ingested, saved = [], {}
+    monkeypatch.setattr(store, 'ingest_chunks', lambda c: ingested.append(c) or len(c))
+    monkeypatch.setattr(db, 'get_setting', lambda k, d='': stored_fingerprint if k == main.RAG_FINGERPRINT_KEY else d)
+    monkeypatch.setattr(db, 'set_setting', lambda k, v: saved.__setitem__(k, v))
     monkeypatch.setattr(main.readiness, 'status', 'ready')
     monkeypatch.setattr(main.readiness, 'rag', 'pending')
     asyncio.run(main._initialize_rag_background())
     assert main.readiness.rag == 'ready'
-    assert main.readiness.status == 'ready'
+    return ingested, saved
+
+
+def test_unchanged_curriculum_is_not_reingested(monkeypatch):
+    fp = main._curriculum_fingerprint(_CHUNKS)
+    ingested, saved = _run_startup_ingest(monkeypatch, _CHUNKS, fp)
+    assert ingested == []
+    assert saved == {}
+
+
+def test_changed_curriculum_is_reingested_after_deploy(monkeypatch):
+    """Persistent DB keeps old chunks across deploys; edited lectures must be re-indexed."""
+    old_fp = main._curriculum_fingerprint(_CHUNKS)
+    new_chunks = [{**_CHUNKS[0], 'content': 'corrected text'}]
+    ingested, saved = _run_startup_ingest(monkeypatch, new_chunks, old_fp)
+    assert ingested == [new_chunks]
+    assert saved[main.RAG_FINGERPRINT_KEY] == main._curriculum_fingerprint(new_chunks)
+    assert saved[main.RAG_FINGERPRINT_KEY] != old_fp
+
+
+def test_index_without_fingerprint_is_reingested(monkeypatch):
+    """Databases indexed before fingerprinting existed have no stored value."""
+    ingested, saved = _run_startup_ingest(monkeypatch, _CHUNKS, '')
+    assert ingested == [_CHUNKS]
+    assert main.RAG_FINGERPRINT_KEY in saved

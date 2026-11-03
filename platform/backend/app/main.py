@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import time
 import asyncio
@@ -71,21 +72,43 @@ async def log_requests(request: Request, call_next):
 from contextlib import asynccontextmanager
 
 
+RAG_FINGERPRINT_KEY = "rag_curriculum_fingerprint"
+
+
+def _curriculum_fingerprint(chunks: list[dict]) -> str:
+    """Stable hash of chunk ids + content, so edited lectures are detected."""
+    h = hashlib.sha256()
+    for c in sorted(chunks, key=lambda c: c["id"]):
+        h.update(c["id"].encode("utf-8") + b"\x00" + c["content"].encode("utf-8") + b"\x00")
+    return h.hexdigest()
+
+
 def _auto_ingest_curriculum():
-    """Auto-ingest curriculum if RAG is empty (e.g. after container restart)."""
+    """Index curriculum into RAG when empty or when the curriculum changed.
+
+    The DB lives on persistent storage, so it survives deploys; without the
+    fingerprint check, corrected lectures would never reach the AI tutor.
+    """
+    from app import db as app_db
     from app.rag.store import get_stats, ingest_chunks
     from app.rag.chunker import load_curriculum_chunks
     stats = get_stats()
-    if stats.get("curriculum_chunks", 0) > 0:
-        return "ready"
+    has_index = stats.get("curriculum_chunks", 0) > 0
     chunks = load_curriculum_chunks()
     if not chunks:
+        if has_index:
+            return "ready"
         logger.warning("No curriculum files available for RAG")
         return "unavailable"
+    fingerprint = _curriculum_fingerprint(chunks)
+    if has_index and app_db.get_setting(RAG_FINGERPRINT_KEY, "") == fingerprint:
+        return "ready"
     count = ingest_chunks(chunks)
     if count <= 0:
         raise RuntimeError("Curriculum ingestion produced no indexed chunks")
-    logger.info("Auto-ingested %d curriculum chunks into RAG", count)
+    app_db.set_setting(RAG_FINGERPRINT_KEY, fingerprint)
+    logger.info("Indexed %d curriculum chunks into RAG (curriculum %s)",
+                count, "changed" if has_index else "initial")
     return "ready"
 
 
