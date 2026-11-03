@@ -16,3 +16,5 @@
 - 主資料庫與 RAG 共用 `DATABASE_PATH`；正式 HF 變更前必須先完成真實資料備份、還原驗證及持久化掛載，操作見 `docs/storage-operations.md`。勿為了讓 CI 發布而直接略過 `HF_STORAGE_MIGRATION_VERIFIED` 部署檢查。
 - 2026-09-20 使用者明確授權 HF 重新初始化，現有正式資料可捨棄；本次初始化不再要求舊資料備份。仍需先確認持久儲存、正式金鑰及重啟驗證，不得把此授權延伸為日後可刪除學生資料。
 - `APP_ENV` 預設 production；本機使用 `.env.example` 明確 development，測試 conftest 明確 test。正式環境拒絕預設 JWT key；JWT 升級後舊 token 失效，改密碼回傳替換 session。學習事件 API 不再接受用戶端成績，教師作業評分使用 `/api/analytics/assignments/grade`。
+- 2026-09-23 登入排查：截圖輸入 `admin@mail.com`；2026-09-20 部署紀錄的管理員帳號為 `admin`。已確認 `platform/backend/app/api/auth_routes.py` 登入只查 `username`，不以 email 欄位登入；`platform/frontend/src/pages/Login.tsx` 將所有登入例外統一顯示「帳號或密碼錯誤」，不能只憑此訊息判定原因。
+- 2026-09-23 使用本機 `.codex/secrets/ml-dl-viz-admin-current.clixml` 保存的憑證呼叫正式 `/api/auth/login`，回傳 HTTP 401；該份憑證當時無法使用，原因尚未確認，不可再據 2026-09-20 紀錄宣稱它仍有效。未重設密碼或修改正式資料；後續需確認現行帳號／密碼或依使用者要求處理重設，勿在記憶或 Git 保存明文密碼。
